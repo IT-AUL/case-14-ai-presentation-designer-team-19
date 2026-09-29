@@ -20,7 +20,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/assets/export.png" alt="Выбор варианта и экспорт колоды в PPTX, PDF и HTML" width="820" />
+  <img src="docs/assets/generation.png" alt="Генерация: три варианта колоды собираются параллельно" width="820" />
 </p>
 
 ---
