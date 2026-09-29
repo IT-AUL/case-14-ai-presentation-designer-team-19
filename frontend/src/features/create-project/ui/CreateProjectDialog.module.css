@@ -1,0 +1,57 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--overlay);
+  animation: dd-fade 0.15s ease-out;
+}
+
+.content {
+  position: fixed;
+  top: 22vh;
+  left: 50%;
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 480px;
+  max-width: calc(100vw - 32px);
+  padding: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-3xl);
+  background: var(--surface);
+  box-shadow: var(--shadow-toast);
+  transform: translateX(-50%);
+  animation: dd-fade 0.2s ease-out;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.description {
+  margin: 0 0 12px;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.error {
+  color: var(--error);
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
+}

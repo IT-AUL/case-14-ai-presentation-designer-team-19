@@ -1,0 +1,51 @@
+.root {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.track {
+  position: relative;
+  flex: none;
+  width: 36px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 10px;
+  background: var(--line-2);
+}
+
+.track[data-state='checked'] {
+  background: var(--ink);
+}
+
+.thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  display: block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--surface);
+  transition: left 0.15s;
+}
+
+.thumb[data-state='checked'] {
+  left: 18px;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+}
+
+.label {
+  font-weight: 500;
+}
+
+.description {
+  color: var(--ink-3);
+  font-size: 12px;
+}

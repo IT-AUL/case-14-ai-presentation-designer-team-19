@@ -1,0 +1,125 @@
+{
+  "id": "tpl_4497762842c84a478245dcfb47552046",
+  "project_id": "prj_d7a5e61be4be4491b158c5f93699a38d",
+  "filename": "VK Tech шаблон.pptx",
+  "media_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "package_type": "pptx",
+  "sha256": "cbbe3aa6a21d23cebc4d1383b93dd07a9cea460d683de1903567b616c839485d",
+  "size_bytes": 20525772,
+  "artifact_id": "art_dfbb90550b404169aec585eddc474432",
+  "validation_status": "valid",
+  "created_at": "2026-09-25T14:04:13.924721Z",
+  "latest_analysis": {
+    "id": "ana_667157affbd943009f3957e7e8a4d294",
+    "template_id": "tpl_4497762842c84a478245dcfb47552046",
+    "revision": 1,
+    "status": "completed",
+    "parser_version": "autopsy-1",
+    "config_version": null,
+    "design_dna_revision": 1,
+    "preview_artifact_ids": [],
+    "package_inventory": {
+      "path": "VK Tech шаблон.pptx",
+      "slides": 54,
+      "masters": 2,
+      "layouts": 39,
+      "themes": 3,
+      "media": 222,
+      "charts": 0,
+      "embeddings": 0,
+      "tables": 0,
+      "layout_usage": {
+        "11": 36,
+        "3": 2,
+        "1": 1,
+        "2": 1,
+        "4": 1,
+        "5": 1,
+        "6": 1,
+        "7": 1,
+        "8": 1,
+        "9": 1,
+        "10": 1,
+        "12": 1,
+        "13": 1,
+        "14": 1,
+        "15": 1,
+        "16": 1,
+        "17": 1,
+        "18": 1
+      },
+      "dominant_layout": [
+        "11",
+        36
+      ],
+      "declared_fonts": [
+        "Arial"
+      ],
+      "observed_fonts": {
+        "Play": 746,
+        "Calibri": 579,
+        "Consolas": 70,
+        "Arial": 1
+      },
+      "theme_palettes": {
+        "VK Tech": {
+          "dk1": "000000",
+          "lt1": "FAFCFF",
+          "dk2": "001515",
+          "lt2": "FEFFFF",
+          "accent1": "0077FF",
+          "accent2": "FFFFFF",
+          "accent3": "FF3885",
+          "accent4": "202020",
+          "accent5": "F7FAFE",
+          "accent6": "D6ECFF",
+          "hlink": "0563C1",
+          "folHlink": "FEFFFF"
+        },
+        "VK Tech-2": {
+          "dk1": "000000",
+          "lt1": "FAFCFF",
+          "dk2": "001515",
+          "lt2": "FEFFFF",
+          "accent1": "0077FF",
+          "accent2": "FFFFFF",
+          "accent3": "FF3885",
+          "accent4": "202020",
+          "accent5": "F7FAFE",
+          "accent6": "D6ECFF",
+          "hlink": "0563C1",
+          "folHlink": "FEFFFF"
+        },
+        "Тема Office": {
+          "dk1": "000000",
+          "lt1": "FFFFFF",
+          "dk2": "44546A",
+          "lt2": "E7E6E6",
+          "accent1": "4472C4",
+          "accent2": "ED7D31",
+          "accent3": "A5A5A5",
+          "accent4": "FFC000",
+          "accent5": "5B9BD5",
+          "accent6": "70AD47",
+          "hlink": "0563C1",
+          "folHlink": "954F72"
+        }
+      },
+      "observed_colors": {
+        "0077FF": 97,
+        "FFFFFF": 27,
+        "C4C4C4": 25,
+        "FEFFFF": 17,
+        "8F8F8F": 12,
+        "005EFF": 9,
+        "FAFCFF": 4,
+        "D6ECFF": 4,
+        "000000": 1,
+        "FAFBFD": 1
+      }
+    },
+    "warnings": [],
+    "created_at": "2026-09-25T14:04:14.037528Z",
+    "finished_at": "2026-09-25T14:04:14.037529Z"
+  }
+}

@@ -1,0 +1,50 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+}
+
+.emphasis {
+  border-color: var(--ink);
+  border-radius: var(--radius-3xl);
+}
+
+.none {
+  padding: 0;
+  overflow: hidden;
+}
+
+.md {
+  padding: 20px;
+}
+
+.lg {
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.title {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.meta {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}

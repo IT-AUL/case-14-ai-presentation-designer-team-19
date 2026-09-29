@@ -1,0 +1,57 @@
+.strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  overflow: hidden;
+  border: 1px solid var(--ink);
+  border-radius: 14px;
+  background: var(--line);
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  background: var(--surface);
+}
+
+.value {
+  font-size: 24px;
+  line-height: 1.3;
+}
+
+.mark {
+  font-weight: 600;
+}
+
+.number {
+  font-family: var(--font-mono);
+  font-weight: 500;
+}
+
+.ok {
+  color: var(--ok);
+}
+
+.warn {
+  color: var(--warn);
+}
+
+.error {
+  color: var(--error);
+}
+
+.unknown {
+  color: var(--ink-3);
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.hint {
+  color: var(--ink-3);
+  font-size: 12px;
+}

@@ -1,0 +1,5 @@
+.skeleton {
+  border-radius: 3px;
+  background: var(--sunken);
+  animation: global(dd-pulse) 1.6s infinite;
+}

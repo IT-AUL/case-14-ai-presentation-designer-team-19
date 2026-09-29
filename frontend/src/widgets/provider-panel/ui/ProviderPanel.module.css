@@ -1,0 +1,241 @@
+.rule {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--info-bg);
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.ruleTitle {
+  color: var(--info);
+  font-weight: 600;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fieldNote,
+.fieldError {
+  font-size: 12px;
+}
+
+.fieldNote {
+  color: var(--ink-3);
+}
+
+.fieldNote a {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+}
+
+.fieldError {
+  color: var(--error);
+}
+
+.more {
+  border-top: 1px solid var(--line);
+  padding-top: 12px;
+}
+
+.moreSummary {
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.moreBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-top: 12px;
+}
+
+.formError {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--error-bg);
+  color: var(--error);
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+}
+
+.summaryHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.statusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+.summaryTitle {
+  flex: 1;
+  font-weight: 600;
+}
+
+.summaryMeta {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.detailRow {
+  display: contents;
+}
+
+.detailRow dt {
+  color: var(--ink-3);
+}
+
+.detailRow dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.probes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.probesHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.probesTitle {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.probeList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.probe {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  align-items: start;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.probeStatus {
+  padding: 2px 0;
+  border-radius: var(--radius-xs);
+  background: var(--sunken);
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+}
+
+.probeStatus[data-status='ok'] {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.probeStatus[data-status='fail'] {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.probeText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.probeLabel {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.probeDetail {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.serverModel {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background: var(--ok-bg);
+  font-size: 13px;
+}
+
+.serverModel p {
+  margin: 2px 0 0;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.serverModelDot {
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: var(--ok);
+}
+
+.form input::placeholder {
+  color: var(--ink-3);
+  opacity: 1;
+}
+
+.codeInput::placeholder {
+  font-family: var(--font-sans);
+}

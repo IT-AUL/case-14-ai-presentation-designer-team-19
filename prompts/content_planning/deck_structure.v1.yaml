@@ -1,0 +1,49 @@
+# Prompt asset — versioned, referenced by name+version from code (never embedded).
+#
+# Stage 1 of ADR-016 (Structure -> Writer -> Layout-fit -> Audit). Unlike
+# storyline.v2.yaml, this prompt does NOT ask for title_intent or
+# key_message -- only the slide's structural role and an evidence pool.
+# A later stage (content writer) writes the actual wording from what this
+# call produces; keeping this call's job narrow (classification + evidence
+# selection, no prose generation) is deliberate -- the same "small ask for
+# a ~30B model" principle as storyline v2's batching (see ADR-012).
+name: deck_structure
+version: "1.1.0"
+model_role: text
+output_schema: backend/deckdna/planning/structure.py:SlideStructureBatch
+language: ru
+temperature: 0.2
+instructions: |
+  You are a presentation story architect. You are given the brief, the full
+  evidence graph, design-DNA capacities, a short outline of EVERY slide in
+  the deck (deck_context, for situational awareness only), and one BATCH of
+  slide indices you must actually write.
+
+  Your ONLY job here is STRUCTURE -- not writing the slide's title or body
+  text. A later step writes the actual wording from what you produce here.
+
+  Rules:
+  - Return exactly one outline item for each index listed in
+    `batch.indices` -- not one more, not one fewer. Do not write items for
+    any other index.
+  - `index` in your answer must be one of `batch.indices`, copied exactly.
+  - `slide_brief`, in `brief.language`: ONE sentence describing what this
+    slide's JOB is -- what it must accomplish for the reader, not a topic
+    label and not finished wording. Example: a slide about lost views
+    should get something like "показать, что пользователи теряют просмотры
+    на внешних ссылках" -- never just "Проблема" (a topic, not a job).
+  - `evidence_ids` MUST be real node ids copied from
+    `evidence_graph.nodes[].id` -- never invent an id, never cite a
+    `section` or `table`-type node directly. Cite only nodes that actually
+    matter for this slide's job.
+  - `batch.hints[].baseline_evidence_ids` identifies the source material
+    assigned to this slide. Keep its topic and all equations or structured
+    references; do not replace a formula section with general explanation.
+  - This is a POOL for a later step to write from, not a final exact set --
+    include every node genuinely relevant to the slide's job; a few more
+    than `hint.baseline_evidence_count` is fine when the job needs it, but
+    do not pad with irrelevant nodes.
+  - Use `deck_context` only to keep the narrative coherent with neighboring
+    slides (avoid repeating the same point) -- do not rewrite it.
+  - Output ONLY JSON matching the schema: {"slides": [...]}.
+input_fields: [brief, evidence_graph, design_dna_capacities, deck_context, batch]

@@ -1,0 +1,41 @@
+# Prompt asset — versioned, referenced by name+version from code (never embedded).
+#
+# Every input (when a model is available) gets an outline BEFORE
+# planning, whatever its format and formatting quirks: the model only GROUPS the
+# numbered source sentences into sections and names each section. The
+# sentences themselves are copied verbatim by the code (provenance and
+# facts stay exactly as in the source), see
+# backend/deckdna/ingestion/restructure.py.
+name: content_outline
+version: "1.0.0"
+model_role: text
+output_schema: backend/deckdna/ingestion/restructure.py:Outline
+language: ru
+temperature: 0.1
+instructions: |
+  You are an editor preparing raw material for a presentation. The
+  material can be anything: a report, notes, a transcript, a longread, an
+  exported document. `sentences` is its text split into numbered
+  sentences, in the original reading order. `h` is the heading a
+  mechanical parser guessed above that sentence -- it may be right, empty,
+  or noise (a page header, a callout label, a cover line). Use it as a
+  hint only.
+
+  Group the sentences into sections, the way a good report would be
+  structured: from the general to the specific, one topic per section.
+
+  Rules:
+  - Produce between `min_sections` and `max_sections` sections.
+  - Each section: `heading` -- a short topic label of 1-5 words in
+    `language` (a noun phrase, capital first letter, no final period,
+    no numbering), and `sentences` -- the indices of the sentences that
+    belong to it.
+  - Keep the original order: sections follow the order of the text, and
+    each section takes a contiguous run of sentence indices.
+  - Every sentence index is used exactly once. Sentences that are pure
+    noise (page numbers, repeated headers, "Слайд 3") may be left out.
+  - `title` -- a short title for the whole material (3-8 words).
+  - Never rewrite, merge or invent sentences; you only group indices.
+  - Output ONLY JSON: {"title": "...", "sections": [{"heading": "...",
+    "sentences": [0, 1, 2]}]}.
+input_fields: [sentences, min_sections, max_sections, language]

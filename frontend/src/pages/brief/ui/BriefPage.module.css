@@ -1,0 +1,65 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 28px 32px 64px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 20px;
+}
+
+.aside {
+  position: sticky;
+  top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.cta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ctaNote,
+.ctaError {
+  margin: 0;
+  font-size: 12px;
+  text-align: center;
+}
+
+.ctaNote {
+  color: var(--ink-3);
+}
+
+.ctaNote a {
+  color: var(--ink);
+}
+
+.ctaError {
+  color: var(--error);
+}
+
+.skeletonTitle {
+  width: 320px;
+  height: 64px;
+  border-radius: var(--radius-md);
+}
+
+.skeletonForm {
+  height: 520px;
+  border-radius: var(--radius-xl);
+}
+
+.skeletonAside {
+  height: 360px;
+  border-radius: var(--radius-xl);
+}

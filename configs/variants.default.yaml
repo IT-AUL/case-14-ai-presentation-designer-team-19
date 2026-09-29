@@ -1,0 +1,22 @@
+version: "1"
+variants:
+  - id: faithful
+    strategy: faithful
+    difference_axis: layout_choice
+    description: "Максимальная верность exemplar-паттернам шаблона, консервативная плотность."
+    weights: { exemplar_fidelity: 0.9, novelty: 0.1, text_density: 0.5, chart_preference: 0.4 }
+  - id: balanced
+    strategy: balanced
+    difference_axis: layout_choice
+    description: "Альтернативные совместимые layout'ы, сбалансированный текст и визуал."
+    weights: { exemplar_fidelity: 0.6, novelty: 0.5, text_density: 0.5, chart_preference: 0.5 }
+  - id: visual
+    strategy: visual
+    difference_axis: visualization_emphasis
+    description: "Акцент на диаграммы/графики и более смелая группировка контента."
+    weights: { exemplar_fidelity: 0.4, novelty: 0.7, text_density: 0.35, chart_preference: 0.9 }
+invariants:
+  shared_evidence: true
+  same_facts: true
+  template_compliance_required: true
+min_structural_difference: 0.4

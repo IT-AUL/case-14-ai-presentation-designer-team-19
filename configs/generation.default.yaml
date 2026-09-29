@@ -1,0 +1,75 @@
+version: "1"
+official_mode: true
+deck:
+  default_slide_count: 12
+  # TZ baseline is 10-15 (the default count stays 12), but the user picks
+  # any length: short briefs (3-5) and long reports (up to the schema's
+  # 40) must plan without an error. The validator reads only this config.
+  min_slides: 3
+  max_slides: 40
+# Slide indices that must never be mutated by generation or repair
+# (e.g. mandatory submission slides). Empty by default.
+protected_slide_indices: []
+variants:
+  count: 3
+  strategies: [faithful, balanced, visual]
+  parallel: true
+planning:
+  evidence_coverage_min: 0.8
+  conclusion_titles_required: true
+  # ADR-016: "v3" (default) — Stage 1 Structure + Stage 2 Writer + Stage 3
+  # layout_fit (exemplar picked FROM the real written text, adapts it to
+  # fit, replaces exemplar_rerank/content_style for this run). Live-
+  # validated 27.09 (3 variants, 3:33 total, real conclusion-style titles
+  # throughout, no generic "Проблема"/"Решение" fallbacks) — the ADR-016
+  # "Риски" gate ("нужна пилотная проверка на реальном ключе") is
+  # satisfied, so this is now the real default, not just reachable.
+  # "v2" — Stage 1+2 only, exemplar still picked the old way (rerank.py).
+  # "v1" — legacy plan_deck_llm (ADR-012), content verbatim from
+  # evidence; kept only as an instant one-line rollback lever, not
+  # actively maintained — the old LLM-pipeline integration suite
+  # (test_pipeline_llm.py, test_generation_llm.py, test_llm_rerank.py,
+  # test_llm_http_e2e.py, ...) still covers it, but it's no longer where
+  # new work goes.
+  pipeline_version: "v3"
+content_styling:
+  # переписать content_units деловым языком после планирования, до
+  # exemplar rerank/compose (prompts/content_styling/content_style.v1.yaml);
+  # без модели содержимое остаётся дословным (как выбрано из EvidenceGraph)
+  enabled: true
+retrieval:
+  top_k: 5
+  vlm_rerank: true
+fitting:
+  # переполненный текст переписывает модель (prompts/text_fitting/text_fit.v1.yaml);
+  # без модели — детерминированно: расширение рамки, затем обрезка с «…»
+  llm_rewrite: true
+  # до сборки: заголовок и пункты длиннее бюджета выбранного эталона
+  # (две строки заголовка при его кегле, слот при 12pt) переписывает
+  # модель (prompts/text_fitting/slide_budget_fit.v1.yaml)
+  budget_fit: true
+content:
+  image_generation:
+    # ADR-017 (docs/adr/ADR-017-image-generation.md), TZ §2.3.1 top-10
+    # stretch — off by default: needs a live pilot on a real image
+    # endpoint before any default flip (same discipline pipeline_version's
+    # v1→v3 flip followed). Slide selection + prompt are deterministic,
+    # not a model call (planning/image_brief.py) — only the actual
+    # generation goes through ModelGateway.image_generate.
+    enabled: false
+    # only the "visual" strategy variant gets generated images —
+    # faithful/balanced are unaffected by design
+    max_per_deck: 2
+    style_suffix: "minimalist flat business illustration, no embedded text, corporate presentation style"
+    purposes: [overview, solution, benefits, team, data]
+composition:
+  # Собственные композиции из токенов шаблона (pptx/composing/native_compose.py)
+  # вместо слайдов шаблона. Выключено: суть задачи — видоизменять блоки
+  # загруженного шаблона, сохраняя узнаваемый стиль, а не рисовать заново.
+  native_fallback: false
+  min_body_font_pt: 10
+  autofit_fallback: true
+  preserve_unsupported: true
+time_budget_seconds: 300
+degradation:
+  at_80_percent: [skip_vlm_rerank, audit_errors_only]

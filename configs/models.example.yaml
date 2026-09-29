@@ -1,0 +1,35 @@
+# Example model profiles. All entries must satisfy: open weights, Apache-2.0/MIT, <=35B (image <=20B).
+# Copy to models.local.yaml and fill real IDs from your provider.
+version: "1"
+providers:
+  default:
+    base_url: ${DECKDNA_PROVIDER_BASE_URL}
+    timeout_seconds: 90
+    max_concurrency: 4
+models:
+  text:
+    model_id: ${DECKDNA_MODEL_TEXT:-qwen2.5-32b-instruct}
+    provider: default
+    size_b: 32
+    license: apache-2.0
+    capabilities: [structured_output, tool_calls]
+    roles: [storyline, variant_specs, claim_extraction, repair_planning]
+  vision:
+    model_id: ${DECKDNA_MODEL_VISION:-qwen2.5-vl-32b-instruct}
+    provider: default
+    size_b: 32
+    license: apache-2.0
+    capabilities: [image_input, structured_output]
+    roles: [semantic_roles, contextual_audit, layout_rerank]
+  embedding:
+    model_id: ${DECKDNA_MODEL_EMBED:-bge-m3}
+    provider: default
+    license: mit
+    capabilities: [embeddings]
+    roles: [exemplar_clustering]
+  image:
+    enabled: false
+    model_id: ""
+    size_b_max: 20
+    license_required: [apache-2.0, mit]
+    roles: [image_generation_stretch]

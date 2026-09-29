@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deckdna/schemas/variant-spec.schema.json",
+  "title": "VariantSpec",
+  "type": "object",
+  "required": [
+    "schema_version", "id", "strategy", "difference_axis",
+    "invariant_evidence_ids", "weights", "seed"
+  ],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "id": { "type": "string" },
+    "strategy": {
+      "type": "string",
+      "enum": ["faithful", "balanced", "visual", "custom"]
+    },
+    "difference_axis": {
+      "type": "object",
+      "required": ["primary", "description"],
+      "properties": {
+        "primary": {
+          "type": "string",
+          "enum": ["layout_choice", "density", "ordering", "visualization_emphasis", "typography_weight"]
+        },
+        "description": { "type": "string" }
+      }
+    },
+    "invariant_evidence_ids": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "All variants must cover the same evidence set."
+    },
+    "weights": {
+      "type": "object",
+      "properties": {
+        "exemplar_fidelity": { "type": "number", "minimum": 0, "maximum": 1 },
+        "visual_density": { "type": "number", "minimum": 0, "maximum": 1 },
+        "text_density": { "type": "number", "minimum": 0, "maximum": 1 },
+        "chart_preference": { "type": "number", "minimum": 0, "maximum": 1 },
+        "novelty": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "slide_overrides": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "slide_plan_id": { "type": "string" },
+          "preferred_exemplar_ids": { "type": "array", "items": { "type": "string" } },
+          "preferred_visual": { "type": "string" },
+          "density": { "type": "string", "enum": ["sparse", "medium", "dense"] }
+        }
+      }
+    },
+    "seed": { "type": "integer" },
+    "config_version": { "type": "string" }
+  }
+}

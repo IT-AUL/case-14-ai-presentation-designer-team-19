@@ -1,0 +1,256 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.title {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.meta {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.actions {
+  margin-left: auto;
+}
+
+.versionBanner {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--info-bg);
+  font-size: 12px;
+}
+
+.versionLabel {
+  color: var(--info);
+  font-weight: 500;
+}
+
+.versionValue {
+  font-family: var(--font-mono);
+}
+
+.section {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 12px;
+}
+
+.number {
+  padding-top: 2px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sectionTitle {
+  font-weight: 600;
+}
+
+.titleRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.timingValue {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.titleNote {
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.text {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.text b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.scores {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.score {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.scoreLabel {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.scoreValue {
+  font-family: var(--font-mono);
+  font-size: 18px;
+}
+
+.issues {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.issueCounts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  font-size: 13px;
+}
+
+.issueCount {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.zero {
+  color: var(--ink-3);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.timing {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.stageBar {
+  display: flex;
+  height: 14px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--sunken);
+}
+
+.stageSegment {
+  border-right: 1px solid var(--surface);
+}
+
+.stageLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.legendSwatch {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.fallbacks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+  list-style: none;
+}
+
+.fallback {
+  display: flex;
+  gap: 8px;
+}
+
+.fallback b {
+  font-weight: 500;
+}
+
+.fallbackDot {
+  color: var(--warn);
+}
+
+.provenance {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 16px;
+  margin: 0;
+  font-size: 12px;
+}
+
+.provenanceRow {
+  display: contents;
+}
+
+.provenanceLabel {
+  color: var(--ink-3);
+}
+
+.provenanceValue {
+  margin: 0;
+  font-family: var(--font-mono);
+  overflow-wrap: anywhere;
+}
+
+.provenanceMuted {
+  color: var(--ink-3);
+  font-family: var(--font-sans);
+}
+
+.provenanceNote {
+  color: var(--info);
+}

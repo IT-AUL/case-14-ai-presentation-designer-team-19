@@ -1,0 +1,66 @@
+.picker {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ink-2);
+  text-align: left;
+  cursor: pointer;
+}
+
+.option:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+  border-radius: var(--radius-sm);
+}
+
+.cover {
+  display: block;
+  overflow: hidden;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--sunken);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.option:hover .cover {
+  border-color: var(--ink-3);
+}
+
+.selected {
+  color: var(--ink);
+}
+
+.selected .cover {
+  border-color: var(--ink);
+  box-shadow: 0 0 0 1px var(--ink);
+}
+
+.name {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  overflow: hidden;
+  font-size: 13px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+}

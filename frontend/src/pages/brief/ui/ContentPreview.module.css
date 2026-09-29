@@ -1,0 +1,170 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+}
+
+.title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.subtitle {
+  margin-top: -12px;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+
+.statValue {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.statLabel {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.sections {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  font-size: 13px;
+  list-style: none;
+}
+
+.sectionRow {
+  display: flex;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.sectionRow:last-child {
+  border-bottom: none;
+}
+
+.sectionIndex {
+  flex: none;
+  width: 24px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+}
+
+.sectionHeading {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.sectionHeading[data-level='top'] {
+  font-weight: 500;
+}
+
+.sectionMore {
+  padding: 7px 0 0 34px;
+  color: var(--ink-3);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.groupTitle {
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.dataRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  font-size: 13px;
+}
+
+.dataMeta {
+  flex: none;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.warnings {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 12px;
+  list-style: none;
+}
+
+.empty,
+.stale,
+.error {
+  margin: 0;
+  font-size: 13px;
+}
+
+.empty {
+  color: var(--ink-3);
+}
+
+.stale {
+  color: var(--warn);
+  font-size: 12px;
+}
+
+.error {
+  color: var(--error);
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeletonLine {
+  width: 60%;
+  height: 12px;
+  border-radius: var(--radius-xs);
+}
+
+.skeletonStat {
+  height: 60px;
+  border-radius: var(--radius-md);
+}
+
+.skeletonBlock {
+  height: 140px;
+  border-radius: var(--radius-md);
+}

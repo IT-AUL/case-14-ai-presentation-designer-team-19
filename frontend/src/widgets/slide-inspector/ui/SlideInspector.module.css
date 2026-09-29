@@ -1,0 +1,259 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nav {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.nav:disabled {
+  opacity: 0.4;
+}
+
+.counter {
+  font-size: 13px;
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stage {
+  position: relative;
+  box-shadow: var(--shadow-stage);
+}
+
+.blank {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: var(--surface);
+}
+
+.blankNote {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  align-items: center;
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.swatch {
+  width: 14px;
+  height: 10px;
+  border: 2px solid var(--error);
+}
+
+.swatch[data-kind='blocker'] {
+  border-color: var(--blocker);
+}
+
+.swatch[data-kind='warning'] {
+  border-color: var(--warn);
+}
+
+.swatch[data-kind='info'] {
+  border-color: var(--info);
+}
+
+.swatch[data-kind='fixed'] {
+  border: 2px dashed var(--ok);
+}
+
+.legendHint {
+  margin-left: auto;
+}
+
+.staleChip {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  z-index: 5;
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  margin: 0;
+  padding: 4px 10px;
+  border: 1px solid var(--warn);
+  border-radius: var(--radius-sm);
+  background: var(--warn-bg);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.15);
+  pointer-events: none;
+}
+
+.staleChip svg {
+  color: var(--warn);
+}
+
+.frameToggle {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  height: 24px;
+  padding: 0 8px 0 4px;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.frameToggle:hover {
+  background: var(--surface);
+}
+
+.frameToggleBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid var(--ink-2);
+  border-radius: 3px;
+  background: var(--surface);
+  color: var(--inv);
+}
+
+.frameToggle[aria-pressed='true'] .frameToggleBox {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.stale {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  background: var(--warn-bg);
+  color: var(--ink);
+  font-size: 12px;
+}
+
+.compare {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.columnTitle {
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.compareStage {
+  position: relative;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+
+.changes {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
+.changeList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.change {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.mark {
+  font-weight: 700;
+}
+
+.mark[data-outcome='fixed'] {
+  color: var(--ok);
+}
+
+.mark[data-outcome='unresolved'] {
+  color: var(--error);
+}
+
+.mark[data-outcome='dismissed'] {
+  color: var(--ink-3);
+}
+
+.changeText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.changeMeta {
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.muted {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.footnote {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  color: var(--ink-3);
+  font-size: 12px;
+}

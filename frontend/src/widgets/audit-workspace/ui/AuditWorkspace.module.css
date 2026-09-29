@@ -1,0 +1,79 @@
+.root {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.grid {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 148px minmax(0, 1fr) 420px;
+  min-height: 0;
+}
+
+.stage {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 20px 28px;
+  overflow: auto;
+  background: var(--stage);
+}
+
+.center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 40px 32px;
+}
+
+.skeletonBar {
+  flex: none;
+  height: 62px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.skeletonBlock {
+  width: 60%;
+  height: 40px;
+  border-radius: var(--radius-md);
+}
+
+.skeletonStrip {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 12px 12px 34px;
+  border-right: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.skeletonThumb {
+  aspect-ratio: 16 / 9;
+  border-radius: 3px;
+}
+
+.skeletonSlide {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+}
+
+.skeletonPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 56px 12px 12px;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.skeletonCard {
+  height: 64px;
+  border-radius: var(--radius-lg);
+}

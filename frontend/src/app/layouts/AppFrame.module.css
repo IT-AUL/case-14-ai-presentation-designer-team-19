@@ -1,0 +1,19 @@
+.frame {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.main {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  overflow: auto;
+}
+

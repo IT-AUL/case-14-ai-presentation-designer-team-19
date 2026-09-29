@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deckdna/schemas/skill-manifest.schema.json",
+  "title": "SkillManifest",
+  "type": "object",
+  "required": ["schema_version", "id", "name", "version", "tools", "inputs", "outputs", "requirements"],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "id": { "type": "string" },
+    "name": { "type": "string" },
+    "version": { "type": "string" },
+    "description": { "type": "string" },
+    "license": { "type": "string" },
+    "tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "description", "input_schema", "output_schema", "timeout_seconds", "idempotent"],
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "input_schema": { "type": "string" },
+          "output_schema": { "type": "string" },
+          "timeout_seconds": { "type": "integer" },
+          "idempotent": { "type": "boolean" },
+          "retryable": { "type": "boolean" }
+        }
+      }
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "kind"],
+        "properties": {
+          "name": { "type": "string" },
+          "kind": { "type": "string", "enum": ["file", "directory", "text", "config", "credentials"] },
+          "required": { "type": "boolean" },
+          "media_types": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name", "kind"],
+        "properties": {
+          "name": { "type": "string" },
+          "kind": { "type": "string", "enum": ["file", "report", "events"] },
+          "media_types": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "properties": {
+        "container": { "type": "boolean" },
+        "network": { "type": "string", "enum": ["none", "provider_only", "open"] },
+        "system_tools": { "type": "array", "items": { "type": "string" } },
+        "env_vars": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "properties": {
+        "streaming_events": { "type": "boolean" },
+        "resume": { "type": "boolean" },
+        "cancel": { "type": "boolean" }
+      }
+    }
+  }
+}

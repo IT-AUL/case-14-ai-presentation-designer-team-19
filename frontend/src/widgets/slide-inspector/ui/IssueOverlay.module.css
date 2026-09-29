@@ -1,0 +1,109 @@
+.layer {
+  position: absolute;
+  inset: 0;
+}
+
+.box {
+  --box: var(--error);
+  position: absolute;
+  z-index: 2;
+  display: block;
+  padding: 0;
+  border: 2px solid var(--box);
+  border-radius: 2px;
+  background: transparent;
+  cursor: pointer;
+}
+
+span.box {
+  cursor: default;
+}
+
+.box[data-severity='blocker'] {
+  --box: var(--blocker);
+}
+
+.box[data-severity='warning'] {
+  --box: var(--warn);
+}
+
+.box[data-severity='info'] {
+  --box: var(--info);
+}
+
+.box[data-status='fixed'] {
+  --box: var(--ok);
+  border-style: dashed;
+}
+
+.box[data-status='dismissed'] {
+  --box: var(--ink-3);
+  border-style: dashed;
+}
+
+.layer[data-focused] .box:not(.highlighted) {
+  opacity: 0.35;
+}
+
+.layer[data-stale] .box {
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+.layer[data-stale][data-focused] .box:not(.highlighted) {
+  opacity: 0.25;
+}
+
+.layer[data-stale] .highlighted {
+  opacity: 0.85;
+}
+
+.highlighted {
+  z-index: 3;
+  border-width: 3px;
+  background: color-mix(in oklch, var(--box) 12%, transparent);
+}
+
+.active {
+  z-index: 4;
+}
+
+.box:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.tag {
+  position: absolute;
+  left: -2px;
+  display: flex;
+  align-items: center;
+  max-width: 360px;
+  padding: 2px 6px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: var(--box);
+  color: var(--inv);
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.tag[data-placement='above'] {
+  bottom: 100%;
+  margin-bottom: 3px;
+}
+
+.tag[data-placement='below'] {
+  top: 100%;
+  margin-top: 3px;
+}
+
+.tag[data-placement='inside'] {
+  top: 2px;
+  left: 2px;
+}

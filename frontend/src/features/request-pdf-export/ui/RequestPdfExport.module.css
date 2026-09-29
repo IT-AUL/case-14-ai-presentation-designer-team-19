@@ -1,0 +1,6 @@
+.note {
+  max-width: 280px;
+  color: var(--ink-3);
+  font-size: 12px;
+  text-align: center;
+}

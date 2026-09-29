@@ -1,0 +1,48 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 28px 32px 64px;
+}
+
+.primaryLink,
+.secondaryLink {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-size: 14px;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.primaryLink {
+  background: var(--ink);
+  color: var(--inv);
+  font-weight: 500;
+}
+
+.primaryLink:hover {
+  background: var(--ink-2);
+  color: var(--inv);
+}
+
+.secondaryLink {
+  padding: 0 14px;
+  border-color: var(--line-2);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.secondaryLink:hover {
+  border-color: var(--ink-3);
+  color: var(--ink);
+}

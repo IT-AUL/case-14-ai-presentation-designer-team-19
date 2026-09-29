@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+.uv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+uv.lock
+
+# Node / frontend build
+node_modules/
+frontend/dist/
+frontend/dist-e2e/
+frontend/dist-live/
+coverage/
+*.tsbuildinfo
+.npm-cache/
+
+# Tests
+playwright-report/
+test-results/
+test-results-live/
+
+# Runtime output
+artifacts/
+out/
+*.local.yaml
+
+# Secrets — .env.example stays tracked
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

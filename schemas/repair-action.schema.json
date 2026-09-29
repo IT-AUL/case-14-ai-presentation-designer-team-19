@@ -1,0 +1,55 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deckdna/schemas/repair-action.schema.json",
+  "title": "RepairAction",
+  "type": "object",
+  "required": ["schema_version", "action_type", "target", "params"],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "action_type": {
+      "type": "string",
+      "enum": [
+        "shorten_text", "rewrite_title", "split_slide", "merge_slide",
+        "swap_exemplar", "move_shape", "resize_shape", "align_shapes",
+        "map_font", "map_color", "recrop_image", "replace_visual",
+        "clone_group", "remove_group", "add_chart_metadata",
+        "reorder_slides", "remove_placeholder", "native_rebuild"
+      ]
+    },
+    "issue_ids": { "type": "array", "items": { "type": "string" } },
+    "target": {
+      "type": "object",
+      "required": ["slide_id"],
+      "properties": {
+        "slide_id": { "type": "string" },
+        "shape_ids": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "params": {
+      "type": "object",
+      "properties": {
+        "text": { "type": "string" },
+        "max_chars": { "type": "integer" },
+        "bbox": {
+          "type": "object",
+          "properties": {
+            "x": { "type": "number" },
+            "y": { "type": "number" },
+            "w": { "type": "number" },
+            "h": { "type": "number" }
+          }
+        },
+        "font_family": { "type": "string" },
+        "font_size_pt": { "type": "number" },
+        "color": { "type": "string", "pattern": "^[0-9A-Fa-f]{6}$" },
+        "exemplar_id": { "type": "string" },
+        "new_index": { "type": "integer" },
+        "alignment": { "type": "string", "enum": ["left", "center", "right", "top", "middle", "bottom", "distribute_h", "distribute_v"] },
+        "keep_aspect": { "type": "boolean" },
+        "scope": { "type": "string", "enum": ["all", "text"] }
+      }
+    },
+    "preconditions": { "type": "array", "items": { "type": "string" } },
+    "expected_postconditions": { "type": "array", "items": { "type": "string" } }
+  }
+}

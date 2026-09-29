@@ -1,0 +1,798 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: dd-fade 0.25s ease-out;
+}
+
+.strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  font-size: 13px;
+}
+
+.stripName {
+  font-weight: 600;
+}
+
+.stripMeta {
+  color: var(--ink-2);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.cell {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cell > .section {
+  flex: 1;
+}
+
+.span-4 {
+  grid-column: span 4;
+}
+
+.span-5 {
+  grid-column: span 5;
+}
+
+.span-6 {
+  grid-column: span 6;
+}
+
+.span-7 {
+  grid-column: span 7;
+}
+
+.span-8 {
+  grid-column: span 8;
+}
+
+.span-12 {
+  grid-column: span 12;
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+}
+
+.sectionHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px;
+}
+
+.sectionTitle {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.sectionMeta {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.subTitle {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.note {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.divided {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+}
+
+.understanding {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 28px;
+  padding: 24px;
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-3xl);
+  background: var(--surface);
+}
+
+.column {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.eyebrow {
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.bigNumber {
+  font-size: 56px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.bigCaption {
+  color: var(--ink-2);
+}
+
+.footnote {
+  margin-top: auto;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.coverage {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.coverageRow {
+  display: grid;
+  grid-template-columns: 16px 112px minmax(0, 1fr);
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.coverageMark {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--ok);
+  border-radius: 50%;
+  color: var(--ok);
+  font-size: 10px;
+  line-height: 1;
+}
+
+.coverageLabel {
+  color: var(--ink-2);
+}
+
+.coverageValue {
+  min-width: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.countHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.count {
+  padding: 1px 7px;
+  border-radius: var(--radius-lg);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.countWarn {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.countNeutral {
+  background: var(--sunken);
+  color: var(--ink-2);
+}
+
+.conflict {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  background: var(--warn-bg);
+  font-size: 13px;
+}
+
+.conflictTitle {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.gap {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  font-size: 13px;
+}
+
+.calm {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.swatches {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.swatch {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.swatchColor {
+  height: 44px;
+  border-radius: var(--radius-md);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.swatchColorLight {
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+
+.swatchText {
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.swatchSlot {
+  color: var(--ink-3);
+}
+
+.usageBar {
+  display: flex;
+  height: 14px;
+  overflow: hidden;
+  border-radius: 4px;
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.usageBar > * {
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.usageLegend {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.usageItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+}
+
+.usageChip {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  box-shadow: inset 0 0 0 1px var(--line-2);
+}
+
+.usageShare {
+  color: var(--ink-3);
+}
+
+.usageTag {
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--ink-3);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tagNear {
+  color: var(--info);
+}
+
+.tagOff {
+  color: var(--warn);
+}
+
+.warnPill {
+  padding: 2px 8px;
+  border-radius: var(--radius-lg);
+  background: var(--warn-bg);
+  color: var(--warn);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.fontCompare {
+  display: grid;
+  grid-template-columns: 1fr 24px 1fr;
+  gap: 10px;
+  align-items: stretch;
+}
+
+.fontCompareSingle {
+  grid-template-columns: 1fr;
+}
+
+.fontCard {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+}
+
+.fontCardConflict {
+  border-color: var(--warn);
+}
+
+.fontCardLabel {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.fontSample {
+  overflow: hidden;
+  font-size: 30px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.fontCaption {
+  overflow: hidden;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fontSign {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ok);
+  font-size: 18px;
+}
+
+.fontSignConflict {
+  color: var(--warn);
+}
+
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.barRow {
+  display: grid;
+  grid-template-columns: 80px 1fr 40px;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.barLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barValue {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: right;
+}
+
+.track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--sunken);
+}
+
+.fill {
+  height: 100%;
+  border-radius: 4px;
+  background: var(--ink);
+}
+
+.fillMuted {
+  background: var(--ink-3);
+}
+
+.scaleRow {
+  display: grid;
+  grid-template-columns: 52px 1fr 110px 34px;
+  gap: 10px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.scaleMuted {
+  color: var(--ink-3);
+}
+
+.scaleBar {
+  height: 8px;
+}
+
+.scaleFill {
+  height: 100%;
+  border-radius: 2px;
+  background: var(--ink);
+}
+
+.scaleMuted .scaleFill {
+  background: var(--line-2);
+}
+
+.scaleCount {
+  color: var(--ink-3);
+  text-align: right;
+}
+
+.sheet {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border: 1px solid var(--line-2);
+  border-radius: 4px;
+  background: var(--surface-2);
+}
+
+.marginGuide {
+  position: absolute;
+  border: 1px dashed var(--ink-3);
+  background: var(--sunken);
+}
+
+.lineX,
+.lineY {
+  position: absolute;
+  background: var(--info);
+  opacity: 0.7;
+}
+
+.lineX {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+}
+
+.lineY {
+  right: 0;
+  left: 0;
+  height: 1px;
+}
+
+.anchor {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  overflow: hidden;
+  border: 2px solid var(--ink);
+  background: var(--surface);
+  font-size: 10px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  font-size: 12px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.statLabel {
+  color: var(--ink-3);
+}
+
+.tree {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 13px;
+}
+
+.treeMaster,
+.treeLeaf {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.treeMaster {
+  padding: 8px 10px;
+  border-radius: var(--radius-md);
+  background: var(--sunken);
+  font-weight: 600;
+}
+
+.treeMaster + .treeLeaf {
+  margin-top: 2px;
+}
+
+.treeLeaf + .treeMaster {
+  margin-top: 6px;
+}
+
+.treeLeaf {
+  margin-left: 12px;
+  padding: 6px 10px 6px 26px;
+  border-left: 1px solid var(--line-2);
+  color: var(--ink-2);
+}
+
+.treeLeafMuted {
+  color: var(--ink-3);
+}
+
+.treeCount {
+  font-family: var(--font-mono);
+  font-weight: 400;
+}
+
+.blueprints {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.blueprint {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.placeholder {
+  position: absolute;
+  overflow: hidden;
+  padding: 1px 3px;
+  border: 1px solid var(--ink-2);
+  background: var(--surface);
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 8px;
+}
+
+.placeholderTitle {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.sheetEmpty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.blueprintName {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.blueprintTitle {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.blueprintCount {
+  flex: none;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+}
+
+.blueprintType {
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.usageList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 28px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.usageRow {
+  display: grid;
+  grid-template-columns: minmax(0, 120px) 1fr 120px;
+  gap: 10px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.usageRowValue {
+  color: var(--ink-2);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.roles {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.roleRow {
+  display: grid;
+  grid-template-columns: 100px 36px 1fr 40px;
+  gap: 10px;
+  align-items: center;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.roleName {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roleCount {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+}
+
+.roleBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.roleTrack {
+  display: block;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--sunken);
+}
+
+.roleFill {
+  display: block;
+  height: 100%;
+  border-radius: 2px;
+  background: var(--ink);
+}
+
+.roleLow {
+  color: var(--warn);
+}
+
+.roleLow .roleFill,
+.roleFillLow {
+  background: var(--warn);
+}
+
+.roleEvidence {
+  overflow: hidden;
+  color: var(--ink-3);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.roleValue {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  text-align: right;
+}
+
+.unsupported {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px 16px;
+  align-items: baseline;
+  margin: 0;
+  font-size: 13px;
+}
+
+.unsupportedItem {
+  display: contents;
+}
+
+.unsupported dt,
+.unsupported dd {
+  margin: 0;
+}
+
+.unsupportedDisclosure {
+  display: block;
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.skeletonStrip {
+  height: 46px;
+  border-radius: var(--radius-xl);
+}
+
+.skeletonPanel {
+  height: 248px;
+  border-radius: var(--radius-3xl);
+}
+
+.skeletonSection {
+  height: 320px;
+  border-radius: var(--radius-xl);
+}

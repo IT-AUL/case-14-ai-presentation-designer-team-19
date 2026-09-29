@@ -1,0 +1,73 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.skeleton {
+  aspect-ratio: 16 / 9;
+  border-radius: 3px;
+}
+
+.thumb {
+  position: relative;
+  display: block;
+  overflow: hidden;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px var(--line);
+  transition: box-shadow 0.15s;
+}
+
+.thumb:hover,
+.thumb:focus-visible {
+  box-shadow: 0 0 0 2px var(--ink);
+}
+
+.thumb:focus-visible {
+  outline: none;
+}
+
+.number {
+  position: absolute;
+  bottom: 2px;
+  left: 3px;
+  padding: 0 3px;
+  border-radius: 3px;
+  background: color-mix(in oklab, var(--surface) 85%, transparent);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 9px;
+  line-height: 13px;
+}
+
+.placeholder {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 140px;
+  padding: 16px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-lg);
+  background: var(--sunken);
+}
+
+.placeholderText {
+  max-width: 300px;
+  color: var(--ink-2);
+  font-size: 12px;
+  text-align: center;
+}
+
+.message {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.message[role='alert'] {
+  color: var(--error);
+}

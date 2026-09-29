@@ -1,0 +1,88 @@
+.success,
+.partial {
+  display: flex;
+  flex: none;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+
+.success {
+  gap: 16px;
+  padding: 14px 20px;
+  background: var(--ok-bg);
+  animation: global(dd-fade) 0.4s ease-out;
+}
+
+.partial {
+  gap: 12px;
+  padding: 12px 20px;
+  background: var(--warn-bg);
+}
+
+.check {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--ok);
+  color: var(--inv);
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.successTitle {
+  color: var(--ok);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.partialTitle {
+  flex: none;
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.detail {
+  font-size: 13px;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.primary {
+  display: inline-flex;
+  flex: none;
+  gap: 6px;
+  align-items: center;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius-md);
+  background: var(--ink);
+  color: var(--inv);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.close {
+  flex: none;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: 12px;
+  white-space: nowrap;
+}

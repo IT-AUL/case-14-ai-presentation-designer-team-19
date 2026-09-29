@@ -1,0 +1,47 @@
+.hit {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  margin: -3px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--inv);
+  cursor: pointer;
+}
+
+.hit:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 0;
+}
+
+.box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: 1.5px solid var(--ink-2);
+  border-radius: 4px;
+  background: var(--surface);
+}
+
+.hit[aria-checked='true'] .box,
+.hit[aria-checked='mixed'] .box {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.hit[aria-disabled='true'] {
+  cursor: not-allowed;
+}
+
+.hit[aria-disabled='true'] .box {
+  border-style: dashed;
+  border-color: var(--line-2);
+  background: var(--sunken);
+}

@@ -1,0 +1,45 @@
+# OR-016 model license manifest — every model the project declares
+# (configs/models.example.yaml, providers/* constants, MODELS.md
+# candidates) must appear here with license, size and source.
+# Validated by scripts/check_model_licenses.py / `deckdna check-models`.
+version: "1"
+policy:
+  allowed_licenses: [apache-2.0, mit]
+  max_size_b: 35        # text / vision / embedding, per official TZ
+  max_image_size_b: 20  # image generation (stretch), per official TZ
+models:
+  - model_id: qwen2.5-32b-instruct
+    license: apache-2.0
+    size_b: 32
+    modality: text
+    declared_in: configs/models.example.yaml (models.text default)
+    source: https://huggingface.co/Qwen/Qwen2.5-32B-Instruct
+  - model_id: qwen2.5-vl-32b-instruct
+    license: apache-2.0
+    size_b: 32
+    modality: vision
+    declared_in: configs/models.example.yaml (models.vision default)
+    source: https://huggingface.co/Qwen/Qwen2.5-VL-32B-Instruct
+  - model_id: bge-m3
+    license: mit
+    size_b: 0.568
+    modality: embedding
+    declared_in: configs/models.example.yaml (models.embedding default)
+    source: https://huggingface.co/BAAI/bge-m3
+  - model_id: qwen3.8-27b
+    license: unverified
+    size_b: 27  # from the model name / TZ («Qwen 3.8 27b»); unverified
+    modality: text
+    declared_in: backend/deckdna/providers/vk_inference.py (DEFAULT_VK_MODEL)
+    source: official TZ — top-10 must use VK Inference «Qwen 3.8 27b»
+    notes: >-
+      VK-hosted model id from the organizer TZ; no public HF card and no
+      official endpoint spec yet — license and exact parameter count are
+      unverified until the VK endpoint spec is published.
+  - model_id: flux.1-schnell
+    license: apache-2.0
+    size_b: 12
+    modality: image
+    declared_in: docs/MODELS.md (image generation role, off by default)
+    source: https://huggingface.co/black-forest-labs/FLUX.1-schnell
+    notes: stretch role only; adapter absent, disabled in the profile.

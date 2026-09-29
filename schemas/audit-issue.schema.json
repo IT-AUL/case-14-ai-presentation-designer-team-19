@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deckdna/schemas/audit-issue.schema.json",
+  "title": "AuditIssue",
+  "type": "object",
+  "required": [
+    "schema_version", "id", "audit_run_id", "rule_code", "deterministic",
+    "severity", "message", "status", "repairable"
+  ],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "id": { "type": "string" },
+    "audit_run_id": { "type": "string" },
+    "deck_revision": { "type": "integer" },
+    "rule_code": { "type": "string" },
+    "deterministic": { "type": "boolean" },
+    "severity": {
+      "type": "string",
+      "enum": ["info", "warning", "error", "blocker"]
+    },
+    "slide_id": { "type": ["string", "null"] },
+    "slide_index": { "type": ["integer", "null"] },
+    "shape_ids": { "type": "array", "items": { "type": "string" } },
+    "bbox": {
+      "type": ["object", "null"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "w": { "type": "number" },
+        "h": { "type": "number" }
+      }
+    },
+    "message": { "type": "string" },
+    "measured_value": { "type": ["string", "number", "null"] },
+    "threshold": { "type": ["string", "number", "null"] },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "kind": { "type": "string", "enum": ["geometry", "style", "text", "model_verdict", "source_span", "package"] },
+          "ref": { "type": "string" },
+          "detail": { "type": "string" }
+        }
+      }
+    },
+    "confidence": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["open", "selected", "fixed", "dismissed", "unresolved"]
+    },
+    "repairable": { "type": "boolean" },
+    "proposed_actions": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "provenance": {
+      "type": "object",
+      "properties": {
+        "rule_version": { "type": "string" },
+        "model_id": { "type": "string" },
+        "prompt_version": { "type": "string" }
+      }
+    }
+  }
+}

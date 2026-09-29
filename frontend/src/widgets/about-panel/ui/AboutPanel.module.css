@@ -1,0 +1,220 @@
+.block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.block + .block {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.blockTitle {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.note {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.note > span {
+  vertical-align: middle;
+  transform: scale(0.85);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 13px;
+}
+
+.gridRow {
+  display: contents;
+}
+
+.gridRow dt {
+  color: var(--ink-3);
+}
+
+.gridRow dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.mono {
+  font-family: var(--font-mono);
+}
+
+.list,
+.itemList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.rowText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.rowLabel {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.rowDetail {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.raw {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.raw summary {
+  cursor: pointer;
+}
+
+.pre {
+  max-height: 240px;
+  margin: 8px 0 0;
+  padding: 10px 12px;
+  overflow: auto;
+  border-radius: var(--radius-md);
+  background: var(--sunken);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.skillHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.skillName {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.version {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--sunken);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 4px;
+}
+
+.groupTitle {
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.groupCount {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-weight: 400;
+}
+
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+}
+
+.itemName {
+  font-family: var(--font-mono);
+}
+
+.itemDetail {
+  flex-basis: 100%;
+  color: var(--ink-3);
+}
+
+.rule {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.ruleText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ruleName {
+  font-size: 13px;
+}
+
+.ruleCode {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.autoFix {
+  flex: none;
+  padding: 1px 6px;
+  border-radius: var(--radius-xs);
+  background: var(--ok-bg);
+  color: var(--ok);
+  font-size: 11px;
+}
+
+.error {
+  margin: 0;
+  color: var(--error);
+  font-size: 13px;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeletonLine {
+  height: 14px;
+  border-radius: var(--radius-xs);
+}

@@ -1,0 +1,74 @@
+version: "1"
+# Пороги реализованных deterministic-правил (audit/basic.py читает этот
+# файл через audit/config.py — правки реально меняют поведение):
+overflow_tolerance: 0.05            # text.overflow: допуск оценки по метрикам шрифта
+aspect_tolerance: 0.03              # image.aspect_ratio: допуск отклонения aspect
+raster_only_slide_area: 0.90        # editability.raster_only: доля площади картинкой
+out_of_bounds_tolerance: 0.005      # layout.out_of_bounds: допуск за край [0,1]
+duplicate_similarity_threshold: 0.9 # integrity.duplicate_slide: jaccard-порог
+max_bullets_per_slide: 6            # density.bullet_count: буллетов в одном txBody
+overlap_min_cover: 0.25             # layout.unintended_overlap: мин. покрытие меньшей
+overlap_containment: 0.90           #   покрытие ≥ = вложенность, не коллизия
+overlap_min_shape_area: 0.01        #   фигура <1% слайда = акцент/иконка (гейт)
+overlap_bg_area: 0.80               #   фигура ≥80% слайда = фоновая плашка (гейт)
+edge_margin: 0.03                   # layout.edge_margin: зазор до края слайда
+edge_bleed_span: 0.95               #   span оси ≥ = осознанный edge-to-edge (гейт)
+font_floor_pt: 8.0                  # text.font_floor: мин. читаемый кегль (= FONT_FLOOR_PT)
+contrast_min_ratio: 4.5             # accessibility.contrast: WCAG AA текст/фон
+max_words_per_bullet: 15            # density.bullet_length: слов в одном буллет-параграфе
+max_table_rows: 7                   # density.table_size: строк таблицы
+max_table_cols: 5                   # density.table_size: колонок таблицы
+max_font_families: 2                # template.font_family: семейств шрифтов на слайде
+max_chart_series: 5                 # density.chart_series: серий (c:ser) в диаграмме
+occupancy_min: 0.25                 # density.occupancy: мин. доля площади под контентом
+occupancy_max: 0.75                 # density.occupancy: макс. доля площади под контентом
+font_scale_tolerance: 0.10          # template.font_scale: допуск отклонения кегля от шага шкалы
+font_scale_min_uses: 3               # template.font_scale: размер на ≥N ранах колоды = ступень наблюдаемой шкалы
+font_scale_display_pt: 40             # template.font_scale: кегль ≥ порога = дисплейный (вне шкалы текста)
+color_tolerance_delta_e: 8          # template.color_palette: допуск ΔE (CIE76) до палитры темы
+anchor_tolerance_pt: 2                # template.anchor_position: допуск сдвига footer/лого (pt)
+# integrity.placeholder_text: дополнительные WHOLE-ярус паттерны —
+# фигура флагается, когда ВЕСЬ её текст целиком матчится паттерну
+# (регистронезависимо). Маркер внутри длинного текста — STRONG-ярус
+# в коде, сюда не вынесен (подстрока типа «Образец» дала бы FP).
+placeholder_patterns:
+  - lorem
+  - TODO
+  - XXX
+  - Вставить
+  - Образец
+  - Заголовок$
+contextual:
+  enabled: true
+  low_temperature: 0.0
+  uncertain_downgrade_to: warning
+  second_pass_on_error: true
+  # Фаза 4 (надёжность) — страховочные дедлайны, не основное решение
+  # проблемы латентности (см. audit/contextual.py). call_timeout_seconds —
+  # hard timeout ОДНОГО vision_json-вызова; budget_seconds — общий бюджет
+  # на всю contextual-аудит стадию одного варианта. Слайды, не успевшие
+  # в бюджет, остаются честно непроверенными (uncertain), а не блокируют
+  # вариант навечно.
+  call_timeout_seconds: 90
+  budget_seconds: 240
+repair:
+  max_iterations: 2
+  allowed_actions:
+    - shorten_text
+    - rewrite_title
+    - split_slide
+    - merge_slide
+    - swap_exemplar
+    - move_shape
+    - resize_shape
+    - align_shapes
+    - map_font
+    - map_color
+    - recrop_image
+    - replace_visual
+    - clone_group
+    - remove_group
+    - add_chart_metadata
+    - reorder_slides
+    - remove_placeholder
+    - native_rebuild

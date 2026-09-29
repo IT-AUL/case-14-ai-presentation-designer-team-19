@@ -1,0 +1,30 @@
+# Secrets
+*.pem
+*.key
+id_ed25519*
+id_rsa*
+deploy/**/.ghcr-token
+.env
+.env.*
+!.env.example
+
+# Dependencies and builds
+node_modules/
+dist/
+dist-e2e/
+dist-live/
+coverage/
+*.tsbuildinfo
+.npm-cache/
+
+# Tests
+playwright-report/
+test-results/
+test-results-live/
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log

@@ -1,0 +1,172 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deckdna/schemas/quality-passport.schema.json",
+  "title": "QualityPassport",
+  "type": "object",
+  "required": [
+    "schema_version", "run_id", "generated_at", "inputs",
+    "metrics", "issues_summary", "provenance", "exports"
+  ],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "run_id": { "type": "string" },
+    "variant_id": { "type": ["string", "null"] },
+    "generated_at": { "type": "string", "format": "date-time" },
+    "inputs": {
+      "type": "object",
+      "required": ["template_sha256", "content_pack_id", "brief_hash"],
+      "properties": {
+        "template_sha256": { "type": "string" },
+        "template_name": { "type": "string" },
+        "content_pack_id": { "type": "string" },
+        "brief_hash": { "type": "string" }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "required": ["validity", "editability", "timings"],
+      "properties": {
+        "validity": {
+          "type": "object",
+          "properties": {
+            "opens_cleanly": { "type": "boolean" },
+            "ooxml_errors": { "type": "integer" },
+            "round_trip_ok": { "type": "boolean" }
+          }
+        },
+        "editability": {
+          "type": "object",
+          "properties": {
+            "pei_level": { "type": "integer", "minimum": 0, "maximum": 5 },
+            "native_text_ratio": { "type": "number" },
+            "raster_only_slides": { "type": "integer" },
+            "preserved_unsupported_objects": { "type": "integer" }
+          }
+        },
+        "style_fidelity": {
+          "type": "object",
+          "properties": {
+            "palette_compliance": { "type": "number" },
+            "font_compliance": { "type": "number" },
+            "layout_origin_compliance": { "type": "number" },
+            "anchor_compliance": { "type": "number" }
+          }
+        },
+        "content_support": {
+          "type": "object",
+          "properties": {
+            "supported_claims": { "type": "integer" },
+            "unsupported_claims": { "type": "integer" },
+            "numbers_verified": { "type": "integer" },
+            "numbers_failed": { "type": "integer" }
+          }
+        },
+        "readability": {
+          "type": "object",
+          "properties": {
+            "contrast_failures": { "type": "integer" },
+            "overflow_count": { "type": "integer" },
+            "avg_occupancy": { "type": "number" }
+          }
+        },
+        "timings": {
+          "type": "object",
+          "properties": {
+            "total_seconds": { "type": "number" },
+            "per_stage": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["stage", "seconds"],
+                "properties": {
+                  "stage": { "type": "string" },
+                  "seconds": { "type": "number" },
+                  "cached": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "usage": {
+          "type": "object",
+          "properties": {
+            "total_tokens": { "type": "integer" },
+            "model_calls": { "type": "integer" },
+            "per_model": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "model_id": { "type": "string" },
+                  "calls": { "type": "integer" },
+                  "input_tokens": { "type": "integer" },
+                  "output_tokens": { "type": "integer" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "issues_summary": {
+      "type": "object",
+      "properties": {
+        "blocker": { "type": "integer" },
+        "error": { "type": "integer" },
+        "warning": { "type": "integer" },
+        "info": { "type": "integer" },
+        "fixed": { "type": "integer" },
+        "dismissed": { "type": "integer" },
+        "unresolved": { "type": "integer" }
+      }
+    },
+    "fallbacks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "feature": { "type": "string" },
+          "slide_index": { "type": "integer" },
+          "strategy": { "type": "string" },
+          "disclosure": { "type": "string" }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["pipeline_version", "prompt_versions", "model_profiles", "config_hashes"],
+      "properties": {
+        "pipeline_version": { "type": "string" },
+        "skill_version": { "type": "string" },
+        "prompt_versions": { "type": "object", "additionalProperties": { "type": "string" } },
+        "model_profiles": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "model_id": { "type": "string" },
+              "provider": { "type": "string" },
+              "size_b": { "type": "number" },
+              "license": { "type": "string" }
+            }
+          }
+        },
+        "config_hashes": { "type": "object", "additionalProperties": { "type": "string" } },
+        "seed": { "type": "integer" }
+      }
+    },
+    "exports": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["format", "artifact_id", "sha256"],
+        "properties": {
+          "format": { "type": "string", "enum": ["pptx", "pdf", "html"] },
+          "artifact_id": { "type": "string" },
+          "sha256": { "type": "string" },
+          "size_bytes": { "type": "integer" }
+        }
+      }
+    }
+  }
+}

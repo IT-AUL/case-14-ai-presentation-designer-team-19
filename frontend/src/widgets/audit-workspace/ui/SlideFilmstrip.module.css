@@ -1,0 +1,81 @@
+.strip {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  overflow: auto;
+  border-right: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.item {
+  position: relative;
+  display: flex;
+  flex: none;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  text-align: left;
+}
+
+.number {
+  width: 16px;
+  padding-top: 2px;
+  color: var(--ink-3);
+  font-size: 10px;
+}
+
+.thumb {
+  display: block;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  border-radius: 3px;
+  box-shadow: 0 0 0 2px transparent, 0 0 0 3px var(--line);
+}
+
+.current {
+  box-shadow: 0 0 0 2px var(--ink), 0 0 0 3px var(--line);
+}
+
+.placeholder {
+  display: block;
+  aspect-ratio: 16 / 9;
+  background: var(--surface);
+}
+
+.badge {
+  --tone: var(--error);
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 9px;
+  background: var(--tone);
+  color: var(--inv);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 500;
+}
+
+.badge[data-severity='blocker'] {
+  --tone: var(--blocker);
+}
+
+.badge[data-severity='warning'] {
+  --tone: var(--warn);
+}
+
+.badge[data-severity='info'] {
+  --tone: var(--info);
+}
+
+.badge[data-severity='clean'] {
+  --tone: var(--ok);
+}

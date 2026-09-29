@@ -1,0 +1,18 @@
+.wrap {
+  display: inline-flex;
+  flex: none;
+  cursor: not-allowed;
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.wrap > button {
+  pointer-events: none;
+}

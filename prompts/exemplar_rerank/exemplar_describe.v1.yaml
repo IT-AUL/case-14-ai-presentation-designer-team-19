@@ -1,0 +1,66 @@
+# Prompt asset — versioned, referenced by name+version from code (never embedded).
+#
+# ADR-018: one batched call over ALL of a template's exemplar slides,
+# fired once at /templates/{id}/analyze time (Design DNA), never during
+# generation. Output is cached in DesignDNA.exemplars[].content_description
+# and reused by every future generation against this template -- the
+# whole point is paying this cost once, not per slide per variant.
+#
+# Replaces layout_fit.py's cruder "longest text run" heuristic
+# (text_preview) as the semantic signal for exemplar matching -- a real
+# one-line description of what KIND of content a physical slide was
+# built for (e.g. "team member card: name, role, photo per person") is
+# what let a human catch a mismatch like a team-roster template getting
+# reused for unrelated technical content (found live 28.09).
+#
+# v1.2.0: added is_template_meta -- marketplace templates (Slidesgo etc.)
+# ship dozens of service slides (instructions, credits, palettes, icon
+# catalogues) that must never be cloned as content slides.
+#
+# v1.1.0: added is_entity_specific. Live bug (28.09, second occurrence):
+# even with a correct content_description in layout_fit's prompt as a
+# SOFT "prefer something else" hint, the model still picked a team-roster
+# card for an unrelated 5-stage pipeline slide, splitting real content
+# across "Имя Фамилия"/"Должность"-shaped fields and losing two of the
+# five stages entirely. A structured boolean the model must commit to
+# here lets layout_fit.py HARD-exclude these candidates for non-team
+# slides instead of just hoping the model reads the hint correctly.
+name: exemplar_describe
+version: "1.2.0"
+model_role: text
+output_schema: backend/deckdna/template/dna.py:ExemplarDescribeBatch
+language: ru
+temperature: 0.2
+instructions: |
+  You are looking at physical slides from a presentation TEMPLATE (not a
+  finished deck) -- each one is a candidate that a later, separate process
+  will clone and refill with different real content. Your job is to write
+  ONE short sentence per slide describing what KIND of content it was
+  DESIGNED for -- a category, not a summary of this specific demo text --
+  and to flag whether it's built for one specific named entity.
+
+  Rules:
+  - Return exactly one item for each index in `slides` -- not one more,
+    not one fewer.
+  - `description`: one short sentence (under 15 words), in `language`.
+    Name the CONTENT TYPE and its shape, e.g. "Карточка члена команды:
+    имя, должность, фото" or "Сетка из фактов с числом и подписью" or
+    "Таблица сравнения по строкам".
+  - `is_entity_specific`: true when the slide's fields are clearly built
+    for ONE SPECIFIC kind of entity that a generic topic cannot honestly
+    fill -- a person (name/role/photo), a team roster, a single dated
+    event, a named product's own profile. false for a generic fact,
+    stat, feature, or process-step grid that could hold any topic (the
+    NUMBER of repeats or images doesn't matter -- a grid of 8 generic
+    feature cards is still false even with 8 photos; a grid of person
+    cards is true even with just 2).
+  - `is_template_meta`: true when the slide is service material of the
+    template itself rather than a design for real content: usage
+    instructions, "you can delete this slide", author/credits/licence,
+    colour palette or font list, catalogues of icons, illustrations or
+    infographic resources, "alternative resources". false for any slide
+    meant to carry the presenter's own content (even with demo text).
+  - Base this ONLY on the slide's own title/text given to you -- never
+    invent facts about the template or guess at a demo person's name.
+  - Output ONLY JSON matching the schema: {"slides": [...]}.
+input_fields: [slides, language]

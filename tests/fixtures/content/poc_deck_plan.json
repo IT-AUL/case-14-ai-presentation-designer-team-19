@@ -1,0 +1,108 @@
+{
+  "schema_version": "0.1.0",
+  "id": "poc-deck-plan",
+  "brief": {
+    "purpose": "Демонстрация сквозного пути компилятора",
+    "audience": "жюри ЛЦТ",
+    "language": "ru",
+    "target_slide_count": 5
+  },
+  "evidence_graph_id": "poc-evidence-graph",
+  "objective": "Собрать multi-slide deck из шаблона VK Tech",
+  "audience": "жюри ЛЦТ",
+  "language": "ru",
+  "slides": [
+    {
+      "id": "s1",
+      "index": 1,
+      "purpose": "overview",
+      "title_intent": "DeckDNA компилирует шаблон в нативную колоду",
+      "key_message": "Сквозной путь работает без ручной правки",
+      "evidence_ids": ["ev-1"],
+      "content_units": [
+        {"role": "title", "kind": "title", "text": "DeckDNA компилирует шаблон"},
+        {"role": "subtitle", "kind": "subtitle", "text": "шаблон в нативную колоду"},
+        {"role": "body", "kind": "bullet", "text": "Exemplar-first выбор слайда"},
+        {"role": "body", "kind": "bullet", "text": "Relationship-safe клонирование"},
+        {"role": "body", "kind": "bullet", "text": "Статичный контент из DeckPlan"},
+        {"role": "body", "kind": "bullet", "text": "Ноль ручных правок"}
+      ],
+      "density_budget": {"level": "medium"}
+    },
+    {
+      "id": "s2",
+      "index": 2,
+      "purpose": "problem",
+      "title_intent": "Шаблоны не масштабируются на произвольный контент",
+      "key_message": "Плотные декоративные слайды ломают прямолинейную замену",
+      "evidence_ids": ["ev-2"],
+      "content_units": [
+        {"role": "title", "kind": "title", "text": "Шаблоны не масштабируются"},
+        {"role": "body", "kind": "paragraph", "text": "Произвольные pptx содержат декоративную типографику"},
+        {"role": "body", "kind": "bullet", "text": "Дроблёные runs ломают замену"},
+        {"role": "body", "kind": "bullet", "text": "Пустые runs — это структура, не слоты"},
+        {"role": "body", "kind": "bullet", "text": "Таблицы и микроподписи не терпят прозу"},
+        {"role": "body", "kind": "bullet", "text": "Нужен гейт контентности"}
+      ],
+      "density_budget": {"level": "medium"}
+    },
+    {
+      "id": "s3",
+      "index": 3,
+      "purpose": "solution",
+      "title_intent": "Клонирование по графу зависимостей сохраняет шаблон",
+      "key_message": "Выходной пакет — транзитивное замыкание exemplar'ов",
+      "evidence_ids": ["ev-3"],
+      "content_units": [
+        {"role": "title", "kind": "title", "text": "Клон по графу зависимостей"},
+        {"role": "body", "kind": "bullet", "text": "Layout, master, theme, шрифты — в замыкании"},
+        {"role": "body", "kind": "bullet", "text": "Media и chart-части переносятся"},
+        {"role": "body", "kind": "bullet", "text": "sldIdLst и rels переписаны под N слайдов"},
+        {"role": "body", "kind": "bullet", "text": "Content-types покрывают все части"},
+        {"role": "body", "kind": "bullet", "text": "Dangling rels запрещены hard gate"}
+      ],
+      "density_budget": {"level": "dense"}
+    },
+    {
+      "id": "s4",
+      "index": 4,
+      "purpose": "data",
+      "title_intent": "Отчёт о композиции фиксирует каждый слайд",
+      "key_message": "Per-slide и суммарные счётчики замены",
+      "evidence_ids": ["ev-4"],
+      "content_units": [
+        {"role": "title", "kind": "title", "text": "Отчёт о композиции"},
+        {"role": "kpi", "kind": "number", "text": "5"},
+        {"role": "kpi-label", "kind": "label", "text": "слайдов в колоде"},
+        {"role": "kpi", "kind": "number", "text": "0"},
+        {"role": "kpi-label", "kind": "label", "text": "dangling relationships"},
+        {"role": "kpi", "kind": "number", "text": "100%"},
+        {"role": "kpi-label", "kind": "label", "text": "content-type coverage"},
+        {"role": "note", "kind": "paragraph", "text": "Exemplar выбран на доминантном layout"}
+      ],
+      "density_budget": {"level": "medium"}
+    },
+    {
+      "id": "s5",
+      "index": 5,
+      "purpose": "cta",
+      "title_intent": "Дальше — семантический slot mapping и fitting",
+      "key_message": "Следующая волна: fitting и семантические слоты",
+      "evidence_ids": ["ev-5"],
+      "content_units": [
+        {"role": "title", "kind": "title", "text": "Следующие шаги"},
+        {"role": "body", "kind": "bullet", "text": "Семантический slot mapping"},
+        {"role": "body", "kind": "bullet", "text": "Fitting и overflow-гейты"},
+        {"role": "body", "kind": "bullet", "text": "Story Director интеграция"},
+        {"role": "body", "kind": "bullet", "text": "Render arena и bounded repair"},
+        {"role": "note", "kind": "note", "text": "POC фиксирует контракт DeckPlan"}
+      ],
+      "density_budget": {"level": "medium"}
+    }
+  ],
+  "provenance": {
+    "planner": "poc-fixture",
+    "prompt_version": "0.0.0",
+    "schema_version": "0.1.0"
+  }
+}

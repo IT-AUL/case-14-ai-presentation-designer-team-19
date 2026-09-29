@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "run_id": "d9a3da665be048ad8e74df4b6911c230",
+  "generated_at": "2026-09-25T14:04:49.173459Z",
+  "inputs": {
+    "template_sha256": "cbbe3aa6a21d23cebc4d1383b93dd07a9cea460d683de1903567b616c839485d",
+    "template_name": "VK Tech шаблон.pptx",
+    "content_pack_id": "pack-7aa41ae9",
+    "brief_hash": "05130b426961f23ef9a4c3cc1ca8a2632d174e7e6abcb9fcbffa8506de116095"
+  },
+  "metrics": {
+    "validity": {
+      "opens_cleanly": true,
+      "ooxml_errors": 0,
+      "round_trip_ok": true
+    },
+    "editability": {
+      "pei_level": 3,
+      "native_text_ratio": 0.4824,
+      "raster_only_slides": 0
+    },
+    "content_support": {
+      "supported_claims": 193
+    },
+    "readability": {
+      "contrast_failures": 18,
+      "overflow_count": 23
+    },
+    "timings": {
+      "total_seconds": 2.6595520850000867
+    }
+  },
+  "issues_summary": {
+    "blocker": 0,
+    "error": 54,
+    "warning": 54,
+    "info": 0,
+    "unresolved": 108
+  },
+  "provenance": {
+    "pipeline_version": "deckdna-poc/0.1.0",
+    "skill_version": "0.1.0",
+    "prompt_versions": {},
+    "model_profiles": [],
+    "config_hashes": {
+      "configs/generation.default.yaml": "80f89b7a7a3b8aae4c3ac5ac571b7e926abf4841ce9afbda9337a24b92426056",
+      "configs/audit.default.yaml": "686b9dfded61b7a08a103fea9afd39d782b21ee19cfd3cc3fd6b797bba1f3694"
+    }
+  },
+  "exports": [
+    {
+      "format": "pptx",
+      "artifact_id": "deck.pptx",
+      "sha256": "c343f1eb019c25a6da5ae5b9ff93b60d49f9061e8ec64a815da67ea054526d19",
+      "size_bytes": 17057765
+    }
+  ]
+}

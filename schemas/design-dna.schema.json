@@ -1,0 +1,269 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deckdna/schemas/design-dna.schema.json",
+  "title": "DesignDNA",
+  "type": "object",
+  "required": [
+    "schema_version", "template_id", "analysis_id", "slide_size",
+    "declared", "observed", "anchors", "slide_roles", "exemplars",
+    "components", "capacities", "unsupported_features", "created_at"
+  ],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "template_id": { "type": "string" },
+    "analysis_id": { "type": "string" },
+    "created_at": { "type": "string", "format": "date-time" },
+    "slide_size": {
+      "type": "object",
+      "required": ["width_emu", "height_emu", "aspect_ratio"],
+      "properties": {
+        "width_emu": { "type": "integer" },
+        "height_emu": { "type": "integer" },
+        "aspect_ratio": { "type": "number" }
+      }
+    },
+    "declared": {
+      "type": "object",
+      "required": ["themes", "masters", "layouts"],
+      "properties": {
+        "themes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["part", "major_font", "minor_font", "colors"],
+            "properties": {
+              "part": { "type": "string" },
+              "major_font": { "type": "string" },
+              "minor_font": { "type": "string" },
+              "colors": {
+                "type": "object",
+                "additionalProperties": { "type": "string", "pattern": "^[0-9A-Fa-f]{6}$" }
+              }
+            }
+          }
+        },
+        "masters": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["part", "layout_parts", "placeholders"],
+            "properties": {
+              "part": { "type": "string" },
+              "layout_parts": { "type": "array", "items": { "type": "string" } },
+              "placeholders": { "type": "array", "items": { "$ref": "#/$defs/placeholder" } }
+            }
+          }
+        },
+        "layouts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["part", "name", "type", "placeholders"],
+            "properties": {
+              "part": { "type": "string" },
+              "name": { "type": "string" },
+              "type": { "type": "string" },
+              "matching_name": { "type": "string" },
+              "placeholders": { "type": "array", "items": { "$ref": "#/$defs/placeholder" } }
+            }
+          }
+        }
+      }
+    },
+    "observed": {
+      "type": "object",
+      "required": ["fonts", "font_sizes", "colors", "spacing"],
+      "properties": {
+        "fonts": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/frequency" }
+        },
+        "font_sizes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["size_pt", "frequency", "roles"],
+            "properties": {
+              "size_pt": { "type": "number" },
+              "frequency": { "type": "integer" },
+              "roles": { "type": "array", "items": { "type": "string" } }
+            }
+          }
+        },
+        "colors": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/frequency" }
+        },
+        "spacing": {
+          "type": "object",
+          "properties": {
+            "common_margins_emu": { "type": "array", "items": { "type": "integer" } },
+            "common_gaps_emu": { "type": "array", "items": { "type": "integer" } },
+            "alignment_lines_x": { "type": "array", "items": { "type": "integer" } },
+            "alignment_lines_y": { "type": "array", "items": { "type": "integer" } }
+          }
+        },
+        "backgrounds": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "kind": { "type": "string", "enum": ["solid", "gradient", "image", "pattern", "inherit"] },
+              "value": { "type": "string" },
+              "frequency": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    "anchors": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "bbox", "slide_coverage"],
+        "properties": {
+          "kind": { "type": "string", "enum": ["logo", "footer", "page_number", "date", "watermark"] },
+          "bbox": { "$ref": "#/$defs/bbox" },
+          "slide_coverage": { "type": "number", "minimum": 0, "maximum": 1 },
+          "source_parts": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "slide_roles": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["role", "slide_ids", "confidence"],
+        "properties": {
+          "role": { "type": "string" },
+          "slide_ids": { "type": "array", "items": { "type": "string" } },
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "evidence": { "type": "string" }
+        }
+      }
+    },
+    "exemplars": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["slide_index", "part", "role", "cluster_id"],
+        "properties": {
+          "slide_index": { "type": "integer" },
+          "part": { "type": "string" },
+          "role": { "type": "string" },
+          "cluster_id": { "type": "string" },
+          "layout_part": { "type": "string" },
+          "preview_artifact_id": { "type": "string" },
+          "mutability": { "type": "string", "enum": ["fully_editable", "partially_editable", "preserve_only"] },
+          "content_description": {
+            "type": "string",
+            "description": "One short sentence on what KIND of content this exemplar is built for (e.g. 'team member card: name, role, team' vs 'generic fact grid'), for semantic template matching (ADR-018). LLM-generated best-effort enrichment -- unlike the rest of Design DNA, NOT guaranteed reproducible across runs; absent when no model was available. See ADR-018."
+          },
+          "content_is_template_meta": {
+            "type": "boolean",
+            "description": "True when the slide is service material of the template itself (usage instructions, author credits, colour palette, font list, icon or illustration catalogue, 'delete this slide' notes) rather than a slide design for real content -- excluded from exemplar matching for every purpose. Same reproducibility caveat as content_description."
+          },
+          "content_is_entity_specific": {
+            "type": "boolean",
+            "description": "True when this exemplar is built for one specific named entity (a person, a team roster, a single dated event) that a generic topic cannot honestly fill -- a hard exclusion signal for exemplar matching, not just a soft preference. Computed alongside content_description, same reproducibility caveat. Absent when content_description is also absent."
+          }
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "semantic_role", "source_slide", "shape_ids"],
+        "properties": {
+          "id": { "type": "string" },
+          "semantic_role": { "type": "string" },
+          "source_slide": { "type": "string" },
+          "shape_ids": { "type": "array", "items": { "type": "string" } },
+          "cardinality": {
+            "type": "object",
+            "properties": {
+              "min": { "type": "integer" },
+              "max": { "type": "integer" },
+              "observed": { "type": "integer" }
+            }
+          },
+          "slots": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["role", "kind"],
+              "properties": {
+                "role": { "type": "string" },
+                "kind": { "type": "string", "enum": ["text", "number", "image", "icon", "chart", "table", "label"] },
+                "max_chars": { "type": "integer" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "capacities": {
+      "type": "object",
+      "properties": {
+        "max_title_chars": { "type": "integer" },
+        "max_body_chars": { "type": "integer" },
+        "max_bullets": { "type": "integer" },
+        "max_words_per_bullet": { "type": "integer" },
+        "max_table_rows": { "type": "integer" },
+        "max_table_cols": { "type": "integer" },
+        "max_chart_series": { "type": "integer" },
+        "occupancy_range": {
+          "type": "object",
+          "properties": {
+            "min": { "type": "number" },
+            "max": { "type": "number" }
+          }
+        }
+      }
+    },
+    "unsupported_features": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["feature", "location", "strategy"],
+        "properties": {
+          "feature": { "type": "string" },
+          "location": { "type": "string" },
+          "strategy": { "type": "string", "enum": ["preserve", "immutable_decoration", "raster_fallback", "skip"] },
+          "disclosure": { "type": "string" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "bbox": {
+      "type": "object",
+      "required": ["x", "y", "w", "h"],
+      "properties": {
+        "x": { "type": "number" },
+        "y": { "type": "number" },
+        "w": { "type": "number" },
+        "h": { "type": "number" }
+      }
+    },
+    "placeholder": {
+      "type": "object",
+      "required": ["type"],
+      "properties": {
+        "type": { "type": "string" },
+        "idx": { "type": "integer" },
+        "bbox": { "$ref": "#/$defs/bbox" }
+      }
+    },
+    "frequency": {
+      "type": "object",
+      "required": ["value", "frequency"],
+      "properties": {
+        "value": { "type": "string" },
+        "frequency": { "type": "integer" },
+        "contexts": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

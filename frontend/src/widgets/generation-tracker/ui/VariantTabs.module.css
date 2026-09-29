@@ -1,0 +1,96 @@
+.tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tab {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  min-width: 0;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.tab:hover {
+  border-color: var(--line-2);
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.selected,
+.selected:hover {
+  border-color: var(--ink);
+}
+
+.cover {
+  flex: none;
+  width: 72px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-xs);
+}
+
+.coverReady {
+  border-style: solid;
+  border-color: var(--line);
+}
+
+.coverBuilding {
+  border-color: var(--ink-3);
+  animation: global(dd-pulse) 1.8s ease-in-out infinite;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  font-size: 14px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status {
+  color: var(--ink-2);
+  font-size: 12px;
+}
+
+.running .status {
+  color: var(--info);
+}
+
+.done .status {
+  color: var(--ok);
+}
+
+.error .status {
+  color: var(--error);
+}
+
+.queued .name,
+.canceled .name {
+  color: var(--ink-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .coverBuilding {
+    animation: none;
+  }
+}

@@ -1,0 +1,107 @@
+.fan {
+  position: relative;
+  width: min(100%, 460px);
+  aspect-ratio: 2.1;
+  margin: 0 auto;
+}
+
+.frame {
+  position: absolute;
+  top: 12%;
+  left: 50%;
+  width: 62%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: var(--radius-md);
+  transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s;
+}
+
+.back {
+  transform: translateX(-78%) rotate(-7deg);
+}
+
+.middle {
+  transform: translateX(-22%) rotate(5deg) translateY(-4%);
+}
+
+.front {
+  z-index: 1;
+  transform: translateX(-50%) translateY(10%);
+}
+
+.ready {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow-stage);
+}
+
+.appear {
+  animation: global(dd-fade) 0.5s both;
+}
+
+.middle .appear {
+  animation-delay: 0.08s;
+}
+
+.front .appear {
+  animation-delay: 0.16s;
+}
+
+.sketch {
+  border: 1px dashed var(--line-2);
+  background: transparent;
+}
+
+.sketch.building {
+  background: var(--surface);
+}
+
+.building {
+  display: flex;
+  align-items: flex-end;
+  padding: 7% 8%;
+  border-color: var(--ink-3);
+  animation: global(dd-pulse) 1.8s ease-in-out infinite;
+}
+
+.failed {
+  border-color: var(--error);
+  opacity: 0.5;
+}
+
+.lines {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  width: 100%;
+}
+
+.lines span {
+  height: 5px;
+  border-radius: 2px;
+  background: var(--line-2);
+}
+
+.lines span:first-child {
+  width: 62%;
+  height: 7px;
+  background: var(--ink-3);
+}
+
+.lines span:nth-child(2) {
+  width: 88%;
+}
+
+.lines span:last-child {
+  width: 46%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame {
+    transition: none;
+  }
+
+  .building {
+    animation: none;
+  }
+}

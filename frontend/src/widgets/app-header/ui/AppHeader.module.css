@@ -1,0 +1,144 @@
+.header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 16px;
+  height: var(--header-height);
+  padding: 0 20px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.brand:hover {
+  color: var(--ink);
+}
+
+.logo {
+  display: flex;
+  flex: none;
+  align-items: center;
+}
+
+.wordmark {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.crumbs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  color: var(--ink-3);
+}
+
+.crumbLink {
+  color: var(--ink-3);
+  text-decoration: none;
+}
+
+.crumbLink:hover {
+  color: var(--ink);
+}
+
+.crumbCurrent {
+  overflow: hidden;
+  color: var(--ink);
+  font-weight: 500;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.status {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.status[data-tone='ok'] {
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.status[data-tone='info'] {
+  background: var(--info-bg);
+  color: var(--info);
+}
+
+.status[data-tone='warn'] {
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.status[data-tone='error'] {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.status[data-tone='neutral'] {
+  background: var(--sunken);
+  color: var(--ink-2);
+}
+
+.statusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentcolor;
+}
+
+.action {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.action:hover {
+  border-color: var(--ink-3);
+}
+
+.providerDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--line-2);
+}
+
+.providerDot[data-connected='true'] {
+  background: var(--ok);
+}
+
+.iconAction {
+  justify-content: center;
+  width: 32px;
+  padding: 0;
+  font-size: 15px;
+}

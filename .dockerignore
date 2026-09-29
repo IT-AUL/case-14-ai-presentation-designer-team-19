@@ -1,0 +1,29 @@
+# Docker build context for the api image is the repo root
+# (compose.yaml: api.build.context=. dockerfile=backend/Dockerfile).
+# Allowlist — send the daemon only what backend/Dockerfile COPYs,
+# never .git, frontend/, tests/fixtures or local dotenv files.
+*
+!pyproject.toml
+!assets
+!assets/fonts
+!assets/fonts/**
+!backend
+!backend/**
+!configs
+!configs/**
+!schemas
+!schemas/**
+!prompts
+!prompts/**
+!skill
+!skill/**
+
+# Never send secrets or caches, even inside whitelisted directories.
+.env
+.env.*
+**/.env
+**/.env.*
+**/__pycache__
+**/__pycache__/**
+**/*.pyc
+**/.DS_Store

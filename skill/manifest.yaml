@@ -1,0 +1,189 @@
+schema_version: "1.0"
+id: deckdna
+name: DeckDNA Presentation Designer
+version: "0.1.0"
+description: >
+  Converts an arbitrary PPTX/POTX template plus a content package into
+  three editable, template-compliant presentation variants with built-in
+  audit and user-selected repair.
+license: Apache-2.0
+
+requirements:
+  container: true
+  network: provider_only
+  system_tools: [libreoffice, pdftoppm, python3.12]
+  env_vars:
+    - DECKDNA_PROVIDER_BASE_URL
+    - DECKDNA_PROVIDER_API_KEY
+    - DECKDNA_MODEL_TEXT
+    - DECKDNA_MODEL_VISION
+
+capabilities:
+  # Honest as of the portable skill runtime (skill/run_skill.py): the
+  # process is synchronous single-process, no job queue underneath it —
+  # these were previously true here with nothing implementing them.
+  streaming_events: false
+  resume: false
+  cancel: false
+
+entrypoint:
+  # The one real, agent-invocable command: runs the full pipeline three
+  # times (faithful/balanced/visual) and writes native PPTX + PDF + HTML
+  # + Quality Passport per variant, plus a machine-readable summary.json
+  # index. Works from any working directory, with or without an
+  # installed package (see skill/SKILL.md).
+  command: >-
+    python3 skill/run_skill.py TEMPLATE CONTENT OUT_DIR
+    [--purpose TEXT] [--audience TEXT] [--language ru] [--slides N]
+    [--llm]
+  status: implemented
+  doc: skill/SKILL.md
+
+inputs:
+  - name: template
+    kind: file
+    required: true
+    media_types:
+      - application/vnd.openxmlformats-officedocument.presentationml.presentation
+      - application/vnd.openxmlformats-officedocument.presentationml.template
+  - name: content
+    kind: directory
+    required: true
+  - name: brief
+    kind: text
+    required: true
+  - name: provider
+    kind: credentials
+    required: false
+  - name: config
+    kind: config
+    required: false
+
+outputs:
+  - name: decks
+    kind: file
+    media_types:
+      - application/vnd.openxmlformats-officedocument.presentationml.presentation
+      - application/pdf
+      - text/html
+  - name: quality_passport
+    kind: report
+  - name: progress
+    kind: events
+    status: not_implemented
+    note: >-
+      Declared for the future job/event layer (api/app.py); the portable
+      entrypoint is synchronous and emits no progress events today —
+      capabilities.streaming_events is false.
+
+tools:
+  # run_skill is the one tool an agent actually needs to call: template +
+  # content + brief in, three audited/exported variants out, in a single
+  # process invocation. It is not a thin wrapper over the seven
+  # fine-grained "tools" below — those describe the internal pipeline
+  # stages (useful for documentation / future step-by-step agent control)
+  # but none of them is independently callable as a separate skill step
+  # today; only the composite CLI/pipeline entrypoints are. Marked
+  # honestly per-entry below rather than implying a tool-calling surface
+  # that does not exist.
+  - name: run_skill
+    description: >-
+      Full pipeline, three times: arbitrary PPTX/POTX template + a
+      content file/directory + a brief -> faithful/balanced/visual
+      variants, each with native editable PPTX, PDF, HTML and a Quality
+      Passport, plus a summary.json index (paths, checksums, status,
+      timing) for the whole run.
+    command: skill/run_skill.py
+    input_schema: manifest:inputs.template+content+brief
+    output_schema: skill/SKILL.md#outputs
+    timeout_seconds: 900
+    idempotent: false
+    retryable: true
+    status: implemented
+    note: >-
+      Not idempotent by design: out_dir must be empty (or contain only a
+      summary.json left by an earlier failed run). Reruns into a used
+      directory are rejected up front so stale artifacts can never
+      masquerade as new output.
+  - name: inspect_template
+    description: Parse a template into Design DNA, exemplar library and previews.
+    input_schema: manifest:inputs.template
+    output_schema: schemas/design-dna.schema.json
+    timeout_seconds: 120
+    idempotent: true
+    retryable: true
+    status: implemented
+    command: deckdna inspect-template
+  - name: ingest_content
+    description: Normalize a content package and build the evidence graph.
+    input_schema: schemas/content-pack.schema.json
+    output_schema: schemas/evidence-graph.schema.json
+    timeout_seconds: 120
+    idempotent: true
+    retryable: true
+    status: implemented
+    command: deckdna ingest
+    note: >-
+      Builds a ContentPack (deckdna ingest); the evidence graph itself is
+      an internal planning-stage structure, not independently exposed as
+      a CLI/skill step today.
+  - name: plan_deck
+    description: Produce DeckPlan and three VariantSpecs from brief + evidence + design DNA.
+    input_schema: manifest:inputs.brief+evidence_graph+design_dna
+    output_schema: schemas/variant-spec.schema.json
+    timeout_seconds: 120
+    idempotent: true
+    retryable: true
+    status: not_independently_callable
+    note: >-
+      Planning happens inside generate()/run_skill, not as a separate
+      invocable step; no standalone CLI command exists for it yet.
+  - name: generate_deck
+    description: Compose native editable PPTX variants from template exemplars.
+    input_schema: schemas/variant-spec.schema.json
+    output_schema: schemas/deck-plan.schema.json
+    timeout_seconds: 300
+    idempotent: true
+    retryable: true
+    status: implemented
+    command: deckdna generate
+    note: >-
+      One call produces one strategy variant (plan+compose+audit+PDF in
+      one pass); run_skill drives it three times for the required
+      faithful/balanced/visual set.
+  - name: audit_deck
+    description: Run deterministic and contextual checks; emit AuditIssues.
+    input_schema: manifest:artifact.pptx
+    output_schema: schemas/audit-issue.schema.json
+    timeout_seconds: 180
+    idempotent: true
+    retryable: true
+    status: implemented
+    command: deckdna audit
+  - name: repair_deck
+    description: Apply user-selected typed repair actions; produce new deck revision.
+    input_schema: schemas/repair-action.schema.json
+    output_schema: schemas/repair-action.schema.json
+    timeout_seconds: 180
+    idempotent: false
+    retryable: true
+    status: implemented
+    command: deckdna repair
+    note: >-
+      12 of 24 deterministic audit rule codes currently map to a repair
+      action; the rest are honestly
+      not_implemented per-issue rather than guessed at.
+  - name: export_deck
+    description: Export PPTX/PDF/HTML and Quality Passport.
+    input_schema: manifest:artifact.deck_revision
+    output_schema: schemas/quality-passport.schema.json
+    timeout_seconds: 120
+    idempotent: true
+    retryable: true
+    status: implemented
+    command: deckdna export --format pdf|html|png
+    note: >-
+      run_skill already calls the pptx/pdf/html paths for every variant;
+      the async job-based API export endpoint's "html" format is
+      separately tracked as not yet wired to this same render path
+      (unrelated to this CLI/skill entrypoint).

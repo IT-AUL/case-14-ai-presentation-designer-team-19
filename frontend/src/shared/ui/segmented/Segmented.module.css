@@ -1,0 +1,31 @@
+.group {
+  display: inline-flex;
+  flex: none;
+  padding: 3px;
+  border-radius: var(--radius-md);
+  background: var(--sunken);
+}
+
+.option {
+  flex: none;
+  padding: 0 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.option[aria-checked='true'] {
+  background: var(--surface);
+  box-shadow: 0 0 0 1px var(--line-2);
+}
+
+.sm .option {
+  height: 28px;
+}
+
+.md .option {
+  height: 32px;
+  padding: 0 14px;
+}

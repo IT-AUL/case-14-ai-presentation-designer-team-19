@@ -1,0 +1,79 @@
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: var(--page-width);
+  margin: 0 auto;
+  padding: 28px 32px 64px;
+}
+
+.banner {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 16px;
+  border-radius: var(--radius-lg);
+  background: var(--info-bg);
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.bannerTag {
+  flex: none;
+  color: var(--info);
+  font-weight: 600;
+}
+
+.bannerText {
+  min-width: 0;
+}
+
+.skeletons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeletonRow {
+  height: 72px;
+  border-radius: var(--radius-lg);
+}
+
+.primaryLink,
+.secondaryLink {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.secondaryLink:hover {
+  border-color: var(--ink-3);
+  color: var(--ink);
+}
+
+.primaryLink {
+  padding: 0 16px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: var(--ink);
+  color: var(--inv);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+}
+
+.primaryLink:hover {
+  background: var(--ink-2);
+  color: var(--inv);
+}

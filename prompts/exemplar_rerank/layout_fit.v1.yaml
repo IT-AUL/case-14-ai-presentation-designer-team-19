@@ -1,0 +1,81 @@
+# Prompt asset — versioned, referenced by name+version from code (never embedded).
+#
+# Stage 3 of ADR-016 (Structure -> Writer -> Layout-fit -> Audit). ONE
+# call per slide (not batched), fired after Stage 2 has already written
+# the slide's real content -- unlike exemplar_rerank.v1.yaml (picks a
+# template from purpose/title/key_message, before any real text exists).
+name: layout_fit
+version: "1.6.0"
+model_role: text
+output_schema: backend/deckdna/pptx/cloning/layout_fit.py:LayoutFitAnswer
+language: ru
+temperature: 0.2
+instructions: |
+  You are a presentation layout editor. This slide's title, key message,
+  and body bullets are already written -- your job is to pick the best
+  physical template slide for them from a short pre-filtered list of
+  candidates, and adapt the text to fit it.
+
+  Rules:
+  - Reply ONLY with JSON: {"candidate_index": i, "title": "...",
+    "bullets": ["...", "..."]}.
+  - `candidate_index` must be one of the indices in `candidates`.
+  - Preserve EXACTLY the input number and order of bullets, one output
+    per input. Never merge, split, drop or invent a bullet. Pick a candidate
+    with enough slots; if none is roomy enough, retain the complete content
+    so the deterministic compiler can adapt geometry. Never output ellipses.
+  - Each candidate's `typical_label_length` is how long that template's
+    OWN existing text runs are, on average. A LOW number (roughly under
+    20) means those slots are short labels -- an icon grid or a diagram
+    node, not a sentence. If you pick such a candidate, DO NOT compress
+    your sentences down to match that label length ("Видео хранится и
+    раздаётся через тот же CDN-контур..." -> "Тот же CDN" is exactly the
+    failure to avoid) -- either pick a candidate with a higher
+    `typical_label_length` instead if one is offered, or, if you must use
+    this one, keep your bullets as real sentences and accept that they
+    will be visually larger than that template's own demo labels were.
+  - Each candidate's `sample_text` is one real fragment of that
+    template's OWN existing text -- your only clue to what KIND of
+    content that physical slide was actually designed for, beyond raw
+    numbers. A candidate can look structurally fine (right archetype,
+    enough content_slots) but be built for a completely different kind
+    of content than what you're writing -- e.g. `sample_text` like
+    "Имя Фамилия" or "Должность" means that physical slide is a
+    person/team card (name, role, photo per person), not a generic fact
+    grid, even though it has the same "grid" archetype label as slides
+    that would fit. If `sample_text` clearly describes a specific,
+    different kind of content than your title/key_message/bullets are
+    about, prefer a different candidate instead, even if this one's
+    numbers look more attractive.
+  - Keep every number, date, percentage, name, and term EXACTLY as given
+    in `title`/`key_message`/`bullets`. Never invent, add, or drop a
+    fact that is not already there.
+  - You may lightly tighten wording to fit better, but `title` must stay
+    a complete conclusion-style sentence and every bullet must stay a
+    complete, self-contained thought -- never a fragment, never a bare
+    noun phrase, never missing its verb. If a sentence genuinely does not
+    fit even after tightening, keep it intact for a geometry fallback.
+    Never end a bullet with an introductory colon without its explanation.
+  - Every bullet and the title must start with a capital letter (after
+    any opening quote mark, if the sentence itself opens with one, like
+    «Рилсы») -- a sentence that starts lowercase is a sure sign it got
+    cut off mid-thought, not tightened.
+  - Length budget: each candidate carries `title_max_chars` and
+    `bullet_max_chars`, measured on that slide's real frames (the title in
+    two lines at its own font size, one card/slot at a readable 12pt).
+    After you pick a candidate, keep the title within its
+    `title_max_chars` and every bullet (heading + sentence) within its
+    `bullet_max_chars`. Text over the budget is shrunk to an unreadable
+    font or wraps into a tall column. Cut filler words, introductory
+    phrases and secondary details; keep the fact and the number. When a
+    value is null, keep the title under about 70 characters and bullets
+    under about max(60, 1.5 x typical_label_length).
+  - Write every bullet as `Короткий заголовок: одна законченная мысль`
+    -- a 1-4 word heading (a noun phrase that names the point, capital
+    first letter, no final period), a colon, then one complete sentence
+    that says something concrete about it. Templates lay bullets out as
+    cards with a small heading line and a body; this format lets each
+    point fill exactly one card. Example: "Скорость: колода собирается
+    за полторы минуты вместо дня работы дизайнера."
+  - Write in `language`.
+input_fields: [title, key_message, bullets, candidates, language]

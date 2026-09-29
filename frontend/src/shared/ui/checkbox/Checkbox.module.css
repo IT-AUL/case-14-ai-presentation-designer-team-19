@@ -1,0 +1,53 @@
+.root {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 5px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--ink-2);
+}
+
+.root::before {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: max(100%, 24px);
+  height: max(100%, 24px);
+  content: '';
+  transform: translate(-50%, -50%);
+}
+
+.box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--ink-2);
+  border-radius: 4px;
+  background: var(--surface);
+  color: var(--inv);
+}
+
+.root[aria-checked='true'] .box {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.sm .box {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  font-size: 10px;
+}
+
+.md .box {
+  width: 18px;
+  height: 18px;
+  font-size: 11px;
+}
+
+.label {
+  font-size: 11px;
+}

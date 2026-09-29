@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deckdna/schemas/content-pack.schema.json",
+  "title": "ContentPack",
+  "type": "object",
+  "required": ["schema_version", "id", "language", "sections", "assets", "tables", "warnings"],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "id": { "type": "string" },
+    "language": { "type": "string" },
+    "title_hint": { "type": "string" },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "heading", "blocks"],
+        "properties": {
+          "id": { "type": "string" },
+          "heading": { "type": "string" },
+          "level": { "type": "integer" },
+          "blocks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["kind", "source_ref"],
+              "properties": {
+                "kind": { "type": "string", "enum": ["paragraph", "list", "quote", "code", "table_ref", "image_ref", "note"] },
+                "text": { "type": "string" },
+                "items": { "type": "array", "items": { "type": "string" } },
+                "source_ref": { "$ref": "#/$defs/source_ref" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tables": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "headers", "rows", "source_ref"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "headers": { "type": "array", "items": { "type": "string" } },
+          "rows": { "type": "array", "items": { "type": "array", "items": { "type": ["string", "number", "null"] } } },
+          "units": { "type": "object", "additionalProperties": { "type": "string" } },
+          "source_ref": { "$ref": "#/$defs/source_ref" }
+        }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "kind", "artifact_id"],
+        "properties": {
+          "id": { "type": "string" },
+          "kind": { "type": "string", "enum": ["image", "icon", "logo", "screenshot", "diagram"] },
+          "artifact_id": { "type": "string" },
+          "caption": { "type": "string" },
+          "alt": { "type": "string" },
+          "width_px": { "type": "integer" },
+          "height_px": { "type": "integer" },
+          "license": { "type": "string" },
+          "attribution": { "type": "string" },
+          "source_url": { "type": "string" }
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["code", "message"],
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" },
+          "source_ref": { "$ref": "#/$defs/source_ref" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "source_ref": {
+      "type": "object",
+      "required": ["artifact_id"],
+      "properties": {
+        "artifact_id": { "type": "string" },
+        "page": { "type": "integer" },
+        "sheet": { "type": "string" },
+        "range": { "type": "string" },
+        "heading_path": { "type": "array", "items": { "type": "string" } },
+        "char_span": {
+          "type": "object",
+          "properties": {
+            "start": { "type": "integer" },
+            "end": { "type": "integer" }
+          }
+        }
+      }
+    }
+  }
+}

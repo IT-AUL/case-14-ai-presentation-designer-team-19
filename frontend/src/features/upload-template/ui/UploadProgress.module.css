@@ -1,0 +1,93 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-3xl);
+  background: var(--surface);
+  animation: dd-fade 0.2s ease-out;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.file {
+  display: flex;
+  flex: none;
+  align-items: flex-end;
+  justify-content: center;
+  width: 40px;
+  height: 48px;
+  padding-bottom: 6px;
+  border-radius: var(--radius-sm);
+  background: var(--sunken);
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+
+.meta {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  overflow: hidden;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bytes {
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 13px;
+}
+
+.percent {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pulse {
+  color: var(--info);
+  font-size: 13px;
+  animation: dd-pulse 1.2s infinite;
+}
+
+.track {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--sunken);
+}
+
+.fill,
+.fillAnalyzing {
+  height: 100%;
+  background: var(--ink);
+  transition: width 0.1s;
+}
+
+.fillAnalyzing {
+  animation: dd-pulse 1.2s infinite;
+}
+
+.groups {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  color: var(--ink-3);
+  font-size: 13px;
+  list-style: none;
+}

@@ -1,0 +1,1182 @@
+{
+  "id": "run_912f80e845264f1daf244744ffbc364f",
+  "project_id": "prj_d7a5e61be4be4491b158c5f93699a38d",
+  "state": "completed",
+  "job_id": "job_8d81bdd5f35b4c178c6d5de7c77410b6",
+  "events_url": "/api/v1/jobs/job_8d81bdd5f35b4c178c6d5de7c77410b6/events",
+  "template_id": "tpl_4497762842c84a478245dcfb47552046",
+  "content_pack_id": "pack-7aa41ae9",
+  "deck_plan_id": "plan-7aa41ae9-faithful",
+  "deck_plan": {
+    "schema_version": "1.0",
+    "id": "plan-7aa41ae9-faithful",
+    "brief": {
+      "purpose": "product",
+      "audience": "руководство",
+      "language": "ru",
+      "target_slide_count": 12,
+      "tone": "деловой",
+      "mandatory_sections": [],
+      "forbidden_claims": null
+    },
+    "evidence_graph_id": "pack:pack-7aa41ae9",
+    "objective": "product",
+    "audience": "руководство",
+    "language": "ru",
+    "sections": [
+      {
+        "id": "sec-0",
+        "title": "DeckDNA: компилятор презентаций для хакатона «Лидеры цифровой трансформации»",
+        "slide_ids": [
+          "slide-1"
+        ]
+      },
+      {
+        "id": "sec-1",
+        "title": "Проблема",
+        "slide_ids": [
+          "slide-1",
+          "slide-2"
+        ]
+      },
+      {
+        "id": "sec-2",
+        "title": "Архитектура: семь стадий пайплайна",
+        "slide_ids": [
+          "slide-3",
+          "slide-4"
+        ]
+      },
+      {
+        "id": "sec-3",
+        "title": "Три варианта, а не один",
+        "slide_ids": [
+          "slide-5",
+          "slide-6"
+        ]
+      },
+      {
+        "id": "sec-4",
+        "title": "Аудит и качество",
+        "slide_ids": [
+          "slide-7",
+          "slide-8"
+        ]
+      },
+      {
+        "id": "sec-5",
+        "title": "Доказательства без хардкода",
+        "slide_ids": [
+          "slide-8",
+          "slide-9"
+        ]
+      },
+      {
+        "id": "sec-6",
+        "title": "Что дальше",
+        "slide_ids": [
+          "slide-9",
+          "slide-10"
+        ]
+      }
+    ],
+    "slides": [
+      {
+        "id": "slide-0",
+        "index": 0,
+        "purpose": "title",
+        "title_intent": "DeckDNA: компилятор презентаций для хакатона «Лидеры цифровой трансформации»",
+        "key_message": "product",
+        "evidence_ids": [
+          "pack-7aa41ae9:meta"
+        ],
+        "content_units": [
+          {
+            "role": "title",
+            "kind": "title",
+            "text": "DeckDNA: компилятор презентаций для хакатона «Лидеры цифровой трансформации»",
+            "evidence_ids": [
+              "pack-7aa41ae9:meta"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "subtitle",
+            "kind": "subtitle",
+            "text": "product",
+            "evidence_ids": [
+              "pack-7aa41ae9:meta"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          }
+        ],
+        "desired_visual": null,
+        "density_budget": {
+          "level": "sparse",
+          "max_items": 0,
+          "max_chars": null
+        },
+        "speaker_note": null,
+        "mandatory": null
+      },
+      {
+        "id": "slide-1",
+        "index": 1,
+        "purpose": "data",
+        "title_intent": "DeckDNA: компилятор презентаций для хакатона «Лидеры цифровой трансформации» — часть 2",
+        "key_message": "DeckDNA превращает произвольный PPTX/POTX-шаблон и сырой контент в готовую редактируемую презентацию в стиле шаблона — без единой ручной правки, с тремя реально различающимися вариантами и встроенным ",
+        "evidence_ids": [
+          "pack-7aa41ae9:sec-0:b0",
+          "pack-7aa41ae9:sec-1:b0",
+          "pack-7aa41ae9:sec-1:b1"
+        ],
+        "content_units": [
+          {
+            "role": "title",
+            "kind": "title",
+            "text": "DeckDNA: компилятор презентаций для хакатона «Лидеры цифровой трансформации» — часть 2",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-0:b0"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "body",
+            "kind": "paragraph",
+            "text": "DeckDNA превращает произвольный PPTX/POTX-шаблон и сырой контент в готовую редактируемую презентацию в стиле шаблона — без единой ручной правки, с тремя реально различающимися вариантами и встроенным аудитом качества.",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-0:b0"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "body",
+            "kind": "paragraph",
+            "text": "Ручная адаптация контента под фирменный шаблон — узкое место любой команды, готовящей презентации на регулярной основе.",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-1:b0"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Дизайнерская вёрстка одной колоды под корпоративный шаблон занимает часы, а не минуты",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-1:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Типовые AI-генераторы презентаций выдают растровые слайды — их нельзя редактировать в PowerPoint",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-1:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Стиль и структура шаблона теряются при переносе реального контента вручную",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-1:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          }
+        ],
+        "desired_visual": "none",
+        "density_budget": {
+          "level": "medium",
+          "max_items": 5,
+          "max_chars": 591
+        },
+        "speaker_note": "Сводка слайдов секций: DeckDNA: компилятор презентаций для хакатона «Лидеры цифровой трансформации», Проблема",
+        "mandatory": null
+      },
+      {
+        "id": "slide-2",
+        "index": 2,
+        "purpose": "problem",
+        "title_intent": "Проблема",
+        "key_message": "Проблема",
+        "evidence_ids": [
+          "pack-7aa41ae9:sec-1:b1"
+        ],
+        "content_units": [
+          {
+            "role": "title",
+            "kind": "title",
+            "text": "Проблема",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-1:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Каждая новая колода требует повторения одной и той же рутинной работы",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-1:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Нет способа быстро проверить, что колода не превратилась в мусор до показа",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-1:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Команды либо жертвуют качеством дизайна, либо тратят на него непропорционально много времени",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-1:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          }
+        ],
+        "desired_visual": "none",
+        "density_budget": {
+          "level": "sparse",
+          "max_items": 3,
+          "max_chars": 235
+        },
+        "speaker_note": null,
+        "mandatory": null
+      },
+      {
+        "id": "slide-3",
+        "index": 3,
+        "purpose": "solution",
+        "title_intent": "Архитектура: семь стадий пайплайна",
+        "key_message": "DeckDNA построен как конвейер специализированных стадий, каждая со своей зоной ответственности.",
+        "evidence_ids": [
+          "pack-7aa41ae9:sec-2:b0",
+          "pack-7aa41ae9:sec-2:b1"
+        ],
+        "content_units": [
+          {
+            "role": "title",
+            "kind": "title",
+            "text": "Архитектура: семь стадий пайплайна",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-2:b0"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "body",
+            "kind": "paragraph",
+            "text": "DeckDNA построен как конвейер специализированных стадий, каждая со своей зоной ответственности.",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-2:b0"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Template Autopsy — форензика шаблона: census пакета, layout usage, declared vs observed шрифты и палитра",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-2:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Evidence Graph — граф источников контента с провенансом, чтобы ничего не выдумывалось",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-2:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Story Director — DeckPlan из контента и брифа, три стратегии варианта",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-2:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          }
+        ],
+        "desired_visual": "none",
+        "density_budget": {
+          "level": "medium",
+          "max_items": 4,
+          "max_chars": 353
+        },
+        "speaker_note": null,
+        "mandatory": null
+      },
+      {
+        "id": "slide-4",
+        "index": 4,
+        "purpose": "solution",
+        "title_intent": "Архитектура: семь стадий пайплайна — часть 2",
+        "key_message": "Архитектура: семь стадий пайплайна",
+        "evidence_ids": [
+          "pack-7aa41ae9:sec-2:b1"
+        ],
+        "content_units": [
+          {
+            "role": "title",
+            "kind": "title",
+            "text": "Архитектура: семь стадий пайплайна — часть 2",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-2:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Constraint Compiler — exemplar-клонирование и типизированная заливка слотов",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-2:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Render Arena — рендер через LibreOffice плюс детерминированный и контекстный аудит",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-2:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Bounded Repair — точечные типизированные правки по выбору пользователя",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-2:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Quality Passport — честный отчёт с метриками, provenance и версиями",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-2:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          }
+        ],
+        "desired_visual": "none",
+        "density_budget": {
+          "level": "medium",
+          "max_items": 4,
+          "max_chars": 294
+        },
+        "speaker_note": null,
+        "mandatory": null
+      },
+      {
+        "id": "slide-5",
+        "index": 5,
+        "purpose": "overview",
+        "title_intent": "Три варианта, а не один",
+        "key_message": "Официальное требование — не одна колода, а три реально различающихся варианта на выбор.",
+        "evidence_ids": [
+          "pack-7aa41ae9:sec-3:b0",
+          "pack-7aa41ae9:sec-3:b1"
+        ],
+        "content_units": [
+          {
+            "role": "title",
+            "kind": "title",
+            "text": "Три варианта, а не один",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-3:b0"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "body",
+            "kind": "paragraph",
+            "text": "Официальное требование — не одна колода, а три реально различающихся варианта на выбор.",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-3:b0"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Faithful — максимально близко к исходному контенту, без агенды и recap-слайдов",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-3:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Balanced — сбалансированное распределение контента, поведение по умолчанию",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-3:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Visual — акцент на визуальную плотность, переранжированный пул exemplar-слайдов",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-3:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          }
+        ],
+        "desired_visual": "none",
+        "density_budget": {
+          "level": "medium",
+          "max_items": 4,
+          "max_chars": 318
+        },
+        "speaker_note": null,
+        "mandatory": null
+      },
+      {
+        "id": "slide-6",
+        "index": 6,
+        "purpose": "overview",
+        "title_intent": "Три варианта, а не один — часть 2",
+        "key_message": "Три варианта, а не один",
+        "evidence_ids": [
+          "pack-7aa41ae9:sec-3:b1"
+        ],
+        "content_units": [
+          {
+            "role": "title",
+            "kind": "title",
+            "text": "Три варианта, а не один — часть 2",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-3:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Различие подтверждено байт-в-байт: три варианта дают три разных sha256 одного и того же контента",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-3:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Все три варианта строятся из одного DeckPlan за один прогон",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-3:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Каждый вариант экспортируется в PPTX, PDF и HTML одновременно",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-3:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          }
+        ],
+        "desired_visual": "none",
+        "density_budget": {
+          "level": "sparse",
+          "max_items": 3,
+          "max_chars": 216
+        },
+        "speaker_note": null,
+        "mandatory": null
+      },
+      {
+        "id": "slide-7",
+        "index": 7,
+        "purpose": "overview",
+        "title_intent": "Аудит и качество",
+        "key_message": "Колода не считается готовой без прохождения проверки — как деструктивной, так и содержательной.",
+        "evidence_ids": [
+          "pack-7aa41ae9:sec-4:b0",
+          "pack-7aa41ae9:sec-4:b1"
+        ],
+        "content_units": [
+          {
+            "role": "title",
+            "kind": "title",
+            "text": "Аудит и качество",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-4:b0"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "body",
+            "kind": "paragraph",
+            "text": "Колода не считается готовой без прохождения проверки — как деструктивной, так и содержательной.",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-4:b0"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "24 детерминированных правила: overflow, коллизии, отступы, контраст, плотность буллетов",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-4:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Контекстный VLM-слой отвечает на 10 официальных вопросов по каждому слайду",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-4:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Раздельные severity: blocker, error, warning — ничего не понижается молча",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-4:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          }
+        ],
+        "desired_visual": "none",
+        "density_budget": {
+          "level": "medium",
+          "max_items": 4,
+          "max_chars": 329
+        },
+        "speaker_note": null,
+        "mandatory": null
+      },
+      {
+        "id": "slide-8",
+        "index": 8,
+        "purpose": "overview",
+        "title_intent": "Аудит и качество — часть 2",
+        "key_message": "Главный риск генератора презентаций — подгонка под три демонстрационных шаблона вместо реальной адаптации.",
+        "evidence_ids": [
+          "pack-7aa41ae9:sec-4:b1",
+          "pack-7aa41ae9:sec-5:b0",
+          "pack-7aa41ae9:sec-5:b1"
+        ],
+        "content_units": [
+          {
+            "role": "title",
+            "kind": "title",
+            "text": "Аудит и качество — часть 2",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-4:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "PEI-метрика редактируемости от 0 до 5 — доказывает, что колода не растровая",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-4:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Проверка целостности OOXML-пакета — колода обязана открываться без ошибок",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-4:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Проверка фактической поддержки утверждений источниками контента",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-4:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "body",
+            "kind": "paragraph",
+            "text": "Главный риск генератора презентаций — подгонка под три демонстрационных шаблона вместо реальной адаптации.",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-5:b0"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Синтетический четвёртый шаблон с чужой палитрой прошёл весь пайплайн от начала до конца",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-5:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "9 из 9 официальных колод — три шаблона на три стратегии — собраны и проверены",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-5:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          }
+        ],
+        "desired_visual": "none",
+        "density_budget": {
+          "level": "medium",
+          "max_items": 6,
+          "max_chars": 481
+        },
+        "speaker_note": "Сводка слайдов секций: Аудит и качество, Доказательства без хардкода",
+        "mandatory": null
+      },
+      {
+        "id": "slide-9",
+        "index": 9,
+        "purpose": "overview",
+        "title_intent": "Доказательства без хардкода",
+        "key_message": "Список честно оставшихся ограничений и следующих шагов после хакатона.",
+        "evidence_ids": [
+          "pack-7aa41ae9:sec-5:b1",
+          "pack-7aa41ae9:sec-6:b0",
+          "pack-7aa41ae9:sec-6:b1"
+        ],
+        "content_units": [
+          {
+            "role": "title",
+            "kind": "title",
+            "text": "Доказательства без хардкода",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-5:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Каждая колода уложилась в единицы секунд против бюджета в пять минут",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-5:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Живой прогон против внешнего OpenAI-совместимого эндпоинта подтверждён отдельно",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-5:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Открытая модель с весами Apache/MIT license, размер модели в допустимых границах",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-5:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "body",
+            "kind": "paragraph",
+            "text": "Список честно оставшихся ограничений и следующих шагов после хакатона.",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-6:b0"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Семантический slot mapping вместо позиционной заливки контента",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-6:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Настоящий Office SmartArt вместо baseline из групп редактируемых фигур",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-6:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          }
+        ],
+        "desired_visual": "none",
+        "density_budget": {
+          "level": "medium",
+          "max_items": 6,
+          "max_chars": 429
+        },
+        "speaker_note": "Сводка слайдов секций: Доказательства без хардкода, Что дальше",
+        "mandatory": null
+      },
+      {
+        "id": "slide-10",
+        "index": 10,
+        "purpose": "overview",
+        "title_intent": "Что дальше",
+        "key_message": "Что дальше",
+        "evidence_ids": [
+          "pack-7aa41ae9:sec-6:b1"
+        ],
+        "content_units": [
+          {
+            "role": "title",
+            "kind": "title",
+            "text": "Что дальше",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-6:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "LLM top-k reranking пула кандидатов для более точного подбора exemplar-слайдов",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-6:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Расширение набора детерминированных правил аудита до полного официального списка",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-6:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          },
+          {
+            "role": "bullet",
+            "kind": "bullet",
+            "text": "Публикация итогового репозитория и запись демонстрационного видео",
+            "evidence_ids": [
+              "pack-7aa41ae9:sec-6:b1"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          }
+        ],
+        "desired_visual": "none",
+        "density_budget": {
+          "level": "sparse",
+          "max_items": 3,
+          "max_chars": 223
+        },
+        "speaker_note": null,
+        "mandatory": null
+      },
+      {
+        "id": "slide-11",
+        "index": 11,
+        "purpose": "thank_you",
+        "title_intent": "Спасибо за внимание",
+        "key_message": "product",
+        "evidence_ids": [
+          "pack-7aa41ae9:meta"
+        ],
+        "content_units": [
+          {
+            "role": "title",
+            "kind": "title",
+            "text": "Спасибо за внимание",
+            "evidence_ids": [
+              "pack-7aa41ae9:meta"
+            ],
+            "target_chars": null,
+            "asset_ref": null,
+            "table_ref": null,
+            "chart_ref": null,
+            "diagram_ref": null,
+            "chart_spec": null
+          }
+        ],
+        "desired_visual": null,
+        "density_budget": {
+          "level": "sparse",
+          "max_items": 0,
+          "max_chars": null
+        },
+        "speaker_note": null,
+        "mandatory": null
+      }
+    ],
+    "provenance": {
+      "planner": "story-director/deterministic-0.1.0",
+      "prompt_version": "v0.1",
+      "schema_version": "1.0",
+      "model_id": "deterministic",
+      "input_hashes": [
+        "e164651132cc3004377a80199da4a357637a531239435bb76c3c5294b5297dfd"
+      ]
+    }
+  },
+  "variants": [
+    {
+      "id": "var_1f25d6ad2ea74d95867a9abfc0fff47e",
+      "run_id": "run_912f80e845264f1daf244744ffbc364f",
+      "strategy": "faithful",
+      "status": "completed",
+      "rationale": null,
+      "deck_artifact_id": "art_ea848c4e2ad14ae3ab284ac4962162f4",
+      "montage_artifact_id": null,
+      "metrics": {
+        "validity": 1.0,
+        "editability_pei": 3,
+        "issues_total": 92
+      },
+      "audit_status": "completed",
+      "export_ids": [
+        "exp_1f8f9d433b04458dbfe19c84da41bc64"
+      ],
+      "planner": "story-director/deterministic-0.1.0",
+      "contextual_issues": null,
+      "deck_plan_id": "plan-7aa41ae9-faithful"
+    },
+    {
+      "id": "var_b378e6a40bb449deac6e62029c46fe1a",
+      "run_id": "run_912f80e845264f1daf244744ffbc364f",
+      "strategy": "balanced",
+      "status": "completed",
+      "rationale": null,
+      "deck_artifact_id": "art_68a54df4c2294e65be5d9e901dddf9c7",
+      "montage_artifact_id": null,
+      "metrics": {
+        "validity": 1.0,
+        "editability_pei": 3,
+        "issues_total": 108
+      },
+      "audit_status": "completed",
+      "export_ids": [
+        "exp_6ef273692bf54489b93a6574a26dc252"
+      ],
+      "planner": "story-director/deterministic-0.1.0",
+      "contextual_issues": null,
+      "deck_plan_id": "plan-7aa41ae9-balanced"
+    },
+    {
+      "id": "var_9984ba5c9e8c47a69c018edf2f12eadb",
+      "run_id": "run_912f80e845264f1daf244744ffbc364f",
+      "strategy": "visual",
+      "status": "completed",
+      "rationale": null,
+      "deck_artifact_id": "art_cb28e2f2ca514ea184c3674381b2cba9",
+      "montage_artifact_id": null,
+      "metrics": {
+        "validity": 1.0,
+        "editability_pei": 3,
+        "issues_total": 74
+      },
+      "audit_status": "completed",
+      "export_ids": [
+        "exp_8305907b32ec499397686bbcad92b812"
+      ],
+      "planner": "story-director/deterministic-0.1.0",
+      "contextual_issues": null,
+      "deck_plan_id": "plan-7aa41ae9-visual"
+    }
+  ],
+  "parent_run_id": null,
+  "created_at": "2026-09-25T14:04:43.912535Z",
+  "finished_at": "2026-09-25T14:04:52.108955Z"
+}

@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deckdna/schemas/content-style.schema.json",
+  "title": "ContentStyleOutput",
+  "description": "Model answer of the content_style skill: rewritten items in source order, keyed by index.",
+  "type": "object",
+  "required": ["items"],
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["index", "text"],
+        "properties": {
+          "index": { "type": "integer", "minimum": 0 },
+          "text": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

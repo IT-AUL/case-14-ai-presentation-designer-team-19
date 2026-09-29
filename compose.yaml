@@ -1,0 +1,41 @@
+# DeckDNA — web (SPA + nginx proxy) + api (FastAPI, in-memory store).
+# `docker compose up --build` works offline in deterministic mock mode —
+# no .env needed. Real model provider is opt-in via .env (see .env.example).
+# State is ephemeral: projects, uploads and exports are lost on api restart.
+services:
+  web:
+    # Tagged releases publish ghcr.io/it-aul/deckdna-web:vX.Y.Z (and
+    # docker.io/renatgubaudullin/deckdna-web:vX.Y.Z); override via
+    # DECKDNA_REGISTRY / DECKDNA_VERSION. `up --build` builds from source.
+    image: ${DECKDNA_REGISTRY:-ghcr.io/it-aul}/deckdna-web:${DECKDNA_VERSION:-dev}
+    build: ./frontend
+    environment:
+      BACKEND_URL: http://api:8000
+    ports:
+      - "127.0.0.1:${WEB_PORT:-8080}:80"
+    depends_on:
+      api: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz || exit 1"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+
+  api:
+    image: ${DECKDNA_REGISTRY:-ghcr.io/it-aul}/deckdna-api:${DECKDNA_VERSION:-dev}
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    command: uvicorn deckdna.api.app:app --host 0.0.0.0 --port 8000
+    env_file:
+      - { path: .env, required: false }
+    environment:
+      DECKDNA_MOCK_PROVIDER: ${DECKDNA_MOCK_PROVIDER:-true}
+    ports:
+      - "127.0.0.1:${API_PORT:-8000}:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://localhost:8000/api/v1/health/live')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s

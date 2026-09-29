@@ -1,0 +1,128 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deckdna/schemas/deck-plan.schema.json",
+  "title": "DeckPlan",
+  "type": "object",
+  "required": [
+    "schema_version", "id", "brief", "evidence_graph_id",
+    "objective", "audience", "language", "slides", "provenance"
+  ],
+  "properties": {
+    "schema_version": { "type": "string" },
+    "id": { "type": "string" },
+    "brief": {
+      "type": "object",
+      "required": ["purpose", "audience", "language", "target_slide_count"],
+      "properties": {
+        "purpose": { "type": "string" },
+        "audience": { "type": "string" },
+        "language": { "type": "string" },
+        "target_slide_count": { "type": "integer", "minimum": 3, "maximum": 40 },
+        "tone": { "type": "string" },
+        "mandatory_sections": { "type": "array", "items": { "type": "string" } },
+        "forbidden_claims": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "evidence_graph_id": { "type": "string" },
+    "objective": { "type": "string" },
+    "audience": { "type": "string" },
+    "language": { "type": "string" },
+    "sections": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "slide_ids"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "slide_ids": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "slides": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/slide_plan" }
+    },
+    "provenance": {
+      "type": "object",
+      "required": ["planner", "prompt_version", "schema_version"],
+      "properties": {
+        "planner": { "type": "string" },
+        "prompt_version": { "type": "string" },
+        "schema_version": { "type": "string" },
+        "model_id": { "type": "string" },
+        "input_hashes": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "$defs": {
+    "slide_plan": {
+      "type": "object",
+      "required": [
+        "id", "index", "purpose", "title_intent", "key_message",
+        "evidence_ids", "content_units", "density_budget"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "index": { "type": "integer" },
+        "purpose": {
+          "type": "string",
+          "enum": [
+            "title", "agenda", "section_divider", "overview", "problem",
+            "solution", "benefits", "data", "comparison", "timeline",
+            "process", "quote", "team", "cta", "qa", "thank_you", "custom"
+          ]
+        },
+        "title_intent": { "type": "string", "description": "conclusion-style title, not a topic" },
+        "key_message": { "type": "string" },
+        "evidence_ids": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "content_units": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["role", "kind"],
+            "properties": {
+              "role": { "type": "string" },
+              "kind": {
+                "type": "string",
+                "enum": ["title", "subtitle", "bullet", "paragraph", "number", "label",
+                         "image", "icon", "table", "chart", "diagram", "quote", "note"]
+              },
+              "text": { "type": "string" },
+              "evidence_ids": { "type": "array", "items": { "type": "string" } },
+              "target_chars": { "type": "integer" },
+              "asset_ref": { "type": "string" },
+              "table_ref": { "type": "string" },
+              "chart_spec": {
+                "type": "object",
+                "properties": {
+                  "chart_type": { "type": "string", "enum": ["bar", "line", "pie", "area", "scatter"] },
+                  "series_count": { "type": "integer", "maximum": 5 },
+                  "has_axis_labels": { "type": "boolean" },
+                  "has_units": { "type": "boolean" },
+                  "has_legend": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "desired_visual": {
+          "type": "string",
+          "enum": ["none", "image", "icon_set", "chart", "table", "diagram", "screenshot", "quote"]
+        },
+        "density_budget": {
+          "type": "object",
+          "required": ["level"],
+          "properties": {
+            "level": { "type": "string", "enum": ["sparse", "medium", "dense"] },
+            "max_items": { "type": "integer" },
+            "max_chars": { "type": "integer" }
+          }
+        },
+        "speaker_note": { "type": "string" },
+        "mandatory": { "type": "boolean" }
+      }
+    }
+  }
+}

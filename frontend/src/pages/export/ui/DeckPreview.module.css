@@ -1,0 +1,49 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.slide {
+  display: block;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  transition: border-color 0.15s;
+}
+
+.slide:hover {
+  border-color: var(--ink-3);
+}
+
+.slide:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.large {
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-stage);
+}
+
+.strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.coverSkeleton {
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-lg);
+}
+
+.thumbSkeleton {
+  aspect-ratio: 16 / 9;
+  border-radius: var(--radius-sm);
+}
+
+.more {
+  color: var(--ink-3);
+  font-size: 12px;
+}

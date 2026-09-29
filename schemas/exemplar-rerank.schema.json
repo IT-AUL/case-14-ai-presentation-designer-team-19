@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deckdna/schemas/exemplar-rerank.schema.json",
+  "title": "ExemplarRerankOutput",
+  "type": "object",
+  "required": ["assignments"],
+  "properties": {
+    "assignments": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["slide_index", "candidate_index"],
+        "properties": {
+          "slide_index": { "type": "integer", "minimum": 0 },
+          "candidate_index": { "type": "integer", "minimum": 0 },
+          "reason": { "type": "string" }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

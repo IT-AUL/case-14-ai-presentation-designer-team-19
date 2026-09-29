@@ -1,0 +1,77 @@
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 360px;
+  padding: 32px;
+  border: 1.5px dashed var(--line-2);
+  border-radius: var(--radius-3xl);
+  background: var(--surface);
+  transition: border-color 0.15s, background-color 0.15s;
+}
+
+.zone:hover,
+.dragging {
+  border-color: var(--ink);
+}
+
+.dragging {
+  background: var(--surface-2);
+}
+
+.invalid {
+  border-color: var(--error);
+}
+
+.title {
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.subtitle {
+  color: var(--ink-2);
+}
+
+.formats {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.chip {
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--sunken);
+}
+
+.limit {
+  padding: 4px 8px;
+}
+
+.note {
+  max-width: 440px;
+  color: var(--ink-3);
+  font-size: 13px;
+  text-align: center;
+}
+
+.input {
+  display: none;
+}
+
+.error {
+  color: var(--error);
+  font-size: 13px;
+}

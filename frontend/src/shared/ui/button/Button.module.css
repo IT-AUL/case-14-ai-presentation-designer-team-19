@@ -1,0 +1,86 @@
+.button {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background-color 0.15s, border-color 0.15s, opacity 0.15s;
+}
+
+.button:disabled {
+  opacity: 0.4;
+}
+
+.primary {
+  background: var(--ink);
+  color: var(--inv);
+}
+
+.primary:not(:disabled):hover {
+  background: var(--ink-2);
+}
+
+.secondary {
+  border-color: var(--line-2);
+  background: var(--surface);
+  font-weight: 400;
+}
+
+.secondary:not(:disabled):hover {
+  border-color: var(--ink-3);
+}
+
+.ghost {
+  background: transparent;
+  color: var(--ink-2);
+  font-weight: 400;
+}
+
+.ghost:not(:disabled):hover {
+  background: var(--sunken);
+}
+
+.dashed {
+  border: 1px dashed var(--line-2);
+  background: transparent;
+  color: var(--ink-2);
+  font-weight: 400;
+}
+
+.dashed:not(:disabled):hover {
+  border-color: var(--ink);
+}
+
+.sm {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.md {
+  height: 36px;
+  font-size: 13px;
+}
+
+.lg {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 14px;
+}
+
+.xl {
+  height: 48px;
+  border-radius: var(--radius-lg);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.block {
+  width: 100%;
+}
