@@ -124,7 +124,7 @@ jobs:
           [[ -n "$HUB_USER" && -n "$HUB_TOKEN" ]] || { echo 'Set DOCKERHUB_USERNAME and DOCKERHUB_TOKEN secrets'; exit 1; }
           [[ "$RELEASE_CUTOFF_UTC" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]] || { echo 'Set RELEASE_CUTOFF_UTC in UTC ISO-8601 format'; exit 1; }
           cutoff="$(date -u -d "$RELEASE_CUTOFF_UTC" +%s)"
-          (( cutoff - $(date -u +%s) >= 7200 )) || { echo 'Release window is closed or too short for the build'; exit 1; }
+          (( cutoff - $(date -u +%s) >= 3600 )) || { echo 'Release window is closed or too short for the build'; exit 1; }
           git fetch --quiet origin main
           git merge-base --is-ancestor "$(git rev-parse "$TAG^{commit}")" origin/main || { echo 'Release tag must point to a commit on main'; exit 1; }
 
@@ -166,7 +166,7 @@ jobs:
         run: |
           set -euo pipefail
           cutoff="$(date -u -d "$RELEASE_CUTOFF_UTC" +%s)"
-          (( cutoff - $(date -u +%s) >= 3600 )) || { echo 'Publication window is closed or too short'; exit 1; }
+          (( cutoff - $(date -u +%s) >= 1800 )) || { echo 'Publication window is closed or too short'; exit 1; }
       - uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
         with:
           context: ${{ matrix.context }}
