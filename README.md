@@ -1,147 +1,252 @@
 <p align="center">
-  <img src="frontend/public/logo-square.svg" alt="DeckDNA" width="120">
+  <img src="docs/assets/logo.svg" alt="DeckDNA" width="128" />
 </p>
 
 <h1 align="center">DeckDNA — цифровой дизайнер презентаций</h1>
 
 <p align="center">
-  <a href="https://github.com/IT-AUL/case-14-ai-presentation-designer-team-19/actions/workflows/ci.yml"><img src="https://github.com/IT-AUL/case-14-ai-presentation-designer-team-19/actions/workflows/ci.yml/badge.svg?branch=main" alt="CI"></a>
-  <a href="https://github.com/IT-AUL/case-14-ai-presentation-designer-team-19/releases"><img src="https://img.shields.io/github/v/release/IT-AUL/case-14-ai-presentation-designer-team-19" alt="Release"></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-Apache--2.0-blue.svg" alt="License: Apache-2.0"></a>
+  <a href="https://github.com/IT-AUL/case-14-ai-presentation-designer-team-19/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/IT-AUL/case-14-ai-presentation-designer-team-19/actions/workflows/ci.yml/badge.svg" /></a>
+  <a href="https://github.com/IT-AUL/case-14-ai-presentation-designer-team-19/releases"><img alt="Release" src="https://img.shields.io/github/v/release/IT-AUL/case-14-ai-presentation-designer-team-19" /></a>
+  <a href="LICENSE"><img alt="License" src="https://img.shields.io/github/license/IT-AUL/case-14-ai-presentation-designer-team-19" /></a>
 </p>
 
-<p align="center"><b>Любой PPTX/POTX-шаблон + ваш контент → три редактируемые презентации в фирменном стиле шаблона — за минуты, с аудитом качества и экспортом.</b></p>
+<p align="center">
+  Загружаете шаблон и материалы — получаете готовую колоду в фирменном стиле,
+  с прозрачным аудитом и редактируемым PowerPoint-файлом. Без ручной вёрстки.
+</p>
 
-<p align="center"><b>Демо-стенд: <a href="https://deckdna.it-aul.ru/">deckdna.it-aul.ru</a></b></p>
+<p align="center">
+  <b>Демо-стенд: <a href="https://deckdna.it-aul.ru/">deckdna.it-aul.ru</a></b>
+</p>
 
-Open-source платформа и agent skill (Apache-2.0).
+<p align="center">
+  <img src="docs/assets/export.png" alt="Выбор варианта и экспорт колоды в PPTX, PDF и HTML" width="820" />
+</p>
+
+---
+
+**Содержание**
+
+- [Возможности](#возможности)
+- [Как это работает](#как-это-работает)
+- [Архитектура](#архитектура)
+- [Быстрый старт](#быстрый-старт)
+- [API: пять запросов до готовой колоды](#api-пять-запросов-до-готовой-колоды)
+- [Провайдер моделей](#провайдер-моделей)
+- [CLI и skill](#cli-и-skill)
+- [Стек](#стек)
+- [Релизы и обновления](#релизы-и-обновления)
+- [Проверки качества](#проверки-качества)
+- [Требования и ограничения](#требования-и-ограничения)
+- [Лицензия](#лицензия)
 
 ## Возможности
 
-- **Design DNA** из произвольного шаблона: layout'ы, палитра, шрифтовая шкала, якоря, роли слайдов — без хардкода под конкретные файлы.
-- **Редактируемый результат**: клонирование эталонных слайдов шаблона и типизированное заполнение слотов — сгруппированные фигуры, тексты, таблицы, диаграммы остаются живыми объектами, а не растром.
-- **Аудит → пользовательский repair**: issues с bbox-оверлеями, ограниченные типизированные правки, re-audit и новая ревизия колоды.
-- **Quality Passport**: метрики, версии промптов и моделей, применённые фолбэки — честная история каждого прогона.
-- **Модели — opt-in**: детерминированный `MockProvider` по умолчанию, без внешних ключей и вызовов; реальный OpenAI-compatible провайдер подключается через `.env`.
+- **Дизайн-DNA из любого шаблона.** DeckDNA не полагается на заготовленные макеты: система разбирает
+  загруженную презентацию, извлекает палитру, шрифты, макеты и паттерны размещения — и воспроизводит стиль.
+- **Детерминизм в центре, модель — на периферии.** Сборка колоды воспроизводима без ИИ вообще:
+  встроенный `MockProvider` делает всё на детерминированной логике, а языковые модели
+  подключаются там, где нужны копирайтинг и суждение.
+- **Три стратегии одновременно.** Один прогон даёт три варианта колоды — консервативный,
+  сбалансированный и более визуальный. Выбор — за пользователем, а не за генератором.
+- **Правки до вёрстки.** План колоды, правила шаблона и выбранные варианты можно поменять
+  до запуска компоновки, а не потом ломать готовые слайды.
+- **Проверки как код.** Аудит фиксирует ошибки OOXML, выход элементов за границы, недопустимые
+  шрифты и расстояния. Автоисправления выполняются как типизированный отчёт и повторно проверяются.
+- **Quality Passport.** Каждая колода отвечает на вопрос «откуда что взялось»: версии
+  конфигов и промптов, хеши входных файлов, признаки использованного контента, оценки.
+- **Экспорт без сюрпризов.** Нативный редактируемый PPTX, PDF через LibreOffice
+  и HTML-вьюер для веба — с гарантиями round-trip.
+- **API-first.** Всё, что видит UI, делается через REST: проекты, загрузки, правила,
+  варианты, прогоны, аудит, экспорты и артефакты.
 
-## Быстрый старт
+| План колоды | Аудит | Паспорт качества |
+|:---:|:---:|:---:|
+| <img src="docs/assets/plan.png" width="340" alt="Редактируемый план колоды" /> | <img src="docs/assets/audit.png" width="340" alt="Аудит: подсветка нарушений и до/после" /> | <img src="docs/assets/passport.png" width="340" alt="Паспорт качества: метрики и происхождение" /> |
+| Порядок и смыслы можно править до вёрстки | Каждое нарушение — правило, слайд и рамка | Метрики, время сборки, версии и хеши |
 
-```bash
-git clone https://github.com/IT-AUL/case-14-ai-presentation-designer-team-19 && cd case-14-ai-presentation-designer-team-19
+## Как это работает
+
+```mermaid
+flowchart LR
+    A["Шаблон<br/>PPTX / POTX"] --> B["Template<br/>Autopsy"]
+    C["Контент<br/>PPTX · PDF · DOCX · MD · XLSX"] --> D["Evidence<br/>Graph"]
+    B --> E["DeckPlan<br/>структура и смыслы"]
+    D --> E
+    E --> F["Компоновка<br/>3 стратегии"]
+    F --> G["Аудит<br/>правила + модель"]
+    G --> H["Repair<br/>типизированные правки"]
+    H --> G
+    G --> I["Quality<br/>Passport"]
+    I --> J["PPTX · PDF · HTML"]
+    F -.->|"опционально"| M["LLM / VLM<br/>через ModelGateway"]
+    M -.-> F
 ```
 
-Дальше — один из двух вариантов:
+**Шаблон → Design DNA.** `Template Autopsy` читает не только masters/layouts, но и обычные слайды,
+выбирает эталоны и дистиллирует правила: палитру, шрифтовую шкалу, заполненность, выравнивание,
+допустимые зоны. Контент, в свою очередь, превращается в граф опор — у каждого будущего
+утверждения есть источник.
 
-**Готовые образы** (публикуются в GHCR и Docker Hub на каждый релизный тег):
+**План до вёрстки.** Система строит `DeckPlan`: цель, аудитория, разделы, мысли и типы слайдов.
+План редактируется в интерфейсе до того, как потрачен прогон.
 
-```bash
-DECKDNA_VERSION=v1.0.0 docker compose up -d --no-build --pull always
-# → http://localhost:8080 (UI), API на 127.0.0.1:8000
-```
+**Компоновка нативными объектами.** Слайды собираются клонированием эталонов и заполнением
+слотов: заголовки, абзацы, таблицы и фигуры остаются редактируемыми объектами PowerPoint,
+а не картинками.
 
-Тянет `ghcr.io/it-aul/deckdna-{web,api}:<версия>`; Docker Hub — тот же
-compose с `DECKDNA_REGISTRY=docker.io/renatgubaudullin`. Публикуются
-только версионные теги `vX.Y.Z`, `latest` нет.
+| Стратегия | Идея |
+|---|---|
+| `faithful` | максимально близко к эталонам шаблона |
+| `balanced` | баланс стиля, плотности и читаемости |
+| `visual` | больше визуальных блоков и схем |
 
-**Сборка из исходников**:
-
-```bash
-docker compose up --build
-# → http://localhost:8080 (UI; OpenAPI: http://127.0.0.1:8000/openapi.json)
-```
-
-Два контейнера (`web` + `api`), `.env` не нужен. Первая сборка скачивает
-базовые образы и LibreOffice — нужна сеть; дальше инференс моделей не
-обращается ни к какому внешнему провайдеру (детерминированный mock-режим).
-
-## От брифа до файла за пять шагов
-
-```text
-1. Создайте проект            → POST /api/v1/projects
-2. Загрузите шаблон           → POST /api/v1/projects/{id}/templates (PPTX/POTX)
-3. Разбор шаблона             → POST /api/v1/templates/{id}/analyze → Design DNA
-4. Загрузите контент          → POST /api/v1/projects/{id}/content-packs
-5. Генерация и выгрузка       → POST /api/v1/projects/{id}/generations
-                                → POST /api/v1/variants/{id}/exports (pptx/pdf/html)
-```
-
-Всё то же — кликами в UI. Полный контракт: [docs/contracts/API.md](docs/contracts/API.md),
-машиночитаемая схема: `docs/contracts/openapi.json` (генерируется из кода).
-
-## Провайдер моделей (opt-in)
-
-Любой OpenAI-compatible endpoint с open-weight моделями (Apache-2.0/MIT, ≤35B
-для text/vision, ≤20B для image по условиям задачи): vLLM, Ollama, TGI.
-
-```dotenv
-DECKDNA_MOCK_PROVIDER=false
-DECKDNA_PROVIDER_BASE_URL=http://your-vllm-host:8000/v1
-DECKDNA_PROVIDER_API_KEY=...
-DECKDNA_PROVIDER_ALLOW_PRIVATE_NETWORKS=true  # для self-hosted/private IP
-DECKDNA_MODEL_TEXT=qwen2.5-32b-instruct
-DECKDNA_MODEL_VISION=qwen2.5-vl-32b-instruct
-DECKDNA_MODEL_EMBED=bge-m3
-```
-
-Провайдер-сессия из UI приоритетнее env. Модели и лицензии —
-`configs/model_licenses.yaml` (`deckdna check-models`), детали —
-[docs/MODELS.md](docs/MODELS.md).
-
-## CLI и agent skill (без Docker)
-
-```bash
-python3.12 -m venv .venv && .venv/bin/pip install -e ".[dev]"
-.venv/bin/deckdna generate tests/fixtures/pptx/vk_tech_template.pptx \
-    tests/fixtures/content/poc_article.md out/demo \
-    --purpose "Представить решение" --slides 12 --strategy balanced
-.venv/bin/deckdna audit out/demo/deck.pptx
-.venv/bin/deckdna repair out/demo/deck.pptx --out out/demo/deck-repaired.pptx
-.venv/bin/deckdna export out/demo/deck.pptx --format pdf --out out/demo/deck.pdf
-python3 skill/run_skill.py tests/fixtures/pptx/vk_tech_template.pptx \
-    tests/fixtures/content/poc_article.md out/skill-demo --slides 12
-```
-
-Контракт скила: [skill/SKILL.md](skill/SKILL.md), манифест: `skill/manifest.yaml`
-(и `GET /api/v1/skill/manifest`).
+**Аудит → исправление → повторный аудит.** Каталог правил проверяет целостность OOXML,
+геометрию, шрифты и контраст; при подключённой модели добавляются контекстные проверки.
+Находки превращаются в типизированные исправления, и результат проходит аудит заново.
+Полный каталог и жизненный цикл правок — в [docs/AUDIT.md](docs/AUDIT.md).
 
 ## Архитектура
 
-```text
-web (SPA + nginx) ──/api/*──▶ api (FastAPI)
-                               ingest → plan → compose → audit → auto-fix
-                               → passport → export   [in-process jobs]
-                               model gateway: Mock │ OpenAI-compat │ VK
+```mermaid
+flowchart TB
+    subgraph compose["Docker Compose"]
+        W["web<br/>React SPA + nginx<br/>/api → api:8000"]
+        A["api<br/>FastAPI · пайплайн,<br/>аудит, repair"]
+        W --> A
+    end
+
+    A --> G["ModelGateway<br/>текст · зрение · изображения"]
+    G --> M0["MockProvider<br/>детерминизм без сети"]
+    G --> M1["OpenAI-compatible<br/>vLLM · Ollama · TGI · VK Inference"]
+    A --> R["LibreOffice + Poppler<br/>PDF · PNG-превью · HTML"]
+    A --> S["configs · schemas · prompts · skill<br/>версионированные в репозитории"]
 ```
 
-Слои: `api/`·`cli/` · pipeline оркестрация · `contracts/`+`domain/` (pydantic,
-без I/O) · `pptx/` (OPC, клонирование, рендер) · `audit/`+`repair/` ·
-`providers/`+`prompts/`. Подробно: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
-аудит: [docs/AUDIT.md](docs/AUDIT.md).
+Все модельные роли — за единым `ModelGateway` и интерфейсом провайдера: `MockProvider`
+по умолчанию, OpenAI-совместимый endpoint или адаптер VK Inference. Роли (текст, зрение,
+генерация изображений) настраиваются независимо — см. [docs/MODELS.md](docs/MODELS.md).
+Более глубокое описание слоёв, файловых контрактов и схем — в [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
-## Релизы
+## Быстрый старт
 
-Тег `vX.Y.Z` на коммите из `main` запускает release-конвейер в том же CI:
-обычные проверки → сборка multi-arch образов → публикация
-`ghcr.io/it-aul/deckdna-{web,api}:vX.Y.Z` и
-`docker.io/renatgubaudullin/deckdna-{web,api}:vX.Y.Z` → GitHub Release с
-автосгенерированными заметками.
-
-## Проверки
+### Готовые образы из реестра (без сборки)
 
 ```bash
-pytest tests -q && ruff check backend tests \
-    && mypy backend/deckdna/domain backend/deckdna/contracts
-cd frontend && npm ci && npm run lint && npm run lint:fsd \
-    && npm run typecheck && npm test -- --run && npm run build
-docker compose config --quiet && docker compose up -d --build
+git clone https://github.com/IT-AUL/case-14-ai-presentation-designer-team-19.git
+cd case-14-ai-presentation-designer-team-19
+
+DECKDNA_VERSION=v1.0.0 docker compose up -d --no-build --pull always
 ```
 
-## Требования
+Без локальной сборки работает только опубликованная версия (`v1.0.0` — первая). До её публикации
+используйте запуск из исходников. Альтернатива GHCR — Docker Hub:
 
-Docker 24+ с Compose — для quickstart; bare-metal: Python 3.12, Node 20+,
-LibreOffice 24+, poppler-utils.
+```bash
+DECKDNA_REGISTRY=docker.io/renatgubaudullin DECKDNA_VERSION=v1.0.0 docker compose up -d --no-build --pull always
+```
+
+### Из исходников
+
+```bash
+docker compose up -d --build   # первый запуск может занять время
+```
+
+Откройте `http://localhost:8080`. API-документация — `http://localhost:8000/docs`.
+Всё настраивается через корневой `.env` — шаблон в [`.env.example`](.env.example). По умолчанию
+сервис детерминирован и не ходит в сеть за моделью: интерфейс, загрузка шаблона и генерация
+работают на встроенной логике, а первый сбор из исходников также скачает базовые образы
+и пакеты сборки. Внешние модели и деплой описаны в [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+Проверка после старта:
+
+```bash
+curl http://localhost:8000/healthz
+curl http://localhost:8080/healthz
+```
+
+## API: пять запросов до готовой колоды
+
+```text
+POST /api/v1/projects                                 → создать проект
+POST /api/v1/projects/{id}/uploads                    → загрузить шаблон PPTX/POTX
+POST /api/v1/projects/{id}/uploads                    → загрузить контентные материалы
+POST /api/v1/projects/{id}/generations                → запустить генерацию
+GET  /api/v1/exports/{exportId}/download              → забрать PPTX/PDF/HTML
+```
+
+Полный curl-пример с опросом статуса и списком всех маршрутов — в
+[docs/contracts/API.md](docs/contracts/API.md). Схемы и типы — в
+[`docs/contracts/openapi.json`](docs/contracts/openapi.json) и `/docs` запущенного сервиса.
+
+## Провайдер моделей
+
+`MockProvider` по умолчанию: полный пайплайн работает без сети и ключей, повторный прогон
+детерминирован — удобно для тестов, CI и воспроизводимости. Модели подключаются через
+OpenAI-совместимый endpoint (`MODEL_BASE_URL`, `MODEL_API_KEY`, `MODEL_NAME`) или
+`MODEL_PROVIDER_TYPE=vk_inference` для VK Inference; отдельные роли для текста,
+зрения и изображений — через переменные `MODEL_TEXT_*`, `MODEL_VISION_*`, `MODEL_IMAGE_*`.
+Подробности и рекомендуемые модели — в [docs/MODELS.md](docs/MODELS.md).
+
+## CLI и skill
+
+`skill/` — переносимый Python-интерфейс к тому же пайплайну, пригодный для разового запуска
+и интеграции. Пример на встроенной фикстуре:
+
+```bash
+python skill/run_skill.py \
+  --template backend/tests/fixtures/template_samples/synthetic_unseen.pptx \
+  --materials backend/tests/fixtures/content_text_pack \
+  --output-dir out/
+```
+
+Документация интерфейса — в [skill/SKILL.md](skill/SKILL.md).
+
+## Стек
+
+| Слой | Технологии |
+|---|---|
+| Фронтенд | React, TypeScript, Vite, nginx (SPA + прокси `/api`) |
+| Бэкенд | Python 3.12, FastAPI, Uvicorn, Pydantic-контракты |
+| Документы | OOXML (PPTX/POTX), LibreOffice, Poppler (`pdftoppm`) |
+| Модели | `ModelGateway`: Mock / OpenAI-compatible / VK Inference, роли text · vision · image |
+| Качество | каталог детерминированных правил, contextual VLM-аудит, типизированный repair |
+| Поставка | Docker Compose, GitHub Actions, multi-arch образы (amd64/arm64) → GHCR + Docker Hub |
+
+## Релизы и обновления
+
+CI прогоняет проверки фронта и бэка, сборку, статический и runtime smoke-тест Compose.
+Тег вида `vX.Y.Z` на коммите из `main` дополнительно собирает и публикует multi-arch образы
+`deckdna-web` и `deckdna-api` в GHCR и Docker Hub и создаёт GitHub Release.
+Команда обновления локального стека до конкретной версии — та же, что для запуска:
+`DECKDNA_VERSION=vX.Y.Z docker compose up -d --no-build --pull always`.
+Для self-hosted и процедуры публикации образов — [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Проверки качества
+
+```bash
+cd backend && python -m pytest -q             # юнит и интеграционные тесты
+cd frontend && npm test -- --run              # тесты фронтенда
+docker compose up -d --build                  # поднять стек
+```
+
+CI повторяет этот же путь, а workflow сопровождается `actionlint`.
+
+## Требования и ограничения
+
+Что важно знать перед эксплуатацией — без преувеличений:
+
+- Узлы и пайплайн спроектированы одиночным контейнером: состояние проектов держится в памяти
+  API и очищается при перезапуске. Для демо и self-hosted сценария этого достаточно;
+  персистентное хранилище — намеренно выведено за границу MVP.
+- Аутентификации и изоляции пользователей нет — сервис рассчитан на доверенный контур.
+  В Compose порты привязаны к loopback; для внешнего доступа поставьте TLS-proxy с авторизацией.
+- Контекстные проверки моделью включаются только при настроенном провайдере.
+- Нативный SmartArt пока заменён группами редактируемых фигур — задача на развитие.
+- HTML-экспорт — это веб-вьюер колоды, а не интерактивный редактор.
+
+Полный список жёстких ограничений и оговорок — в [docs/AUDIT.md](docs/AUDIT.md).
 
 ## Лицензия
 
-Apache-2.0 — [LICENSE](LICENSE). Шрифты в `assets/fonts/` под SIL OFL.
-Hackathon build (ЛЦТ 2026, задача «Цифровой дизайнер презентаций»).
+Apache-2.0 — см. [LICENSE](LICENSE).
