@@ -66,7 +66,7 @@ jobs:
             fonts-dejavu fonts-liberation fonts-noto \
             fonts-crosextra-carlito fonts-crosextra-caladea
 
-      - run: pytest tests -q
+      - run: pytest tests -q -n auto --dist loadscope
 
   compose:
     name: Docker Compose — build + health smoke

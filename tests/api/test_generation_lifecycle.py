@@ -100,7 +100,7 @@ def _gate_generate(monkeypatch):
     return started, release
 
 
-def _wait_state(job_id: str, states: set[str], timeout: float = 30.0) -> dict:
+def _wait_state(job_id: str, states: set[str], timeout: float = 120.0) -> dict:
     deadline = time.monotonic() + timeout
     while True:
         job = _job(job_id)
