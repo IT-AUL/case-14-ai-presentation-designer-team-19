@@ -204,3 +204,23 @@ jobs:
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" --verify-tag --title "DeckDNA $TAG" --generate-notes
           fi
+          BODY="$(gh release view "$TAG" --json body -q .body)"
+          {
+            cat <<EOF
+          ## Готовые образы
+
+          | Реестр | web | api |
+          |---|---|---|
+          | GHCR | \`ghcr.io/it-aul/deckdna-web:$TAG\` | \`ghcr.io/it-aul/deckdna-api:$TAG\` |
+          | Docker Hub | \`docker.io/renatgubaudullin/deckdna-web:$TAG\` | \`docker.io/renatgubaudullin/deckdna-api:$TAG\` |
+
+          Запуск без сборки:
+
+          \`\`\`bash
+          DECKDNA_VERSION=$TAG docker compose up -d --no-build --pull always
+          \`\`\`
+
+          EOF
+            printf '%s\n' "$BODY"
+          } > release-notes.md
+          gh release edit "$TAG" --notes-file release-notes.md

@@ -217,7 +217,19 @@ python skill/run_skill.py \
 
 CI прогоняет проверки фронта и бэка, сборку, статический и runtime smoke-тест Compose.
 Тег вида `vX.Y.Z` на коммите из `main` дополнительно собирает и публикует multi-arch образы
-`deckdna-web` и `deckdna-api` в GHCR и Docker Hub и создаёт GitHub Release.
+в два реестра и создаёт GitHub Release.
+
+**Имена образов и версии.** Версия образа всегда равна git-тегу релиза — список доступных
+версий смотрите на странице [Releases](https://github.com/IT-AUL/case-14-ai-presentation-designer-team-19/releases)
+(в описании каждого релиза уже лежит готовая команда запуска). Например, для тега `v1.0.0`:
+
+| Реестр | web | api |
+|---|---|---|
+| GHCR | `ghcr.io/it-aul/deckdna-web:v1.0.0` | `ghcr.io/it-aul/deckdna-api:v1.0.0` |
+| Docker Hub | `docker.io/renatgubaudullin/deckdna-web:v1.0.0` | `docker.io/renatgubaudullin/deckdna-api:v1.0.0` |
+
+Compose сам подставляет их по двум переменным: `DECKDNA_VERSION` — тег, `DECKDNA_REGISTRY` —
+реестр (`ghcr.io/it-aul` по умолчанию, `docker.io/renatgubaudullin` для Docker Hub).
 Команда обновления локального стека до конкретной версии — та же, что для запуска:
 `DECKDNA_VERSION=vX.Y.Z docker compose up -d --no-build --pull always`.
 Для self-hosted и процедуры публикации образов — [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
