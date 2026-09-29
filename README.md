@@ -209,7 +209,7 @@ python skill/run_skill.py \
 | Фронтенд | React, TypeScript, Vite, nginx (SPA + прокси `/api`) |
 | Бэкенд | Python 3.12, FastAPI, Uvicorn, Pydantic-контракты |
 | Документы | OOXML (PPTX/POTX), LibreOffice, Poppler (`pdftoppm`) |
-| Модели | `ModelGateway`: Mock / OpenAI-compatible / VK Inference, роли text · vision · image |
+| Модели | `ModelGateway`: Mock / OpenAI-compatible / VK Inference — text+vision `qwen-3.8-27b`, image `black-forest-labs/flux.2-klein-4b` |
 | Качество | каталог детерминированных правил, contextual VLM-аудит, типизированный repair |
 | Поставка | Docker Compose, GitHub Actions, multi-arch образы (amd64/arm64) → GHCR + Docker Hub |
 

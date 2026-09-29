@@ -31,9 +31,9 @@ DECKDNA_MOCK_PROVIDER=false
 DECKDNA_PROVIDER_BASE_URL=https://endpoint/v1   # любой OpenAI-compatible
 DECKDNA_PROVIDER_API_KEY=...
 DECKDNA_PROVIDER_ALLOW_PRIVATE_NETWORKS=true    # для self-hosted/private IP
-DECKDNA_MODEL_TEXT=qwen2.5-32b-instruct
-DECKDNA_MODEL_VISION=qwen2.5-vl-32b-instruct
-DECKDNA_MODEL_EMBED=bge-m3
+DECKDNA_MODEL_TEXT=qwen-3.8-27b
+DECKDNA_MODEL_VISION=qwen-3.8-27b
+DECKDNA_MODEL_IMAGE=black-forest-labs/flux.2-klein-4b
 ```
 
 Проверка сессии — `POST /provider-sessions/{id}/test` выполняет **живые**
@@ -51,12 +51,13 @@ provider-сессии): на vision-роль можно ставить боле�
 
 Манифест — `configs/model_licenses.yaml` (валидируется `deckdna check-models`):
 
-| Роль | model_id | Карточка | Лицензия | Размер |
+| Роль | model_id | Провайдер | Лицензия | Размер |
 |---|---|---|---|---|
-| text | qwen2.5-32b-instruct | [Qwen/Qwen2.5-32B-Instruct](https://huggingface.co/Qwen/Qwen2.5-32B-Instruct) | Apache-2.0 | 32B |
-| vision | qwen2.5-vl-32b-instruct | [Qwen/Qwen2.5-VL-32B-Instruct](https://huggingface.co/Qwen/Qwen2.5-VL-32B-Instruct) | Apache-2.0 | 32B |
-| embedding | bge-m3 | [BAAI/bge-m3](https://huggingface.co/BAAI/bge-m3) | MIT | 0.57B |
-| image (stretch) | flux.1-schnell | [black-forest-labs/FLUX.1-schnell](https://huggingface.co/black-forest-labs/FLUX.1-schnell) | Apache-2.0 | 12B |
+| text | qwen-3.8-27b | VK Inference | Apache-2.0* | 27B |
+| vision | qwen-3.8-27b | VK Inference | Apache-2.0* | 27B |
+| image (stretch) | black-forest-labs/flux.2-klein-4b | VK Inference | Apache-2.0 | 4B |
+
+\* лицензия VK-hosted модели заявлена по ТЗ; манифест — `configs/model_licenses.yaml`.
 
 Ограничения задачи: только open-weight Apache-2.0/MIT; text/vision ≤35B;
 text-to-image ≤20B. Требования к VRAM и latency зависят от квантизации и
@@ -75,6 +76,6 @@ text-to-image ≤20B. Требования к VRAM и latency зависят о�
 - `OpenAICompatibleProvider` — базовый (`providers/`): chat.completions,
   `response_format` json_schema, картинки как data URL.
 - `VKInferenceProvider` (`providers/vk_inference.py`) — тонкий адаптер,
-  модель `qwen3.8-27b`, env `DECKDNA_VK_*`.
+  модель `qwen-3.8-27b` (text+vision), env `DECKDNA_VK_*`.
 - `MockProvider` — детерминированный, офлайн, default.
 
