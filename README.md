@@ -12,6 +12,8 @@
 
 <p align="center"><b>Любой PPTX/POTX-шаблон + ваш контент → три редактируемые презентации в фирменном стиле шаблона — за минуты, с аудитом качества и экспортом.</b></p>
 
+<p align="center"><b>Демо-стенд: <a href="https://deckdna.it-aul.ru/">deckdna.it-aul.ru</a></b></p>
+
 Open-source платформа и agent skill (Apache-2.0).
 
 ## Возможности
