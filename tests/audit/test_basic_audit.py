@@ -186,6 +186,33 @@ class TestEmptySlide:
         prs.save(path)
         assert _issues_by_rule(audit_deck(path), RULE_EMPTY_SLIDE) == []
 
+    def test_synthetic_heading_with_text_counts_as_content(self, tmp_path):
+        """Слайд-закрытие только с синтетическим «DeckDNA heading» +
+        текст («Спасибо за внимание») — это контент, не empty_slide."""
+        prs = Presentation()
+        slide = _blank_slide(prs)
+        box = slide.shapes.add_textbox(Inches(1), Inches(3), Inches(8), Inches(1))
+        box.name = "DeckDNA heading"
+        box.text_frame.text = "Спасибо за внимание"
+        path = tmp_path / "deck.pptx"
+        prs.save(path)
+        assert _issues_by_rule(audit_deck(path), RULE_EMPTY_SLIDE) == []
+
+    def test_empty_synthetic_heading_still_empty(self, tmp_path):
+        """Пустой «DeckDNA heading»/backdrop — структурный мусор, слайд
+        без реального контента остаётся empty_slide."""
+        prs = Presentation()
+        slide = _blank_slide(prs)
+        backdrop = slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE, Inches(1), Inches(3), Inches(8), Inches(1)
+        )
+        backdrop.name = "DeckDNA heading backdrop"
+        box = slide.shapes.add_textbox(Inches(1), Inches(3), Inches(8), Inches(1))
+        box.name = "DeckDNA heading"  # текста нет — декоративный
+        path = tmp_path / "deck.pptx"
+        prs.save(path)
+        assert _issues_by_rule(audit_deck(path), RULE_EMPTY_SLIDE)
+
 
 class TestAspectRatio:
     def _deck(self, tmp_path, pic_w, pic_h, img=(64, 64)):
@@ -364,6 +391,34 @@ class TestOutOfBounds:
         """Фигура целиком внутри → без issue."""
         path = self._deck(tmp_path, Inches(1), Inches(1), Inches(3), Inches(2))
         assert _issues_by_rule(audit_deck(path), RULE_OUT_OF_BOUNDS) == []
+
+    def test_full_bleed_artwork_slightly_past_edge_is_allowed(self, tmp_path):
+        prs = Presentation()
+        slide = _blank_slide(prs)
+        slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            int(-0.02 * prs.slide_width),
+            Inches(1),
+            int(1.04 * prs.slide_width),
+            Inches(4),
+        )
+        path = tmp_path / "deck.pptx"
+        prs.save(path)
+        assert _issues_by_rule(audit_deck(path), RULE_OUT_OF_BOUNDS) == []
+
+    def test_partial_artwork_outside_edge_is_still_reported(self, tmp_path):
+        prs = Presentation()
+        slide = _blank_slide(prs)
+        slide.shapes.add_shape(
+            MSO_SHAPE.RECTANGLE,
+            int(-0.02 * prs.slide_width),
+            Inches(1),
+            int(0.50 * prs.slide_width),
+            Inches(1),
+        )
+        path = tmp_path / "deck.pptx"
+        prs.save(path)
+        assert _issues_by_rule(audit_deck(path), RULE_OUT_OF_BOUNDS)
 
     @pytest.mark.parametrize("top,expected", [(5.44, True), (1.0, False)])
     def test_wrapped_table_rows_expand_past_slide(self, tmp_path, top, expected):

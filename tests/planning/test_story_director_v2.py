@@ -195,7 +195,7 @@ def _sparse_pack_forcing_dividers() -> ContentPack:
 
 
 async def test_section_dividers_end_to_end_stay_title_only():
-    """Живой баг: без protection, Stage 1 could
+    """Живой баг : без protection, Stage 1 could
     fabricate a slide_brief describing a divider's TRANSITION role
     ("Слайд задаёт маршрут: от проблемы к решению...") that then leaked
     into title_intent via content_writer's fallback, publishing a

@@ -6,11 +6,9 @@ Guards against cross-endpoint regressions that per-feature tests miss:
 entities created by one route must be consumable by the next (uploaded
 bytes -> analyze -> generate -> export -> repair -> re-audit)."""
 
-import hashlib
 from pathlib import Path
 
 import pytest
-from conftest import inject_text_overflow
 from deckdna.api.app import STORE, app
 from fastapi.testclient import TestClient
 
@@ -34,8 +32,8 @@ BRIEF = {
     "template_name",
     [
         # organizer benchmark template + an unseen synthetic template the
-        # API layer has never been hardcoded against (no fixture-name or
-        # layout assumptions as product behaviour)
+        # API layer has never been hardcoded against (no
+        # fixture-name/layout assumptions as product behaviour)
         "vk_tech_template.pptx",
         "synthetic_unseen.pptx",
     ],
@@ -125,6 +123,10 @@ def test_full_api_surface_end_to_end(template_name: str, wait_generation):
     assert magics["pptx"][:2] == b"PK"
     assert magics["pdf"][:4] == b"%PDF"
 
+    # Repair needs a genuinely damaged file; clean generation is a success.
+    from conftest import squeeze_variant_text_frames
+
+    squeeze_variant_text_frames(variant_id)
     # audit -> repair -> re-audit: issues shrink for real
     audit = client.post(f"/api/v1/variants/{variant_id}/audits", json={})
     assert audit.status_code == 202, audit.text
@@ -135,34 +137,7 @@ def test_full_api_surface_end_to_end(template_name: str, wait_generation):
         f"/api/v1/audits/{audit_id}/issues", params={"limit": 200}
     ).json()["items"]
     repairable = [i for i in issues if i["repairable"]]
-    if not repairable:
-        # Чистая генерация не обязана давать repairable issues (auto-fix
-        # закрывает aspect/contrast/palette до ревизии 1). Вносим реальный
-        # text.overflow в байты артефакта и пересоздаём аудит — repair
-        # проверяется на настоящем дефекте, не на синтетическом issue.
-        variant = client.get(f"/api/v1/variants/{variant_id}").json()
-        artifact = STORE.artifacts[variant["deck_artifact_id"]]
-        data = inject_text_overflow(artifact.data)
-        artifact.data = data
-        artifact.sha256 = hashlib.sha256(data).hexdigest()
-        artifact.size_bytes = len(data)
-        # POST /audits идемпотентно отдаёт аудит времени генерации (на
-        # чистой колоде) — удаляем его, чтобы повторный POST честно
-        # проаудировал мутированные байты.
-        for stale in [
-            a for a in STORE.audits.values() if a.variant_id == variant_id
-        ]:
-            STORE.audits.pop(stale.id, None)
-            STORE.issues.pop(stale.id, None)
-        audit = client.post(f"/api/v1/variants/{variant_id}/audits", json={})
-        assert audit.status_code == 202, audit.text
-        audit_id = audit.json()["audit_id"]
-        before = client.get(f"/api/v1/audits/{audit_id}").json()["issue_count"]
-        issues = client.get(
-            f"/api/v1/audits/{audit_id}/issues", params={"limit": 200}
-        ).json()["items"]
-        repairable = [i for i in issues if i["repairable"]]
-    assert repairable, "injected real defect must be repairable"
+    assert repairable, "the deliberately squeezed deck must have repairable issues"
     repair = client.post(
         f"/api/v1/audits/{audit_id}/repairs",
         json={"selected_issue_ids": [i["id"] for i in repairable[:3]]},

@@ -44,7 +44,7 @@ function parseBrief(value: unknown): Brief {
   if (!isRecord(value)) throw validationError('brief', "Field 'brief' is required")
   return {
     purpose: requiredString(value, 'purpose'),
-    audience: requiredString(value, 'audience'),
+    audience: optionalString(value, 'audience') ?? '',
     language: requiredString(value, 'language', 16),
     target_slide_count: optionalInteger(value, 'target_slide_count', { min: 3, max: 40, fallback: 12 }),
     tone: optionalString(value, 'tone'),
@@ -83,6 +83,31 @@ export function parseGenerationRequest(store: MockStore, projectId: string, body
     seed: null,
     use_llm: optionalBoolean(body, 'use_llm', false),
   }
+}
+
+export function createPlanSet(store: MockStore, projectId: string, body: JsonObject): JsonObject {
+  store.project(projectId)
+  const contentPackId = requiredString(body, 'content_pack_id')
+  store.contentPack(contentPackId)
+  const templateId = optionalString(body, 'template_id')
+  if (templateId) store.template(templateId)
+  const brief = parseBrief(body.brief)
+  const requested = Array.isArray(body.strategies) && body.strategies.length > 0 ? body.strategies : ['faithful', 'balanced', 'visual']
+  const strategies = parseVariants(requested.map((strategy) => ({ strategy }))).map((variant) => variant.strategy)
+  const source = generationFixture.deck_plan
+  if (!source) throw stateConflict('Plan fixture is missing', {})
+  const plan = rebrand(source, new Map([[FIXTURE_PACK_ID, contentPackId], [FIXTURE_PLAN_PREFIX, planKey(contentPackId)]]))
+  const planId = prefixedId('plan')
+  return {
+    plan_id: planId,
+    project_id: projectId,
+    content_pack_id: contentPackId,
+    plans: strategies.map((strategy) => ({
+      strategy,
+      deck_plan: { ...plan, id: `${planId}-${strategy}`, brief, audience: brief.audience, language: brief.language, slides: plan.slides.slice(0, Math.max(3, brief.target_slide_count)) },
+    })),
+    created_at: nowIso(),
+  } as unknown as JsonObject
 }
 
 function planKey(contentPackId: string): string {

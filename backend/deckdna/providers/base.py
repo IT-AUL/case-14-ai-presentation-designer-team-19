@@ -1,4 +1,4 @@
-"""Provider gateway — frozen interface."""
+"""Provider gateway — frozen interface (docs/agents/INTERFACE_FREEZE.md §5)."""
 
 from __future__ import annotations
 

@@ -1,0 +1,23 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:51:33.711Z",
+  "method": "GET",
+  "path": "/projects/prj_dcfe27bda1874f76b03a28e7ee495aa1/session",
+  "status": 200,
+  "body": {
+    "step": 1,
+    "completed_steps": [],
+    "skipped_steps": [],
+    "artifacts": {
+      "template_id": null,
+      "content_pack_id": null,
+      "brandbook_id": null,
+      "plan_id": null,
+      "preview_id": null,
+      "generation_id": null
+    },
+    "brief": {},
+    "assistant_note": "Добавьте шаблон и материалы, начну с них.",
+    "job_id": null
+  }
+}

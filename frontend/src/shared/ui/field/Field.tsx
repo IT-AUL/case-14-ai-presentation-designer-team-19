@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { useId, type InputHTMLAttributes, type ReactNode, type TextareaHTMLAttributes } from 'react'
+import { useId, type ComponentProps, type InputHTMLAttributes, type ReactNode } from 'react'
 import styles from './Field.module.css'
 
 interface FieldProps {
@@ -26,6 +26,6 @@ export function TextInput({ className, mono, ...rest }: InputHTMLAttributes<HTML
   return <input className={clsx(styles.input, mono && styles.mono, className)} {...rest} />
 }
 
-export function TextArea({ className, ...rest }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+export function TextArea({ className, ...rest }: ComponentProps<'textarea'>) {
   return <textarea className={clsx(styles.textarea, className)} {...rest} />
 }

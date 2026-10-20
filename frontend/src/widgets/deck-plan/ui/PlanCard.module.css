@@ -1,0 +1,351 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+  padding: 18px 20px 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.03);
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+
+.card:hover {
+  border-color: var(--line-2);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.06);
+}
+
+.card:focus-within {
+  border-color: var(--ink-3);
+}
+
+.card[data-selected] {
+  border-color: var(--focus);
+  box-shadow: 0 0 0 1px var(--focus);
+}
+
+.card[data-off-topic] {
+  border-style: dashed;
+  border-color: var(--line-2);
+}
+
+.card[aria-busy='true'] {
+  opacity: 0.6;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.number {
+  color: var(--ink-3);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.role {
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.sources {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  min-width: 0;
+}
+
+.source {
+  padding: 1px 8px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  color: var(--ink-2);
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+.source[data-kind='web'] {
+  border-color: transparent;
+  background: var(--info-bg);
+  color: var(--info);
+}
+
+.open {
+  margin-left: auto;
+  padding: 2px 4px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--ink-3);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.open:hover {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.open:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.title,
+.pointInput {
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 4px 6px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  resize: none;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+
+.title {
+  margin: 0 -6px;
+  width: calc(100% + 12px);
+  font-size: 17px;
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.005em;
+}
+
+.pointInput {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.title:hover,
+.pointInput:hover {
+  border-color: var(--line);
+}
+
+.title:focus-visible,
+.pointInput:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 0;
+  border-color: transparent;
+  background: var(--surface);
+}
+
+.title::placeholder,
+.pointInput::placeholder {
+  color: var(--ink-3);
+  font-weight: 400;
+}
+
+.offTopic {
+  margin: -4px 0 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.points {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.point {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+  padding-left: 12px;
+  color: var(--ink-2);
+}
+
+.point::before {
+  position: absolute;
+  top: 14px;
+  left: 0;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--ink-3);
+  content: '';
+}
+
+.remove {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--ink-3);
+  opacity: 0;
+  cursor: pointer;
+}
+
+.point:hover .remove,
+.point:focus-within .remove,
+.remove:focus-visible {
+  opacity: 1;
+}
+
+.remove:hover {
+  background: var(--sunken);
+  color: var(--ink);
+}
+
+.remove:focus-visible {
+  outline: 2px solid var(--focus);
+}
+
+.more,
+.add {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.more {
+  margin-left: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.more:hover,
+.add:hover {
+  color: var(--ink);
+}
+
+.more:focus-visible,
+.add:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.chart {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-top: auto;
+  padding: 10px 12px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--motion-fast);
+}
+
+.chart:hover {
+  background: var(--sunken);
+}
+
+.chart:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.spark {
+  display: block;
+  flex: none;
+  width: 64px;
+  height: 26px;
+}
+
+.chartText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.chartLabel {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.chartWhy {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.45;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.chartTypes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chartType {
+  height: 26px;
+  padding: 0 10px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: var(--type-caption);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast),
+    border-color var(--motion-fast),
+    color var(--motion-fast);
+}
+
+.chartType:hover {
+  border-color: var(--ink-3);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.chartType[data-active],
+.chartType[data-active]:hover {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--inv);
+}
+
+.chartType:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.visual {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+}

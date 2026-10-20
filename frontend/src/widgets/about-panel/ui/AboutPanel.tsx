@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { CheckKindBadge, useRuleCatalog } from '@/entities/audit'
 import { useCapabilities, useSkillManifest, useVersion } from '@/entities/system'
+import { humanError } from '@/shared/api'
 import { Badge, Drawer, Skeleton } from '@/shared/ui'
 import { capabilityRows, countRules, describeManifest, formatRows, ruleGroups, versionRows } from '../lib/about'
 import styles from './AboutPanel.module.css'
@@ -23,7 +24,7 @@ function Block({ title, note, children }: { title: string; note?: ReactNode; chi
 function Failure({ error }: { error: Error }) {
   return (
     <p className={styles.error} role="alert">
-      Сервис не ответил: {error.message}
+      Сервис не ответил: {humanError(error)}
     </p>
   )
 }

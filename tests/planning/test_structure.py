@@ -297,7 +297,7 @@ def _sparse_pack() -> ContentPack:
 
 
 async def test_section_dividers_are_never_sent_to_the_model():
-    """Живой баг: section_divider — легитимно
+    """Живой баг : section_divider — легитимно
     content-free bookend, но SlideStructureItem.evidence_ids требует
     min_length=1, так что модель вынуждена придумывать evidence и
     slide_brief, описывающий саму роль слайда ("Слайд задаёт маршрут:

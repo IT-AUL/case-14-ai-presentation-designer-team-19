@@ -281,6 +281,14 @@ def _narrow_candidates(
         no_donor_artwork = [c for c in pool if "image" not in c["capabilities"]]
         if no_donor_artwork:
             pool = no_donor_artwork
+    # график/таблица донора без своих данных — это демо-цифры шаблона
+    # (кольца «42% / 32%» в VK Education, 29.09): такой эталон — последний
+    # выбор для слайда без графика/таблицы
+    for payload in ("chart", "table"):
+        if payload not in need:
+            without = [c for c in pool if payload not in c["capabilities"]]
+            if without:
+                pool = without
     if content_count >= 2:
         broad = [
             c for c in pool
@@ -316,6 +324,8 @@ async def _fit_one_slide(
     ``own_baseline_part`` — то, что уже зарезервировано ЗА ЭТИМ слайдом;
     не считается «занятым» для него самого (иначе Stage 3 никогда не смог
     бы предложить эталон, если он совпадает с исходным)."""
+    if any(u.locked for u in slide.content_units):
+        return None, None, None
     async with lock:
         available = [
             c
@@ -428,12 +438,18 @@ async def _fit_one_slide(
     bullets = [b.strip() for b in answer.bullets]
     # One output per input bullet preserves provenance and unit order.
     # Equations and structured references are never sent through rewriting.
+    # ADR-030: пункт, отредактированный пользователем (locked), уходит в
+    # слайд как написан — переписанный моделью вариант для него
+    # отбрасывается; не влезет — это честный text.overflow аудита.
     rewritten = iter(bullets)
-    new_units = [
-        u.model_copy(update={"text": next(rewritten)})
-        if u.kind == Kind.bullet and u.role != "equation" else u
-        for u in slide.content_units
-    ]
+    new_units = []
+    for u in slide.content_units:
+        if u.kind == Kind.bullet and u.role != "equation":
+            text = next(rewritten)
+            new_units.append(u if u.locked else u.model_copy(update={"text": text}))
+        else:
+            new_units.append(u)
+    title_locked = any(u.kind == Kind.title and u.locked for u in slide.content_units)
 
     choice = ExemplarChoice(
         slide_part=picked["slide_part"],
@@ -443,7 +459,7 @@ async def _fit_one_slide(
         long_runs=picked["long_runs"],
         content_slots=picked["content_slots"],
     )
-    return choice, new_units, answer.title.strip()
+    return choice, new_units, slide.title_intent if title_locked else answer.title.strip()
 
 
 # Назначение слайда плана → роль образца в Design DNA (template/dna.py).
@@ -511,6 +527,17 @@ def assign_role_exemplars(
             continue
         current = choices[i].slide_part
         options = [p for role in roles for p in by_role.get(role, [])]
+        slide_size = _presentation_slide_size(pkg)
+        if slide.purpose == Purpose.title and len(options) > 1:
+            # На обложке 1 подзаголовок: образец с 1 текстовым слотом подзаголовка
+            # предпочтительнее обложки с карточками спикеров на 4 слота (F-69).
+            order_idx = {p: idx for idx, p in enumerate(options)}
+            options.sort(
+                key=lambda p: (
+                    abs(count_content_slots(pkg.parts[p], slide_size) - 1),
+                    order_idx[p],
+                )
+            )
         closing = slide.purpose in _CLOSING_PURPOSES and bool(title_images)
         if closing and options:
             # финал «зеркалит» обложку: тот же фон/иллюстрация, что у титула
@@ -519,14 +546,14 @@ def assign_role_exemplars(
             options.sort(key=lambda p: -len(_images_of(pkg, p) & title_images))
             if current in options and current == options[0]:
                 continue
-        elif not options or current in options:
+        elif not options or (current in options and current == options[0]):
             if slide.purpose == Purpose.title:
                 title_images = _images_of(pkg, current)
             continue
         free = [p for p in options if p not in used or p == current]
-        # раздел может повторять единственный образец-разделитель шаблона
+        # раздел и обложка имеют приоритет на титульный/разделительный образец
         pick = free[0] if free else (
-            options[0] if slide.purpose is Purpose.section_divider else None
+            options[0] if slide.purpose in (Purpose.section_divider, Purpose.title) else None
         )
         if pick is None:
             continue
@@ -534,6 +561,20 @@ def assign_role_exemplars(
             title_images = _images_of(pkg, pick)
         if pick == current:
             continue
+        if slide.purpose == Purpose.title and pick in used and current not in options:
+            # Освобождаем титульный образец от контентного слайда в пользу обложки
+            for j, other in enumerate(out):
+                if j != i and other.slide_part == pick and plan.slides[j].purpose != Purpose.title:
+                    other_prof = run_profile(pkg, current)
+                    out[j] = ExemplarChoice(
+                        slide_part=current,
+                        layout_part=layouts.get(current) or "",
+                        shape_count=shape_count(pkg, current),
+                        layout_slide_count=other.layout_slide_count,
+                        long_runs=other_prof.long_runs,
+                        content_slots=count_content_slots(pkg.parts[current], slide_size),
+                    )
+                    break
         used.discard(current)
         used.add(pick)
         profile = run_profile(pkg, pick)
@@ -543,7 +584,7 @@ def assign_role_exemplars(
             shape_count=shape_count(pkg, pick),
             layout_slide_count=choices[i].layout_slide_count,
             long_runs=profile.long_runs,
-            content_slots=count_content_slots(pkg.parts[pick], _presentation_slide_size(pkg)),
+            content_slots=count_content_slots(pkg.parts[pick], slide_size),
         )
     return out
 
@@ -665,6 +706,9 @@ async def layout_fit_deck(
             ),
         )
         fitting = [c for c in narrowed if _fits_rigid(c, _points(slide))]
+        # KPI-эталон (демо-текст — числа) только слайду, у которого числа есть
+        if not _has_numbers(slide):
+            fitting = [c for c in (fitting or narrowed) if not c.get("numeric_demo")] or fitting
         if fitting:
             narrowed = fitting
         shortlists[i] = narrowed
@@ -706,7 +750,9 @@ async def layout_fit_deck(
         changed = True
 
     new_plan = plan.model_copy(update={"slides": new_slides}) if changed else plan
-    new_choices = _avoid_rigid_mismatch(new_plan, new_choices, shortlists, all_candidates)
+    new_choices = _avoid_rigid_mismatch(
+        new_plan, new_choices, shortlists, all_candidates, budgets or {}, needs_padded
+    )
     new_choices = _diversify(new_plan, new_choices, shortlists, all_candidates)
     return assign_role_exemplars(pkg, new_plan, new_choices, design_dna), new_plan
 
@@ -735,6 +781,11 @@ def _points(slide: SlidePlan) -> int:
     )
 
 
+def _has_numbers(slide: SlidePlan) -> bool:
+    text = " ".join(u.text or "" for u in slide.content_units if u.kind != Kind.title)
+    return len(extract_numbers(text)) >= 2
+
+
 def _swap_choice(pick: dict) -> ExemplarChoice:
     return ExemplarChoice(
         slide_part=pick["slide_part"],
@@ -751,25 +802,39 @@ def _avoid_rigid_mismatch(
     choices: list[ExemplarChoice],
     shortlists: dict[int, list[dict]],
     all_candidates: list[dict],
+    budgets: dict[str, dict] | None = None,
+    needs: list[frozenset[str]] | None = None,
 ) -> list[ExemplarChoice]:
-    """Слайд, откатившийся на baseline-эталон с «запечённой» сеткой другого
-    размера, переводится на подходящий эталон из своего шортлиста."""
+    """Слайд на эталоне с «запечённой» сеткой другого размера переводится
+    на подходящий эталон: сначала из своего шортлиста, затем из всего пула
+    (с теми же требованиями к носителям — картинка, таблица, график)."""
+    budgets = budgets or {}
     by_part = {c["slide_part"]: c for c in all_candidates}
     out = list(choices)
     used = {c.slide_part for c in out}
     for i, slide in enumerate(plan.slides):
-        current = by_part.get(out[i].slide_part)
-        if current is None or slide.purpose in _PURPOSE_ROLES:
+        if slide.purpose in _PURPOSE_ROLES:
             continue
+        # эталон вне пула кандидатов (запасной выбор) тоже проверяется:
+        # признак «запечённой» графики есть в бюджетах всех слайдов
+        current = by_part.get(out[i].slide_part) or {
+            "content_slots": out[i].content_slots,
+            **(budgets.get(out[i].slide_part) or {}),
+        }
         bullets = _points(slide)
         if _fits_rigid(current, bullets):
             continue
+        need_caps = needs[i] if needs and i < len(needs) else frozenset()
+        pool = shortlists.get(i, []) + [
+            c for c in all_candidates if c not in shortlists.get(i, [])
+        ]
         alt = next(
             (
-                c for c in shortlists.get(i, [])
+                c for c in pool
                 if c["slide_part"] not in used
                 and not c.get("layout_art")
                 and (c.get("content_slots") or 0) >= bullets
+                and need_caps <= frozenset(c["capabilities"])
             ),
             None,
         )

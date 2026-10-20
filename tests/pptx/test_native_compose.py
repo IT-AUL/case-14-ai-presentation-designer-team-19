@@ -291,3 +291,128 @@ def test_choose_archetype():
     assert choose_archetype(steps) == "process"
     assert choose_archetype([{"heading": None, "body": "x"}] * 3) == "list"
     assert choose_archetype([{"heading": "h", "body": "b"}] * 8) == "list"
+
+
+def test_compose_verbatim_refusal_when_nothing_fits(tmp_path):
+    """allow_shorten=False: ни один архетип не вмещает пункты вербатим —
+    compose возвращает None вместо текста с многоточием (вызывающий
+    откатывается на эталонную заливку, слова пользователя не режутся)."""
+    src = _built_deck(tmp_path / "built.pptx")
+    part, extra, sw, sh = _parts(src, 1)
+    frame, region, tokens = slide_frame(_read(src, part), sw, sh, **extra)
+    items = [
+        {"heading": f"Пункт {i}", "body": "Очень длинный текст пункта. " * 30} for i in range(6)
+    ]
+    assert compose(frame, region, tokens, "list", TITLE, items, sw, sh, allow_shorten=False) is None
+    xml = compose(frame, region, tokens, "list", TITLE, items, sw, sh)
+    assert xml is not None and "…".encode() in xml
+
+
+def test_decide_native_strategy_axes():
+    """Ось вариантов: faithful держит эталон, balanced — когда сетка
+    эталона не вмещает пункты (здесь: сетки нет), visual — всегда своя
+    композиция."""
+    from deckdna.contracts.deck_plan import (
+        ContentUnit,
+        DensityBudget,
+        Kind,
+        Level,
+        Purpose,
+        SlidePlan,
+    )
+    from deckdna.contracts.variant_spec import Strategy
+    from deckdna.pptx.composing.native_plan import decide_native
+
+    slide = SlidePlan(
+        id="s1",
+        index=1,
+        purpose=Purpose.overview,
+        title_intent="Заголовок",
+        key_message="k",
+        evidence_ids=["e1"],
+        content_units=[
+            ContentUnit(role="bullet", kind=Kind.bullet, text=f"Пункт {i}", evidence_ids=["e1"])
+            for i in range(3)
+        ],
+        density_budget=DensityBudget(level=Level.medium, max_chars=200),
+    )
+    exemplar = (
+        f'<?xml version="1.0"?><p:sld xmlns:p="{P}" xmlns:a="{A}">'
+        f'<p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/>'
+        f"<p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree>"
+        f"</p:cSld></p:sld>"
+    ).encode()
+    sw, sh = 12192000, 6858000
+    assert (
+        decide_native(slide, exemplar, "ppt/slides/slide1.xml", set(), Strategy.faithful, sw, sh)
+        is None
+    )
+    assert (
+        decide_native(
+            slide,
+            exemplar,
+            "ppt/slides/slide1.xml",
+            {"ppt/slides/slide1.xml"},
+            Strategy.faithful,
+            sw,
+            sh,
+        )
+        is not None
+    )  # копипаст
+    assert (
+        decide_native(slide, exemplar, "ppt/slides/slide1.xml", set(), Strategy.balanced, sw, sh)
+        is not None
+    )
+    assert (
+        decide_native(slide, exemplar, "ppt/slides/slide1.xml", set(), Strategy.visual, sw, sh)
+        is not None
+    )
+
+
+def test_native_fallback_clones_its_frame_relationships(tmp_path, monkeypatch):
+    """A frame from another donor must carry that donor's media closure."""
+    from deckdna.contracts.deck_plan import ContentUnit, DeckPlan, Kind, Purpose
+    from deckdna.pptx.composing import minimal
+    from deckdna.pptx.composing.native_plan import build_frame
+    from PIL import Image
+
+    prs = Presentation()
+    first = prs.slides.add_slide(prs.slide_layouts[5])
+    first.shapes.title.text = "First donor"
+    second = prs.slides.add_slide(prs.slide_layouts[5])
+    second.shapes.title.text = "Second donor"
+    logo = io.BytesIO()
+    Image.new("RGB", (20, 20), "red").save(logo, "PNG")
+    logo.seek(0)
+    second.shapes.add_picture(logo, 0, 0, Emu(200000), Emu(200000))
+    src = tmp_path / "two-donors.pptx"
+    prs.save(src)
+    pkg = minimal.OpcPackage.open(src)
+    frame = build_frame(pkg, "ppt/slides/slide2.xml", prs.slide_width, prs.slide_height)
+    assert frame is not None
+    monkeypatch.setattr(minimal, "build_frame", lambda *args: None)
+    monkeypatch.setattr(minimal, "best_frame", lambda *args: frame)
+    plan = DeckPlan.model_validate_json(
+        (Path(__file__).parents[1] / "fixtures/content/poc_deck_plan.json").read_text()
+    )
+    slide = plan.slides[0].model_copy(
+        update={
+            "purpose": Purpose.overview,
+            "content_units": [
+                ContentUnit(kind=Kind.bullet, role="body", text="Первый тезис"),
+                ContentUnit(kind=Kind.bullet, role="body", text="Второй тезис"),
+            ],
+        }
+    )
+    choice = minimal.ExemplarChoice(
+        "ppt/slides/slide1.xml", "ppt/slideLayouts/slideLayout6.xml", 1, 1
+    )
+    out = tmp_path / "fallback.pptx"
+    report = minimal.generate_deck(
+        src, plan.model_copy(update={"slides": [slide]}), out, exemplar_choices=[choice]
+    )
+    assert report["slides"][0]["native_composition"] is not None
+    result = Presentation(out).slides[0]
+    picture = next(s for s in result.shapes if s.shape_type == 13)
+    assert picture.image.blob == logo.getvalue()
+    assert report["slides"][0]["exemplar"]["slide_part"] == frame.part

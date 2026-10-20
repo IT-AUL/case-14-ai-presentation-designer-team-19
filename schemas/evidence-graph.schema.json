@@ -38,7 +38,8 @@
               "range": { "type": "string" }
             }
           },
-          "confidence": { "type": "number", "minimum": 0, "maximum": 1 }
+          "confidence": { "type": "number", "minimum": 0, "maximum": 1 },
+          "origin": { "type": "string", "enum": ["user", "web", "model"], "description": "ADR-030: user content (default when absent), web source or model knowledge" }
         }
       }
     },

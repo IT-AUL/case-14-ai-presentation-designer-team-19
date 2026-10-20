@@ -1,7 +1,7 @@
 """Optional introspection: which models a gateway actually invoked.
 
 NOT part of the frozen ``ModelGateway`` protocol
-(see ``providers/base.py``): providers MAY implement
+(docs/agents/INTERFACE_FREEZE.md §5): providers MAY implement
 ``used_model_ids()`` — consumers check ``isinstance`` and fall back to
 an honest empty report instead of assuming. Record only calls that
 returned successfully: a failed call means the model produced nothing

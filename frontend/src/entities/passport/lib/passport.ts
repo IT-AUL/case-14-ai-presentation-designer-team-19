@@ -4,6 +4,7 @@ import type {
   PassportFallback,
   PassportIssues,
   PassportModelProfile,
+  PassportResearch,
   PassportScore,
   PassportStageTiming,
   QualityPassport,
@@ -133,6 +134,30 @@ function issues(source: Json): PassportIssues {
   }
 }
 
+function firstNumber(source: Json, keys: readonly string[]): number | null {
+  for (const key of keys) {
+    const value = number(source, key)
+    if (value !== null) return value
+  }
+  return null
+}
+
+function research(metrics: Json): PassportResearch | null {
+  const origin = section(metrics, 'content_origin')
+  const block = section(metrics, 'research')
+  const user = firstNumber(origin, ['user', 'user_facts', 'content'])
+  const web = firstNumber(origin, ['web', 'web_facts', 'internet'])
+  const model = firstNumber(origin, ['model', 'model_facts', 'llm'])
+  const hasOrigin = user !== null || web !== null || model !== null
+  const result: PassportResearch = {
+    origin: hasOrigin ? { user: user ?? 0, web: web ?? 0, model: model ?? 0 } : null,
+    sources: firstNumber(block, ['sources_count', 'sources']),
+    contentFill: text(block, 'content_fill') ?? text(metrics, 'content_fill'),
+    seconds: firstNumber(block, ['duration_s', 'seconds']),
+  }
+  return result.origin || result.sources !== null || result.contentFill || result.seconds !== null ? result : null
+}
+
 export function parsePassport(raw: unknown): QualityPassport {
   if (!isRecord(raw) || !isRecord(raw.metrics)) throw new PassportFormatError()
   const inputs = section(raw, 'inputs')
@@ -176,6 +201,7 @@ export function parsePassport(raw: unknown): QualityPassport {
       overflowCount: number(readability, 'overflow_count'),
       avgOccupancy: number(readability, 'avg_occupancy'),
     },
+    research: research(metrics),
     timings: {
       totalSeconds: number(timings, 'total_seconds'),
       perStage: stageTimings(timings.per_stage),

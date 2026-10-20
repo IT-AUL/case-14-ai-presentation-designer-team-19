@@ -29,7 +29,7 @@ describe('provider form validation', () => {
   it('rejects models above the case limits', () => {
     const errors = validateProviderForm({
       ...valid,
-      textModel: 'openai/gpt-oss-120b',
+      textModel: 'qwen/qwen2.5-120b',
       visionModel: 'Qwen/Qwen2.5-VL-72B-Instruct',
       imageModel: 'some-t2i-24B',
       embeddingModel: 'BAAI/bge-m3',

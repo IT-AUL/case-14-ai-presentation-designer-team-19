@@ -1,0 +1,35 @@
+{
+  "version": "1",
+  "strategies": ["faithful", "balanced", "visual"],
+  "templates": {
+    "vk_tech": {"file": "VK Tech шаблон.pptx", "fallback": "tests/fixtures/pptx/vk_tech_template.pptx"},
+    "workspace": {"file": "VK_WorkSpace_Клиентская_конференция_Шаблон_03.pptx", "fallback": "tests/fixtures/pptx/vk_workspace.pptx"},
+    "education": {"file": "Шаблон презентации VK Education.pptx", "fallback": "tests/fixtures/pptx/vk_education.pptx"},
+    "unseen43": {"file": "synthetic_unseen_43.pptx", "fallback": "tests/fixtures/pptx/synthetic_unseen_43.pptx", "generator": "scripts/build_unseen_templates.py:build_43"}
+  },
+  "datasets": {
+    "nps": {"path": "examples/stage2/nps_with_gaps.csv", "expected": ["line"]},
+    "channels": {"path": "examples/stage2/channels_share.json", "expected": ["pie", "doughnut", "bar_horizontal", "bar_stacked_100"]},
+    "kpi": {"path": "examples/stage2/kpi.json", "expected": ["kpi", "table"]},
+    "products": {"path": "examples/stage2/products_reference.xlsx", "expected": ["table"]},
+    "regions": {"path": "examples/stage2/regions.xlsx", "expected": ["bar_horizontal", "bar"]},
+    "advertising": {"path": "examples/stage2/ad_spend_vs_sales.csv", "expected": ["scatter"]},
+    "orders": {"path": "examples/stage2/order_values.csv", "expected": ["histogram"]}
+  },
+  "brandbook": ["examples/stage2/brandbook/tokens.json", "examples/stage2/brandbook/guideline.pdf", "examples/stage2/brandbook/logo.png"],
+  "forbidden": ["Предположение:", "условн", "Направление A", "Thanks!", "CREDITS", "Slidesgo", "viz_reason"],
+  "scoring": {
+    "weights": {"audit": 30, "numeric_titles": 15, "label_titles": 5, "unsupported_numbers": 5, "diversity": 10, "lists": 5, "forbidden": 15, "chart_match": 10, "latency": 5},
+    "latency_budget_seconds": 300,
+    "diversity_target": 4,
+    "max_run_target": 3,
+    "list_share_target": 0.4,
+    "regression_tolerance": 2
+  },
+  "scenarios": [
+    {"id": "all_data_vk", "template": "vk_tech", "datasets": ["nps", "channels", "kpi", "products", "regions", "advertising", "orders"], "slides": 14, "idea": "Синтетический магазин Северный ветер. Представить руководству все семь наборов данных: NPS, доли каналов, KPI, справочник товаров, регионы, связь рекламы с продажами, распределение заказов. Для каждого набора нужен отдельный слайд. Покажите числовые выводы, не приписывайте корреляции причинность."},
+    {"id": "all_data_brand_workspace", "template": "workspace", "datasets": ["nps", "channels", "kpi", "products", "regions", "advertising", "orders"], "brandbook": true, "slides": 14, "idea": "Синтетический магазин Северный ветер. Представить руководству все семь наборов данных: NPS, доли каналов, KPI, справочник товаров, регионы, связь рекламы с продажами, распределение заказов. Для каждого набора нужен отдельный слайд. Покажите числовые выводы, не приписывайте корреляции причинность."},
+    {"id": "company_text", "template": "education", "datasets": [], "slides": 6, "content": "configs/bench/company.ru.md", "idea": "Представить компанию Северный ветер потенциальным партнёрам. Использовать только предоставленный текст, без внешних данных и выдуманных показателей."},
+    {"id": "brief_unseen43", "template": "unseen43", "datasets": [], "slides": 4, "idea": "Предложить пилот сервиса проверки презентаций: загрузка шаблона и текста, автоматическая сборка, проверка ошибок, редактируемая колода. Аудитория — руководители команд. Завершить приглашением выбрать команду для пилота. Использовать только этот бриф без новых цифр."}
+  ]
+}

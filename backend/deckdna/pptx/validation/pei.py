@@ -1,6 +1,6 @@
 """PEI (Presentation Editability Index) assessment on a generated .pptx.
 
-Rubric (docs/AUDIT.md — слой оценки качества):
+Rubric (docs/pipeline/EVALUATION.md):
 
 - L0 — package unopenable or every slide is a raster-only bitmap;
 - L1 — some native editable text exists;

@@ -1,4 +1,4 @@
-"""Upload size limits.
+"""Upload size limits: hardening check #20.
 
 upload_template already checked ``len(data) > max_upload_mb`` but only
 after ``await file.read()`` had already buffered the entire body --

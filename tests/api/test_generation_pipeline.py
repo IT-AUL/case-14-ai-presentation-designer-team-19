@@ -11,9 +11,7 @@ from fastapi.testclient import TestClient
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 TEMPLATE = FIXTURES / "pptx" / "vk_tech_template.pptx"
 CONTENT = FIXTURES / "content" / "poc_article.md"
-PPTX_MIME = (
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-)
+PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 
 client = TestClient(app)
 
@@ -68,7 +66,8 @@ def test_generation_runs_real_pipeline(wait_generation):
 
     # real DeckPlan from story_director, not the stub
     plan = run["deck_plan"]
-    assert plan is not None and len(plan["slides"]) == 10
+    assert plan is not None and 3 <= len(plan["slides"]) <= BRIEF["target_slide_count"]
+    assert len(plan["slides"]) == plan["brief"]["target_slide_count"]
     assert plan["brief"]["purpose"] == BRIEF["purpose"]
 
 
@@ -102,7 +101,7 @@ def test_variant_artifacts_are_real_and_downloadable(wait_generation):
 def test_real_audit_issues_and_export_endpoint(wait_generation):
     project_id, template_id, pack_id = _project_with_inputs()
     accepted = _generate(project_id, template_id, pack_id)
-    wait_generation(client, accepted["generation_id"])
+    generation = wait_generation(client, accepted["generation_id"])
     variant_id = accepted["variant_ids"][0]
 
     # deterministic audit already ran inside the pipeline — POST audits serves it
@@ -122,7 +121,7 @@ def test_real_audit_issues_and_export_endpoint(wait_generation):
     )
     assert export.status_code == 202, export.text
 
-    # html is built lazily from the variant's PDF: a zip with index.html
+    # html is built lazily from PPTX objects: markup + assets, no slide PNGs
     html = client.post(f"/api/v1/variants/{variant_id}/exports", json={"formats": ["html"]})
     assert html.status_code == 202, html.text
     record = client.get(f"/api/v1/exports/{html.json()['export_id']}").json()
@@ -134,7 +133,13 @@ def test_real_audit_issues_and_export_endpoint(wait_generation):
     body = client.get(artifact["download_url"]).content
     with zipfile.ZipFile(io.BytesIO(body)) as zf:
         assert "index.html" in zf.namelist()
-        assert any(n.endswith(".png") for n in zf.namelist())
+        from lxml import html as html_parser
+
+        doc = html_parser.fromstring(zf.read("index.html"))
+        assert len(doc.xpath('//section[@class="slide"]')) == len(generation["deck_plan"]["slides"])
+        assert doc.xpath('//div[@class="text-frame"]//span')
+        assert all(n == "index.html" or n.startswith("assets/") for n in zf.namelist())
+        assert not any(src.startswith("slide-") for src in doc.xpath("//img/@src"))
 
     # a format outside the API's set is still an honest 422, not a fake export
     bad = client.post(f"/api/v1/variants/{variant_id}/exports", json={"formats": ["docx"]})
@@ -144,10 +149,10 @@ def test_real_audit_issues_and_export_endpoint(wait_generation):
 def test_variant_slides_match_plan(wait_generation):
     project_id, template_id, pack_id = _project_with_inputs()
     accepted = _generate(project_id, template_id, pack_id)
-    wait_generation(client, accepted["generation_id"])
+    generation = wait_generation(client, accepted["generation_id"])
     variant_id = accepted["variant_ids"][0]
     slides = client.get(f"/api/v1/variants/{variant_id}/slides").json()["items"]
-    assert len(slides) == 10
+    assert len(slides) == len(generation["deck_plan"]["slides"])
     assert all(s["slide_plan_id"] and s["purpose"] for s in slides)
 
 

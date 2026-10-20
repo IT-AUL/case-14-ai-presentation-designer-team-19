@@ -66,10 +66,12 @@ async def _slide_task(
     sem: asyncio.Semaphore,
 ) -> tuple[int, str, str, list, bool]:
     base = base_by_index[idx]
+    if any(u.locked for u in base.content_units):
+        return idx, base.title_intent, base.key_message, base.content_units, False
     source_heading = base.title_intent.casefold().strip()
-    if source_heading.startswith((
-        "references", "bibliography", "источники", "список источников", "литература"
-    )):
+    if source_heading.startswith(
+        ("references", "bibliography", "источники", "список источников", "литература")
+    ):
         # Bibliography is structured source data, not a writing prompt.
         # Keep every grounded entry in display form from ingestion and
         # prevent the writer from turning it into a prose fact dump.
@@ -99,9 +101,12 @@ async def _slide_task(
     for original in base.content_units:
         if original.role == "equation" or original.kind in {Kind.table, Kind.chart, Kind.diagram}:
             if not any(
-                u.kind == original.kind and u.text == original.text
-                and u.table_ref == original.table_ref and u.chart_ref == original.chart_ref
-                and u.diagram_ref == original.diagram_ref for u in units
+                u.kind == original.kind
+                and u.text == original.text
+                and u.table_ref == original.table_ref
+                and u.chart_ref == original.chart_ref
+                and u.diagram_ref == original.diagram_ref
+                for u in units
             ):
                 units.append(original)
     if not units:
@@ -120,6 +125,10 @@ async def _slide_task(
         # retains the complete deterministic slide, including structured
         # objects and qualifications, rather than a capped evidence excerpt.
         return idx, base.title_intent, base.key_message, base.content_units, False
+    from deckdna.planning.story_director import clean_purpose_text
+
+    title = clean_purpose_text(title) or base.title_intent
+    key_message = clean_purpose_text(key_message) or base.key_message
     return idx, title, key_message, units, used
 
 
@@ -130,6 +139,9 @@ async def plan_deck_llm_v2(
     design_dna: DesignDNA | None = None,
     config: GenerationConfig | None = None,
     strategy: Strategy = Strategy.balanced,
+    *,
+    fact_ledger: object | None = None,
+    story_plan: object | None = None,
 ) -> DeckPlan:
     """ADR-016 Stage 1 + Stage 2 -> DeckPlan. See module docstring."""
     cfg = config
@@ -137,8 +149,54 @@ async def plan_deck_llm_v2(
         from deckdna.planning.config import load_generation_config
 
         cfg = load_generation_config()
+    if pack.datasets or fact_ledger is not None or story_plan is not None:
+        from deckdna.analysis.fact_ledger import FactLedger, build_pack_fact_ledger
+        from deckdna.analysis.pipeline import analyze_pack
+        from deckdna.planning.story_director import plan_story_ledger_llm
 
+        brief_text = " ".join(
+            filter(
+                None,
+                [
+                    getattr(brief, "purpose", None),
+                    getattr(brief, "key_message", None),
+                    getattr(brief, "call_to_action", None),
+                ],
+            )
+        )
+        ledger = (
+            fact_ledger
+            if isinstance(fact_ledger, FactLedger)
+            else build_pack_fact_ledger(analyze_pack(pack, brief_text))
+        )
+        from deckdna.planning.story_rules import ledger_source_groups
+
+        story_brief = brief.model_copy(
+            update={
+                "target_slide_count": max(
+                    3, brief.target_slide_count - len(ledger_source_groups(pack, brief))
+                )
+            }
+        )
+        resolved_story = (
+            story_plan
+            if story_plan is not None
+            else await plan_story_ledger_llm(ledger, story_brief, gateway)
+        )
+        return plan_deck(
+            pack,
+            brief,
+            cfg,
+            strategy=strategy,
+            fact_ledger=ledger,
+            story_plan=resolved_story,
+        )
     baseline = plan_deck(pack, brief, cfg, strategy=strategy)
+    if all(
+        s.purpose in _STRUCTURE_PROTECTED_PURPOSES or any(u.locked for u in s.content_units)
+        for s in baseline.slides
+    ):
+        return baseline
     graph = build_evidence_graph(pack)
     nodes_by_id = {n.id: n for n in graph.nodes}
     capacities = design_dna.capacities if design_dna else None
@@ -167,6 +225,18 @@ async def plan_deck_llm_v2(
         )
     )
 
+    from deckdna.planning.story_rules import (
+        enforce_archetype_diversity,
+        enforce_slide_density,
+        storyline_config,
+        variant_axis_config,
+    )
+
+    story_cfg = storyline_config(cfg)
+    axis = variant_axis_config(strategy)
+    max_b = min(story_cfg.max_bullets_per_slide, axis.max_bullets_per_slide)
+    max_w = min(story_cfg.max_words_per_bullet, axis.max_words_per_bullet)
+
     slides: list[SlidePlan] = []
     llm_used = 0
     for idx, title, key_message, units, used in sorted(results, key=lambda r: r[0]):
@@ -174,23 +244,35 @@ async def plan_deck_llm_v2(
         evidence_ids = [eid for u in units for eid in (u.evidence_ids or [])] or list(
             base.evidence_ids
         )
-        slides.append(
-            SlidePlan(
-                id=base.id,
-                index=idx,
-                purpose=base.purpose,
-                title_intent=title,
-                key_message=key_message,
-                evidence_ids=evidence_ids,
-                content_units=units or base.content_units,
-                desired_visual=(_desired_visual(units) if units else base.desired_visual),
-                density_budget=(_density(units) if units else base.density_budget),
-                speaker_note=base.speaker_note,
-                mandatory=base.mandatory,
-            )
+        candidate = SlidePlan(
+            id=base.id,
+            index=idx,
+            purpose=base.purpose,
+            title_intent=title,
+            key_message=key_message,
+            evidence_ids=evidence_ids,
+            content_units=units or base.content_units,
+            desired_visual=(_desired_visual(units) if units else base.desired_visual),
+            density_budget=(_density(units) if units else base.density_budget),
+            speaker_note=base.speaker_note,
+            mandatory=base.mandatory,
         )
         if used:
+            candidate = enforce_slide_density(
+                candidate,
+                max_bullets=max_b,
+                max_words=max_w,
+                overflow_to_notes=story_cfg.overflow_to_speaker_notes,
+                density_level=axis.density_level,
+            )
+            used_ev = [eid for u in candidate.content_units for eid in (u.evidence_ids or [])]
+            if used_ev:
+                candidate = candidate.model_copy(update={"evidence_ids": used_ev})
             llm_used += 1
+        slides.append(candidate)
+
+    if llm_used:
+        slides = enforce_archetype_diversity(slides, strategy=strategy, settings=story_cfg)
 
     plan = baseline.model_copy(update={"slides": slides})
     structure_version = load_prompt(STRUCTURE_PROMPT).version

@@ -1,81 +1,64 @@
 # Модели
 
-Модель включается автоматически, когда есть провайдер: leased-сессия из UI
-или серверный провайдер через `.env`. Без провайдеров пайплайн полностью
-детерминированный — и честно говорит об этом в Quality Passport
-(`usage.model_calls = 0`).
+Внешние модели подключаются автоматически, когда настроен серверный провайдер
+через `.env` или создана сессия провайдера из веб-интерфейса. По умолчанию
+включён детерминированный `MockProvider` (`DECKDNA_MOCK_PROVIDER=true`), при
+котором весь пайплайн работает офлайн без сетевых вызовов.
 
-## Карта стадий → роли моделей
+## Карта стадий и ролей
 
-| Стадия | Роль | Промпт (версионируемый файл) | Фолбэк без модели |
+| Стадия | Роль | Промпт | Поведение без внешней модели |
 |---|---|---|---|
-| Структура и смысл слайдов | text | `prompts/content_planning/*.yaml` (storyline, структура, writer) | детерминированный `plan_deck`; модель только выбирает purpose/title/key_message/evidence маленькими батчами, текст пунктов собирается детерминированно из cited evidence |
-| Стилизация текста | text | `prompts/content_styling/content_style.v1.yaml` | verbatim-текст из источника; grounding-проверка чисел/дат/имён, отклонённые пункты не меняются |
-| Выбор эталона | text | `prompts/exemplar_rerank/*.yaml` | top-k только над детерминированными кандидатами; каждый кандидат несёт дискретный `layout_archetype` |
-| Однострочное описание эталона | text | `prompts/exemplar_rerank/exemplar_describe.v1.yaml` | best-effort при `/templates/{id}/analyze`, вне 5-минутного бюджета генерации |
-| Вписывание текста | text | `prompts/text_fitting/text_fit.v1.yaml` | расширить рамку → сократить с «…»; принимается только если re-audit показывает меньше overflow |
-| Контекстный аудит | vision | `prompts/contextual_audit/slide_checks.v1.yaml` | только детерминированные правила; `uncertain` ≠ issue |
-| Генерация картинок | image | — | stretch-роль, выключена по умолчанию (`content.image_generation.enabled: false`) |
+| Структура, SCQA и тезисы слайдов | text | `prompts/content_planning/*.yaml` | Детерминированный планировщик `plan_deck` + `FactLedger`; модель уточняет заголовки-выводы и распределение опор по слайдам с проверкой чисел и цитат |
+| Стилизация текста | text | `prompts/content_styling/content_style.v1.yaml` | Дословный текст из источника; при работе модели выполняется проверка сохранности всех чисел, дат и собственных имён |
+| Выбор эталонного макета | text | `prompts/exemplar_rerank/*.yaml` | Детерминированный ранжировщик по 8 архетипам (`hero_stat`, `kpi_grid`, `process_steps`, `comparison_2col`, `cards_grid`, `chart_takeaway`, `table_summary`, `timeline`) |
+| Описание эталона | text | `prompts/exemplar_rerank/exemplar_describe.v1.yaml` | Выполняется при анализе шаблона вне бюджета генерации колоды |
+| Вписывание текста в рамку | text | `prompts/text_fitting/text_fit.v1.yaml` | Геометрическое расширение рамки или аккуратное сокращение с проверкой через повторный аудит |
+| Диалоговый помощник | text | встроенный системный контур `assistant/` | Детерминированный разбор намерений и команд редактирования плана с проверкой фактов по `EvidenceGraph` |
+| Контекстный аудит | vision | `prompts/contextual_audit/slide_checks.v1.yaml` | Выполняются 26 детерминированных правил |
+| Генерация иллюстраций | image | — | Опциональная роль (по умолчанию выключена: `content.image_generation.enabled: false`) |
 
-Режим `use_llm` принимается на `POST /projects/{id}/generations`,
-`POST /projects/{id}/plans` и `POST /audits/{id}/repairs`:
-`null` (по умолчанию) = авто — модель при наличии провайдера; `true` =
-серверный gateway; `false` = без модели. `provider_session_id` (сессия,
-созданная через `POST /provider-sessions`, в UI — выбор провайдера)
-сам включает LLM-путь и приоритетнее env-настроек.
+Параметр `use_llm` в `POST /projects/{id}/generations`, `POST /projects/{id}/plans`
+и `POST /audits/{id}/repairs` управляет режимом запуска:
+- `null` (по умолчанию) — использовать модель при наличии активной сессии или серверного провайдера;
+- `true` — принудительно использовать серверный `ModelGateway`;
+- `false` — принудительно выполнить только детерминированный проход.
 
 ## Настройка провайдера
 
 ```dotenv
 DECKDNA_MOCK_PROVIDER=false
-DECKDNA_PROVIDER_BASE_URL=https://endpoint/v1   # любой OpenAI-compatible
+DECKDNA_PROVIDER_BASE_URL=https://api.inference.EachOtherHost/v1
 DECKDNA_PROVIDER_API_KEY=...
-DECKDNA_PROVIDER_ALLOW_PRIVATE_NETWORKS=true    # для self-hosted/private IP
-DECKDNA_MODEL_TEXT=qwen-3.8-27b
-DECKDNA_MODEL_VISION=qwen-3.8-27b
+DECKDNA_PROVIDER_PROJECT_ID=...                 # опционально, заголовок X-Project-Id для VK Inference
+DECKDNA_PROVIDER_ALLOW_PRIVATE_NETWORKS=true    # для локальных инсталляций vLLM / Ollama / TGI
+DECKDNA_MODEL_TEXT=qwen38-27b-fp8
+DECKDNA_MODEL_VISION=qwen38-27b-fp8
 DECKDNA_MODEL_IMAGE=black-forest-labs/flux.2-klein-4b
 ```
 
-Проверка сессии — `POST /provider-sessions/{id}/test` выполняет **живые**
-минимальные пробы по каждой заявленной capability: `structured_output`
-(json_schema chat), `image_input` (+1px PNG data URL), `embeddings`
-(один embed-вызов); `tool_calls` честно `skip` — пробы нет. Вердикты
-`ok` / `fail` / `skip`.
-
-`model_text` и `model_vision` — независимые настройки (и независимые в каждой
-provider-сессии): на vision-роль можно ставить более быструю/мелкую модель —
-контекстный аудит ограничен бюджетами стадий и таймаутами на слайд, а слайд,
-не проверенный вовремя, честно помечается `uncertain`, а не блокируется.
+Эндпоинт `POST /api/v1/provider-sessions/{id}/test` выполняет живые минимальные пробы
+по заявленным возможностям провайдера (`structured_output`, `image_input`, `embeddings`)
+и возвращает вердикты `ok` / `fail` / `skip`.
 
 ## Заявленные модели и лицензии
 
-Манифест — `configs/model_licenses.yaml` (валидируется `deckdna check-models`):
+Реестр разрешённых моделей хранится в `configs/model_licenses.yaml` и проверяется
+командой `deckdna check-models`:
 
-| Роль | model_id | Провайдер | Лицензия | Размер |
+| Роль | `model_id` | Провайдер | Лицензия | Размер |
 |---|---|---|---|---|
-| text | qwen-3.8-27b | VK Inference | Apache-2.0* | 27B |
-| vision | qwen-3.8-27b | VK Inference | Apache-2.0* | 27B |
-| image (stretch) | black-forest-labs/flux.2-klein-4b | VK Inference | Apache-2.0 | 4B |
+| text | `qwen38-27b-fp8` (`qwen-3.8-27b`) | VK Inference / OpenAI-compatible | Apache-2.0 | 27B |
+| vision | `qwen38-27b-fp8` (`qwen-3.8-27b`) | VK Inference / OpenAI-compatible | Apache-2.0 | 27B |
+| image | `black-forest-labs/flux.2-klein-4b` | VK Inference / OpenAI-compatible | Apache-2.0 | 4B |
 
-\* лицензия VK-hosted модели заявлена по ТЗ; манифест — `configs/model_licenses.yaml`.
+Все используемые модели удовлетворяют ограничениям: открытые веса под лицензией
+Apache-2.0 / MIT, размер языковой и визуальной модели ≤ 35B параметров, модели
+генерации изображений ≤ 20B параметров.
 
-Ограничения задачи: только open-weight Apache-2.0/MIT; text/vision ≤35B;
-text-to-image ≤20B. Требования к VRAM и latency зависят от квантизации и
-провайдера — подбирайте хост под конкретную развёртку.
+## Трассировка в Quality Passport
 
-## Версионирование и provenance
-
-Каждый Quality Passport несёт `provenance.prompt_versions` (только промпты
-реально выполненных и принятых стадий) и `provenance.model_profiles`
-(`model_id`, `provider` — sanitized host без userinfo/ключей, `size_b`,
-`license` из манифеста). Полностью детерминированный прогон оставляет оба
-поля пустыми.
-
-## Адаптеры
-
-- `OpenAICompatibleProvider` — базовый (`providers/`): chat.completions,
-  `response_format` json_schema, картинки как data URL.
-- `VKInferenceProvider` (`providers/vk_inference.py`) — тонкий адаптер,
-  модель `qwen-3.8-27b` (text+vision), env `DECKDNA_VK_*`.
-- `MockProvider` — детерминированный, офлайн, default.
-
+Каждый `QualityPassport` фиксирует `provenance.prompt_versions` (версии и хеши
+реально вызванных промптов) и `provenance.model_profiles` (`model_id`, очищенный
+хост провайдера без ключей, размер и лицензия). При детерминированном прогоне
+`usage.model_calls` равен `0`.

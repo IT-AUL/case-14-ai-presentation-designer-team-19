@@ -1,4 +1,4 @@
-"""DELETE /projects/{id} lifecycle coverage.
+"""DELETE /projects/{id}: hardening check #18.
 
 Deleting a project used to remove only the project record -- templates,
 content packs, generation runs/variants, audits, issues, plans, exports,

@@ -1,6 +1,5 @@
-import { Link } from 'react-router'
 import { pluralize } from '@/shared/lib/format'
-import { ArrowRight, CircleCheck, Icon } from '@/shared/ui'
+import { CircleCheck, Icon } from '@/shared/ui'
 import styles from './ReauditBanner.module.css'
 
 interface ReauditBannerProps {
@@ -8,7 +7,6 @@ interface ReauditBannerProps {
   blockers: number
   errors: { before: number; after: number }
   stats: { fixed: number; dismissed: number; failed: number }
-  exportHref: string
   onClose: () => void
 }
 
@@ -16,7 +14,7 @@ function reauditDelta(errors: { before: number; after: number }, fixed: number):
   return `ошибок ${errors.before} → ${errors.after} · исправлено ${fixed}`
 }
 
-export function ReauditBanner({ revision, blockers, errors, stats, exportHref, onClose }: ReauditBannerProps) {
+export function ReauditBanner({ revision, blockers, errors, stats, onClose }: ReauditBannerProps) {
   const delta = reauditDelta(errors, stats.fixed)
   if (blockers === 0) {
     return (
@@ -29,13 +27,9 @@ export function ReauditBanner({ revision, blockers, errors, stats, exportHref, o
           <div className={styles.detail}>
             Ревизия r{revision} · {delta}
             {stats.dismissed > 0 ? `, отклонено с причиной ${stats.dismissed}` : ''}
-            {stats.failed > 0 ? `, не удалось ${stats.failed}` : ''}. Всё раскрыто в журнале и паспорте.
+            {stats.failed > 0 ? `, не удалось ${stats.failed}` : ''}. Можно скачивать — кнопка справа сверху.
           </div>
         </div>
-        <Link to={exportHref} className={styles.primary}>
-          Скачать PPTX и паспорт
-          <Icon as={ArrowRight} size={14} />
-        </Link>
         <button type="button" className={styles.close} onClick={onClose}>
           Скрыть
         </button>

@@ -43,11 +43,15 @@ GOLDEN = [
             RULE_ASPECT_RATIO: 75,
             RULE_DUPLICATE_SLIDE: 8,
             RULE_EDGE_MARGIN: 6,
-            RULE_OUT_OF_BOUNDS: 7,
+            # ADR-031: было 7. Фон-плашка слайда 27 без текста на 104% ширины —
+            # намеренный bleed, правило 29.09 его больше не считает
+            RULE_OUT_OF_BOUNDS: 6,
             RULE_PLACEHOLDER_TEXT: 271,
             RULE_UNINTENDED_OVERLAP: 7,
             RULE_FONT_FLOOR: 67,
-            RULE_CONTRAST: 128,
+            # ADR-056: 23 inherited image backdrops are now unresolved,
+            # rather than incorrectly treated as the plain slide background.
+            RULE_CONTRAST: 105,
             RULE_OCCUPANCY: 11,
             RULE_FONT_SCALE: 2,  # Q1: наблюдаемая шкала; было 418 (шкала только из defRPr)
             RULE_COLOR_PALETTE: 40,
@@ -59,7 +63,9 @@ GOLDEN = [
             RULE_TEXT_OVERFLOW: 11,
             RULE_DUPLICATE_SLIDE: 8,
             RULE_EDGE_MARGIN: 2,
-            RULE_OUT_OF_BOUNDS: 2,
+            # ADR-031: было 2. Картинки слайдов 19 и 25 без текста на всю высоту —
+            # намеренный bleed, правило 29.09 его больше не считает
+            RULE_OUT_OF_BOUNDS: 0,
             RULE_PLACEHOLDER_TEXT: 137,
             RULE_UNINTENDED_OVERLAP: 3,
             # Alpha-compositing (ad87cf9, 28.09) now finds contrast hidden

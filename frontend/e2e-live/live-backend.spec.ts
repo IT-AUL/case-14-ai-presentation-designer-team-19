@@ -19,90 +19,84 @@ function trackApi(page: Page) {
   page.on('pageerror', (error) => apiFailures.push(`pageerror ${error.message}`))
 }
 
-test('live backend: template, brief, three variants, audit repair, export', async ({ page }) => {
+test('live backend: seven steps from files to a downloaded deck', async ({ page }) => {
+  test.setTimeout(600_000)
   trackApi(page)
-  const name = `Live ${Date.now()}`
+  const rejected: string[] = []
+  page.on('response', (response) => {
+    if (response.url().includes('/api/v1/') && response.status() === 422) rejected.push(`${response.request().method()} ${response.url()}`)
+  })
   await page.goto('/')
   await expect(page.getByRole('banner').getByRole('link', { name: 'DeckDNA — к проектам' })).toBeVisible()
 
-  await test.step('create project and upload a real template', async () => {
+  await test.step('step 1: a real template, content and a topic', async () => {
     await page.getByRole('button', { name: 'Новый проект' }).click()
     const dialog = page.getByRole('dialog', { name: 'Новый проект' })
-    await dialog.getByRole('textbox', { name: /^Название/ }).fill(name)
-    await dialog.getByRole('button', { name: 'Создать и загрузить шаблон' }).click()
-    const dropzone = page.getByRole('button', { name: /Перетащите шаблон сюда/ })
+    await dialog.getByRole('textbox', { name: /^Название/ }).fill(`Live ${Date.now()}`)
+    await dialog.getByRole('button', { name: 'Создать и закинуть файлы' }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'Что у вас есть?' })).toBeVisible()
+    await page.getByRole('textbox', { name: 'О чём презентация' }).fill('DeckDNA: компилятор корпоративных презентаций для жюри хакатона')
+    const dropzone = page.getByRole('button', { name: /Перетащите файлы сюда/ })
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), dropzone.click()])
-    await chooser.setFiles(TEMPLATE)
-    await expect(page.getByRole('region', { name: 'Что система поняла' })).toBeVisible({ timeout: 120_000 })
+    await chooser.setFiles([TEMPLATE, CONTENT])
+    await expect(page.getByRole('region', { name: 'Как будет выглядеть презентация' })).toContainText('Так будут выглядеть ваши слайды', { timeout: 180_000 })
+    await expect(page.getByRole('button', { name: 'Дальше' })).toBeEnabled({ timeout: 60_000 })
+    await page.getByRole('button', { name: 'Дальше' }).click()
   })
 
-  await test.step('design DNA shows real palette, fonts and layouts', async () => {
-    const palette = page.getByRole('region', { name: 'Палитра' })
-    await expect(palette.getByRole('list', { name: 'Цвета темы' }).getByRole('listitem')).not.toHaveCount(0)
-    const fonts = page.getByRole('region', { name: 'Шрифты' })
-    await expect(fonts.getByRole('list', { name: 'Шрифты на слайдах' }).getByRole('listitem')).not.toHaveCount(0)
+  await test.step('steps 2–3: what was found, then the plan', async () => {
+    await expect(page.getByRole('heading', { level: 1, name: 'Вот что я нашёл' })).toBeVisible({ timeout: 180_000 })
+    await expect(page.getByRole('button', { name: 'Дальше' })).toBeEnabled({ timeout: 180_000 })
+    await page.getByRole('button', { name: 'Дальше' }).click()
+    await expect(page).toHaveURL(/\/(questions|plan)$/, { timeout: 180_000 })
+    if (page.url().endsWith('/questions')) await page.getByRole('button', { name: 'Составить план', exact: true }).click()
+    await expect(page.getByRole('heading', { level: 1, name: 'План презентации' })).toBeVisible({ timeout: 240_000 })
   })
 
-  await test.step('brief: upload content and start generation', async () => {
-    await page.getByRole('button', { name: /Дальше: бриф/ }).click()
-    await expect(page.getByRole('heading', { level: 1, name: 'О чём презентация' })).toBeVisible()
-    await page.getByRole('radiogroup', { name: 'Назначение' }).getByRole('radio', { name: /^Продукт/ }).check()
-    const fileInput = page.locator('input[type="file"]').first()
-    await fileInput.setInputFiles(CONTENT)
-    await expect(page.getByRole('main')).toContainText('deckdna_pitch_rich.md', { timeout: 30_000 })
-    await page.getByRole('button', { name: /Собрать 3 варианта/ }).click()
+  await test.step('step 4: edit a slide title and pick a style', async () => {
+    await page.getByRole('list', { name: 'Слайды' }).getByRole('button', { name: /^Слайд 2:/ }).click()
+    const title = page.getByRole('complementary', { name: 'Слайд 2' }).getByRole('textbox', { name: 'Заголовок — вывод слайда' })
+    await title.fill('Шаблон — это правила, а не картинка')
+    await page.keyboard.press('Escape')
+    await page.getByRole('button', { name: 'Выбрать стиль' }).click()
   })
 
-  await test.step('generation finishes with three variants', async () => {
-    await expect(page.getByRole('heading', { level: 1, name: 'Три варианта готовы' })).toBeVisible({ timeout: 240_000 })
-    for (const name of ['Близко к шаблону', 'Сбалансированный', 'Визуальный']) {
-      await expect(page.getByRole('article', { name, exact: true }).getByRole('link', { name, exact: true })).toBeVisible()
-    }
-    await expect(page.getByRole('timer')).toHaveCount(0)
+  await test.step('steps 5–6: build in the recommended style', async () => {
+    await expect(page.getByRole('heading', { level: 1, name: 'Как оформить?' })).toBeVisible({ timeout: 60_000 })
+    await expect(page.getByRole('button', { name: 'Собрать', exact: true })).toBeEnabled({ timeout: 60_000 })
+    await page.getByRole('button', { name: 'Собрать', exact: true }).click()
+    await expect(page.getByRole('heading', { level: 1, name: /Собираю презентацию|Презентация готова/ })).toBeVisible({ timeout: 60_000 })
+    await expect(page).toHaveURL(/\/polish/, { timeout: 300_000 })
   })
 
-  await test.step('variants render real PDF thumbnails', async () => {
-    await page.getByRole('link', { name: /Сравнить по слайдам/ }).click()
-    for (const strategy of ['Близко к шаблону', 'Сбалансированный', 'Визуальный']) {
-      const first = page.getByRole('list', { name: `Слайды варианта «${strategy}»` }).getByRole('img').first()
-      await expect(async () => {
-        await first.scrollIntoViewIfNeeded()
-        await expect(first).toHaveAttribute('data-state', 'ready', { timeout: 5_000 })
-      }).toPass({ timeout: 40_000 })
-    }
-  })
-
-  await test.step('audit: overlays are drawn and repair produces a journal', async () => {
-    await page.getByRole('region', { name: 'Сбалансированный' }).getByRole('link', { name: 'Открыть и проверить' }).click()
-    await expect(page.getByRole('region', { name: 'Сводка аудита' })).toBeVisible()
+  await test.step('step 7: repair one issue and download the PPTX', async () => {
+    await expect(page.getByRole('region', { name: 'Сводка аудита' })).toBeVisible({ timeout: 60_000 })
     const panel = page.getByRole('complementary', { name: 'Проблемы' })
     await panel.getByRole('radio', { name: 'По слайдам' }).click()
     const selectable = panel.getByRole('checkbox', { name: /^Выбрать для исправления/ })
     await expect(selectable.first()).toBeVisible()
     await selectable.nth(0).check()
     await page.getByRole('button', { name: /^Исправить выбранное \(1\)/ }).click()
-    const journalTab = panel.getByRole('tab', { name: /^Журнал · [1-9]/ })
-    await expect(journalTab).toBeVisible({ timeout: 120_000 })
-  })
+    await expect(panel.getByRole('tab', { name: /^Журнал · [1-9]/ })).toBeVisible({ timeout: 120_000 })
 
-  await test.step('export: PPTX downloads with a valid package', async () => {
-    await page.getByRole('region', { name: 'Сводка аудита' }).getByRole('link', { name: /Экспорт/ }).click()
-    await expect(page.getByRole('heading', { level: 1, name: 'Заберите колоду' })).toBeVisible()
-    const link = page.getByRole('complementary', { name: 'Скачать колоду' }).getByRole('link', { name: 'Скачать PPTX' })
-    await expect(link).toBeVisible({ timeout: 60_000 })
-    const [download] = await Promise.all([page.waitForEvent('download'), link.click()])
+    const downloads = page.getByRole('group', { name: 'Скачать презентацию' })
+    const pptx = downloads.getByRole('link', { name: 'Скачать PPTX' }).or(downloads.getByRole('button', { name: 'Скачать PPTX' }))
+    await expect(pptx).toBeVisible({ timeout: 60_000 })
+    const [download] = await Promise.all([page.waitForEvent('download', { timeout: 120_000 }), pptx.click()])
     const bytes = await readFile(await download.path())
     expect(bytes.subarray(0, 2).toString('latin1')).toBe('PK')
     expect(bytes.length).toBeGreaterThan(10_000)
   })
 
+  expect(rejected).toEqual([])
   expect(apiFailures).toEqual([])
 })
 
 test('live backend: system panel reflects the real capabilities', async ({ page }) => {
   trackApi(page)
   await page.goto('/')
-  await page.getByRole('button', { name: 'О системе' }).click()
+  await page.getByRole('button', { name: 'Настройки' }).click()
+  await page.getByRole('menuitem', { name: 'О системе' }).click()
   const dialog = page.getByRole('dialog', { name: 'О системе' })
   const capabilities = dialog.getByRole('region', { name: 'Возможности сервиса' })
   await expect(capabilities).toBeVisible()
@@ -115,10 +109,11 @@ test('live backend: system panel reflects the real capabilities', async ({ page 
 test('live backend: provider session is created, probed and revoked', async ({ page }) => {
   trackApi(page)
   await page.goto('/')
-  await page.getByRole('button', { name: 'Модели', exact: true }).click()
+  await page.getByRole('button', { name: 'Настройки' }).click()
+  await page.getByRole('menuitem', { name: /Модели/ }).click()
   const dialog = page.getByRole('dialog', { name: 'Провайдер моделей' })
   const form = dialog.getByRole('form', { name: 'Подключение провайдера моделей' })
-  await form.getByRole('textbox', { name: 'Адрес API' }).fill('http://127.0.0.1:9/v1')
+  await form.getByRole('textbox', { name: 'Адрес API' }).fill('https://example.com/v1')
   await form.getByRole('textbox', { name: /^Модель для текста/ }).fill('qwen3-32b')
   await form.getByRole('textbox', { name: /^Модель для картинок слайдов/ }).fill('qwen2.5-vl-32b')
   await form.getByLabel('Токен').fill('test-token-not-a-secret')

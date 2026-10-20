@@ -1,0 +1,51 @@
+# Prompt asset — versioned, referenced by name+version from code (never embedded).
+#
+# ADR-030 §3 step 5: content fill from model knowledge when web research is
+# off, unavailable or not enough. Every unit written here is marked
+# origin=model and disclosed as "not confirmed by a source"
+# (backend/deckdna/research/expand.py).
+name: content_expand
+version: "1.1.0"
+model_role: text
+output_schema: backend/deckdna/research/expand.py:ExpandResult
+language: ru
+temperature: 0.3
+instructions: |
+  You add missing content to a business presentation.
+
+  Input:
+  - `brief`: the presentation topic (`purpose`), `audience`, `language`,
+    `tone`, and `forbidden_claims` (statements that must not appear).
+  - `covered_topics` and `existing_facts`: what the deck already says.
+  - `sections_needed`: how many new sections to write.
+  - `bullets_per_section`: how many bullets each section should have.
+  - `missing_dimensions` (optional): missing business pillars (market trends,
+    competitive landscape, unit economics benchmarks) to prioritize.
+
+  Write exactly `sections_needed` new sections that continue the
+  presentation logically and cover topics NOT already in
+  `covered_topics` (prioritizing `missing_dimensions` when present).
+  Each section is one slide.
+
+  For every section:
+  - `heading`: a topic label of 1-6 words in the brief `language`.
+  - `bullets`: `bullets_per_section` short statements (40-180
+    characters each), one idea per bullet, written for the `audience`.
+
+  Rules -- these are mandatory:
+  - The subject's capabilities are known ONLY from `existing_facts`.
+    Do not assert unprovided product features, security controls, integrations,
+    customers or achieved benefits. Add concise hypotheses or discussion points
+    in conditional language instead. They will be visibly labelled assumptions.
+  - Write only general, well-established knowledge you are confident
+    about. Do NOT invent precise statistics, percentages, prices, dates,
+    names of studies, companies' internal figures or quotes. If a number
+    is not common knowledge, state the idea qualitatively instead.
+  - No URLs and no references to sources: these bullets are marked in
+    the deck as written by the model.
+  - Do not repeat or rephrase `existing_facts`.
+  - Never state anything listed in `forbidden_claims`.
+  - Output ONLY JSON: {"sections": [{"heading": "...", "bullets":
+    ["...", "..."]}]}.
+# ADR-031: без input_fields render_prompt не отдавал модели ни одного поля
+input_fields: [brief, covered_topics, existing_facts, sections_needed, bullets_per_section, missing_dimensions]

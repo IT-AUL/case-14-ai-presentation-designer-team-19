@@ -147,15 +147,11 @@ def _text_slot(card: _Card) -> int:
     """Сколько текстовых мест у карточки: собственный текст (фигура с
     txBody или группа) плюс текстовые фигуры внутри шириной ≥40%."""
     own = 1 if _has_tx_body(card.container) else 0
-    inner = sum(
-        1 for m, mb in card.members if _has_tx_body(m) and mb.w >= 0.4 * card.box.w
-    )
+    inner = sum(1 for m, mb in card.members if _has_tx_body(m) and mb.w >= 0.4 * card.box.w)
     return own + inner
 
 
-def _find_cards(
-    shapes: list[tuple[etree._Element, _Box]], sw: int, sh: int
-) -> list[_Card]:
+def _find_cards(shapes: list[tuple[etree._Element, _Box]], sw: int, sh: int) -> list[_Card]:
     """Самый многочисленный кластер одинаковых непересекающихся подложек,
     каждая из которых содержит текстовую фигуру."""
     area = sw * sh
@@ -164,8 +160,7 @@ def _find_cards(
     candidates = [
         (el, b)
         for el, b in shapes
-        if not _is_placeholder(el)
-        and _MIN_CARD_AREA <= (b.w * b.h) / area <= _MAX_CARD_AREA
+        if not _is_placeholder(el) and _MIN_CARD_AREA <= (b.w * b.h) / area <= _MAX_CARD_AREA
     ]
     clusters: list[list[tuple[etree._Element, _Box]]] = []
     for el, b in candidates:
@@ -208,6 +203,7 @@ def _find_cards(
         if any(n > 1 for n in owners.values()):
             continue
         valid.append(cards)
+
     # Выигрывает кластер, покрывающий больше текстовых фигур; при равенстве —
     # с большим числом карточек. Полосы рядов покрывают те же тексты, что и
     # карточки внутри них, но их меньше; плашки-заголовки внутри карточек
@@ -242,12 +238,11 @@ def _min_gap(starts: list[int], size: int) -> int:
     return min(gaps) if gaps else 0
 
 
-def _move_member(
-    el: etree._Element, mb: _Box, old: _Box, new: _Box
-) -> _Box:
+def _move_member(el: etree._Element, mb: _Box, old: _Box, new: _Box) -> _Box:
     """Новое место элемента карточки при смене рамки карточки ``old → new``.
 
-    Отступы от краёв сохраняются. Широкие элементы (≥ половины ширины
+    Отступы от краёв сохраняются; при уменьшении высоты вертикальные
+    отступы и неригидные рамки уменьшаются пропорционально. Широкие элементы (≥ половины ширины
     карточки) растягиваются по ширине; элемент, доходящий почти до низа и
     занимающий заметную высоту (основной текст), — по высоте. Мелкие
     элементы в правой/нижней половине держат расстояние до правого/нижнего
@@ -255,8 +250,11 @@ def _move_member(
     dx, dy = mb.x - old.x, mb.y - old.y
     right_gap, bottom_gap = old.r - mb.r, old.b - mb.b
     rigid = etree.QName(el).localname in {"pic", "graphicFrame"}  # пропорции картинки
-    wide = mb.w >= 0.5 * old.w and not rigid
     tall_bottom = mb.h >= 0.3 * old.h and bottom_gap <= 0.2 * old.h and not rigid
+    shrink_y = min(1.0, new.h / max(1, old.h)) if not rigid else 1.0
+    dy, bottom_gap = int(dy * shrink_y), int(bottom_gap * shrink_y)
+    member_h = max(1, int(mb.h * shrink_y))
+    wide = mb.w >= 0.5 * old.w and not rigid
     if wide:
         x, w = new.x + dx, max(1, new.w - dx - right_gap)
     elif dx > old.w / 2:
@@ -268,13 +266,17 @@ def _move_member(
     elif (dy > old.h / 2 or rigid) and not _text(el):
         y, h = new.b - bottom_gap - mb.h, mb.h
     else:
-        y, h = new.y + dy, mb.h
+        y, h = new.y + dy, member_h
     return _Box(int(x), int(y), int(w), int(h))
 
 
-def _grow_fonts(el: etree._Element, factor: float) -> int:
+def _grow_fonts(
+    el: etree._Element,
+    factor: float,
+    font_scale: list[float] | tuple[float, ...] | None = None,
+) -> int:
     """Увеличить явные кегли текста фигуры (карточка стала заметно больше).
-    Кегли округляются до 0.5pt; рост ограничен ``_FONT_GROWTH_CAP``."""
+    Кегли округляются до 0.5pt (или до шкалы шаблона); рост ограничен ``_FONT_GROWTH_CAP``."""
     factor = min(factor, _FONT_GROWTH_CAP)
     if factor < 1.15:
         return 0
@@ -284,7 +286,17 @@ def _grow_fonts(el: etree._Element, factor: float) -> int:
             sz = rpr.get("sz")
             if not sz:
                 continue
-            new = int(round(int(sz) * factor / 50.0) * 50)
+            old_pt = int(sz) / 100.0
+            raw_pt = round(old_pt * factor * 2.0) / 2.0
+            if font_scale:
+                from deckdna.pptx.composing.font_scale import snap_font_pt
+
+                snapped_pt = snap_font_pt(raw_pt, font_scale, mode="down", min_pt=old_pt)
+                if snapped_pt <= old_pt:
+                    snapped_pt = snap_font_pt(raw_pt, font_scale, mode="nearest", min_pt=old_pt)
+                new = int(round(snapped_pt * 100))
+            else:
+                new = int(round(int(sz) * factor / 50.0) * 50)
             if new > int(sz):
                 rpr.set("sz", str(new))
                 grown += 1
@@ -304,16 +316,14 @@ def _expand_bodies(cards: list[_Card]) -> int:
     for c in cards:
         box = _box(c.container) or c.box
         members = [(m, _box(m)) for m, _ in c.members if m.getparent() is not None]
-        texts = [
-            (m, b) for m, b in members if b is not None and _text(m) and b.w >= 0.4 * box.w
-        ]
+        texts = [(m, b) for m, b in members if b is not None and _text(m) and b.w >= 0.4 * box.w]
         if not texts:
             continue
         m, b = max(texts, key=lambda mb: mb[1].b)
         top_pad = min(bb.y for _, bb in members if bb is not None) - box.y
         limit = box.b - max(top_pad, int(0.06 * box.h))
         for other, ob in members:
-            if other is m or ob is None or ob.y < b.b:
+            if other is m or ob is None or ob.y < b.b or not _is_visible(other):
                 continue
             if min(ob.r, b.r) > max(ob.x, b.x):  # под рамкой по горизонтали
                 limit = min(limit, ob.y - int(0.02 * box.h))
@@ -326,9 +336,9 @@ def _expand_bodies(cards: list[_Card]) -> int:
                 continue
             if min(ob.r, b.r) > max(ob.x, b.x):
                 ceiling = max(ceiling, ob.b + int(0.03 * box.h))
-        if ceiling < b.y - int(0.1 * box.h):
+        if ceiling < b.y - int(0.02 * box.h):
             top = ceiling
-        bottom = limit if limit > b.b + int(0.1 * box.h) else b.b
+        bottom = limit if limit > b.b + int(0.02 * box.h) else b.b
         if top < b.y or bottom > b.b:
             _set_box(m, _Box(b.x, top, b.w, bottom - top))
             grown += 1
@@ -379,6 +389,7 @@ def reflow_cards(
     slide_h: int,
     *,
     filled_shape_ids: set[str] | frozenset[str] | None = None,
+    font_scale: list[float] | tuple[float, ...] | None = None,
 ) -> tuple[bytes, ReflowReport]:
     """Удалить незаполненные карточки сетки и растянуть оставшиеся.
 
@@ -401,11 +412,25 @@ def reflow_cards(
     for c in cards:
         if filled_shape_ids is not None:
             ids = {_shape_id(c.container)} | {_shape_id(m) for m, _ in c.members}
-            c.filled = bool(ids & filled_shape_ids)
+            # graphicFrame-член (таблица, созданная fill_native_tables, или
+            # схема) — живой контент, а не текстовый слот: его id нет в
+            # filled_shape_ids, но карточка с ним заполнена. Очищенные
+            # донорские таблицы и графики сняты раньше (remove_empty_
+            # table_frames / _remove_chart_frames), сюда доезжает только
+            # реальная полезная нагрузка.
+            c.filled = (
+                bool(ids & filled_shape_ids)
+                or etree.QName(c.container).localname == "graphicFrame"
+                or any(etree.QName(m).localname == "graphicFrame" for m, _ in c.members)
+            )
         else:
-            c.filled = bool(_WORD_RE.search(_text(c.container))) or any(
-                _WORD_RE.search(_text(m)) or etree.QName(m).localname == "graphicFrame"
-                for m, _ in c.members
+            c.filled = (
+                etree.QName(c.container).localname == "graphicFrame"
+                or bool(_WORD_RE.search(_text(c.container)))
+                or any(
+                    _WORD_RE.search(_text(m)) or etree.QName(m).localname == "graphicFrame"
+                    for m, _ in c.members
+                )
             )
     kept = [c for c in cards if c.filled]
     removed = [c for c in cards if not c.filled]
@@ -436,9 +461,7 @@ def reflow_cards(
         max(c.box.b for c in cards) - min(c.box.y for c in cards),
     )
 
-    ids_in_cards = {id(c.container) for c in cards} | {
-        id(m) for c in cards for m, _ in c.members
-    }
+    ids_in_cards = {id(c.container) for c in cards} | {id(m) for c in cards for m, _ in c.members}
     tol_x, tol_y = int(_EDGE_TOL * slide_w), int(_EDGE_TOL * slide_h)
     # полосы-подложки рядов: содержат ≥2 карточек, но не все
     strips = [
@@ -453,6 +476,7 @@ def reflow_cards(
 
     def foreign_in(area: _Box) -> bool:
         """Чужая фигура (не карточка, не полоса, не общая подложка) в области."""
+
         def inter(b: _Box) -> int:
             w = min(b.r, area.r) - max(b.x, area.x)
             h = min(b.b, area.b) - max(b.y, area.y)
@@ -533,7 +557,7 @@ def reflow_cards(
             if _text(m) and mb.h >= 0.25 * old.h:
                 growth = math.sqrt((nb.w * nb.h) / max(1, mb.w * mb.h))
                 if growth >= 1.2:
-                    report.font_grown += _grow_fonts(m, growth)
+                    report.font_grown += _grow_fonts(m, growth, font_scale=font_scale)
     # полосы рядов, в которых не осталось карточек, удаляются
     for el, b in strips:
         if not any(b.contains(nb, tol_x, tol_y) for nb in new_boxes):
@@ -579,9 +603,7 @@ def card_slots(slide_xml: bytes, slide_w: int, slide_h: int) -> tuple[int, int]:
     cards = _find_cards(shapes, slide_w, slide_h)
     if not cards:
         return 0, 0
-    per_card = {
-        sum(1 for m, mb in c.members if _text(m) and mb.w >= 0.4 * c.box.w) for c in cards
-    }
+    per_card = {sum(1 for m, mb in c.members if _text(m) and mb.w >= 0.4 * c.box.w) for c in cards}
     if len(per_card) != 1:
         return len(cards), 0
     return len(cards), per_card.pop()
@@ -608,12 +630,9 @@ def pair_texts_for_cards(texts: list[str], slots_per_card: int) -> list[str]:
 # Клонирование карточек (пунктов больше, чем карточек в эталоне)
 # --------------------------------------------------------------------------
 
+
 def _max_shape_id(root: etree._Element) -> int:
-    ids = [
-        int(el.get("id"))
-        for el in root.iter(f"{{{P}}}cNvPr")
-        if (el.get("id") or "").isdigit()
-    ]
+    ids = [int(el.get("id")) for el in root.iter(f"{{{P}}}cNvPr") if (el.get("id") or "").isdigit()]
     return max(ids, default=1)
 
 
@@ -625,7 +644,12 @@ def _renumber(el: etree._Element, next_id: int) -> int:
 
 
 def clone_cards(
-    slide_xml: bytes, need: int, slide_w: int, slide_h: int
+    slide_xml: bytes,
+    need: int,
+    slide_w: int,
+    slide_h: int,
+    *,
+    max_columns: int | None = None,
 ) -> tuple[bytes, int]:
     """Добавить в сетку эталона карточки-копии, пока их не станет ``need``.
 
@@ -640,10 +664,12 @@ def clone_cards(
         return slide_xml, 0
     shapes = [(el, b) for el in tree if el.tag in _SHAPE_TAGS if (b := _box(el)) is not None]
     cards = _find_cards(shapes, slide_w, slide_h)
-    if len(cards) < 2 or need <= len(cards):
+    if len(cards) < 2:
         return slide_xml, 0
     cards.sort(key=lambda c: (c.box.y, c.box.x))
     cols, rows = _grid(cards, slide_w, slide_h)
+    if need <= len(cards) and (max_columns is None or len(cols) <= max_columns):
+        return slide_xml, 0
     size = cards[0].box
     gap_x = _min_gap(cols, size.w) or int(0.012 * slide_w)
     gap_y = _min_gap(rows, size.h) or int(0.02 * slide_h)
@@ -653,6 +679,19 @@ def clone_cards(
         max(c.box.r for c in cards) - min(c.box.x for c in cards),
         max(c.box.b for c in cards) - min(c.box.y for c in cards),
     )
+    if max_columns is not None and math.ceil(max(need, len(cards)) / max_columns) > len(rows):
+        member_ids = {id(c.container) for c in cards} | {id(m) for c in cards for m, _ in c.members}
+        foreign = [
+            b
+            for element, b in shapes
+            if id(element) not in member_ids
+            and min(b.r, region.r) > max(b.x, region.x)
+            and not b.contains(region, int(0.02 * slide_w), int(0.02 * slide_h))
+        ]
+        if not any(b.y < region.b and b.b > region.y for b in foreign):
+            bottom = min([int(0.88 * slide_h), *[b.y - gap_y for b in foreign if b.y >= region.b]])
+            region = _Box(region.x, region.y, region.w, max(region.h, bottom - region.y))
+
     source = cards[-1]
     group = [source.container, *(m for m, _ in source.members)]
     anchor = max(group, key=lambda el: list(tree).index(el))
@@ -672,7 +711,9 @@ def clone_cards(
 
     all_cards = cards + added
     k = len(all_cards)
-    if len(rows) == 1:
+    if max_columns is not None:
+        n_cols = math.ceil(k / math.ceil(k / max(1, max_columns)))
+    elif len(rows) == 1:
         n_cols = k if k <= 5 else math.ceil(k / 2)
     else:
         n_cols = max(len(cols), math.ceil(k / max(1, len(rows))))

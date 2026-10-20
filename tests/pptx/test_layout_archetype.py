@@ -2,7 +2,7 @@
 exemplar candidate, designed so a weak (~27-30B) rerank model can match a
 plan slide's purpose against a small named enum instead of weighing raw
 geometric numbers (see the docstring on ``LayoutArchetype`` for the
-motivation and the live-quality finding of 27.09).
+motivation and architecture notes, "Волна качества генерации 27.09").
 
 Ground-truth cases below were verified by hand against the real
 organizer fixture (``vk_tech_template.pptx``) while designing the
@@ -134,9 +134,7 @@ def test_single_shape_is_single_block(synth_pkg):
 def test_two_shapes_side_by_side_is_two_column(synth_pkg):
     def add(slide):
         for i in range(2):
-            box = slide.shapes.add_textbox(
-                Inches(1 + i * 4), Inches(1), Inches(3), Inches(2)
-            )
+            box = slide.shapes.add_textbox(Inches(1 + i * 4), Inches(1), Inches(3), Inches(2))
             box.text_frame.paragraphs[0].add_run().text = f"Колонка номер {i} с текстом."
 
     pkg = synth_pkg(add)
@@ -146,9 +144,7 @@ def test_two_shapes_side_by_side_is_two_column(synth_pkg):
 def test_three_shapes_in_a_row_is_row_grid(synth_pkg):
     def add(slide):
         for i in range(3):
-            box = slide.shapes.add_textbox(
-                Inches(1 + i * 3), Inches(1), Inches(2), Inches(2)
-            )
+            box = slide.shapes.add_textbox(Inches(1 + i * 3), Inches(1), Inches(2), Inches(2))
             box.text_frame.paragraphs[0].add_run().text = f"Карточка номер {i} с текстом."
 
     pkg = synth_pkg(add)
@@ -158,9 +154,7 @@ def test_three_shapes_in_a_row_is_row_grid(synth_pkg):
 def test_stacked_shapes_in_one_column_is_stacked_list(synth_pkg):
     def add(slide):
         for i in range(3):
-            box = slide.shapes.add_textbox(
-                Inches(1), Inches(1 + i * 2), Inches(4), Inches(1.5)
-            )
+            box = slide.shapes.add_textbox(Inches(1), Inches(1 + i * 2), Inches(4), Inches(1.5))
             box.text_frame.paragraphs[0].add_run().text = f"Пункт списка номер {i} текст."
 
     pkg = synth_pkg(add)
@@ -198,3 +192,135 @@ def test_title_placeholder_text_does_not_leak_into_arrangement(tmp_path):
     part = "ppt/slides/slide1.xml"
     prof = run_profile(pkg, part)
     assert layout_archetype(pkg, part, prof) is LayoutArchetype.single_block
+
+
+@pytest.mark.parametrize("slide_count", [2, 6])
+def test_layout_family_selection_prevents_three_consecutive_identical_layouts(
+    tmp_path, slide_count
+):
+    """FactLedger story: выбор семейства макета по формуле
+    cost = fit + 0.8·(family == prev) + 0.3·count_in_last_4
+    разбивает серии >= 3 одинаковых макетов подряд при наличии совместимой альтернативы."""
+    from deckdna.contracts.deck_plan import (
+        Brief,
+        ChartSpec,
+        ChartType,
+        ContentUnit,
+        DeckPlan,
+        DensityBudget,
+        DesiredVisual,
+        Kind,
+        Level,
+        Provenance,
+        Purpose,
+        SlidePlan,
+    )
+    from deckdna.pptx.cloning.exemplar import ExemplarChoice
+    from deckdna.pptx.composing.minimal import _diversify_exemplar_layout_families
+    from deckdna.pptx.composing.native_plan import layout_family_cost, select_layout_family
+
+    assert layout_family_cost(0.2, "slideLayout10.xml", ["slideLayout10.xml"]) == 1.3
+    assert (
+        select_layout_family(
+            {"slideLayout10.xml": 0.0, "slideLayout9.xml": 0.24},
+            ["slideLayout10.xml", "slideLayout10.xml"],
+        )
+        == "slideLayout9.xml"
+    )
+
+    # Синтетический шаблон с двумя совместимыми контентными макетами (layout 1 и layout 3)
+    prs = Presentation()
+    for layout_idx in (1, 3):
+        sld = prs.slides.add_slide(prs.slide_layouts[layout_idx])
+        for k in range(3):
+            tb = sld.shapes.add_textbox(
+                Inches(0.8 + k * 2.8), Inches(1.5), Inches(2.5), Inches(1.5)
+            )
+            tb.text_frame.paragraphs[0].add_run().text = f"Широкий контентный блок {k} для проверки"
+    tpl_path = tmp_path / "two_layouts.pptx"
+    prs.save(tpl_path)
+    synth = OpcPackage.open(tpl_path)
+
+    slides = [
+        SlidePlan(
+            id=f"slide-{i}",
+            index=i,
+            purpose=Purpose.data,
+            title_intent=f"Слайд данных {i}",
+            key_message=f"Вывод {i}",
+            evidence_ids=[f"p:f{i}"],
+            content_units=[
+                ContentUnit(
+                    role="title",
+                    kind=Kind.title,
+                    text=f"Слайд данных {i}",
+                    evidence_ids=[f"p:f{i}"],
+                ),
+                ContentUnit(
+                    role="chart",
+                    kind=Kind.chart,
+                    chart_ref=f"c{i}",
+                    evidence_ids=[f"p:f{i}"],
+                    chart_spec=ChartSpec(chart_type=ChartType.bar),
+                ),
+                ContentUnit(
+                    role="bullet",
+                    kind=Kind.bullet,
+                    text=f"Показатель {i} составил {10 + i}%",
+                    evidence_ids=[f"p:f{i}"],
+                ),
+            ],
+            desired_visual=DesiredVisual.chart,
+            density_budget=DensityBudget(level=Level.medium, max_items=2),
+        )
+        for i in range(slide_count)
+    ]
+    plan = DeckPlan(
+        schema_version="1.0",
+        id="plan-streak",
+        brief=Brief(purpose="Тест", audience="все", language="ru", target_slide_count=6),
+        evidence_graph_id="pack:p",
+        objective="Тест",
+        audience="все",
+        language="ru",
+        sections=[],
+        slides=slides,
+        provenance=Provenance(
+            planner="test",
+            prompt_version="1",
+            schema_version="1.0",
+            input_hashes=["abc"],
+        ),
+    )
+    from deckdna.pptx.cloning.exemplar import slide_layout_map
+
+    lmap = slide_layout_map(synth)
+    initial_choices = [
+        ExemplarChoice(
+            slide_part="ppt/slides/slide1.xml",
+            layout_part=lmap["ppt/slides/slide1.xml"],
+            shape_count=4,
+            layout_slide_count=1,
+            content_slots=3,
+        )
+        for _ in range(slide_count)
+    ]
+    diversified = _diversify_exemplar_layout_families(synth, plan, initial_choices)
+    fams = [c.layout_part for c in diversified]
+    assert fams[0] != fams[1], "Стоимость повторения применяется и к двум слайдам"
+    for i in range(len(fams) - 2):
+        assert not (fams[i] == fams[i + 1] == fams[i + 2]), f"серия из 3 одинаковых: {fams}"
+    # Тип графика ни на одном слайде не изменился
+    assert all(
+        u.chart_spec.chart_type == ChartType.bar
+        for s in plan.slides
+        for u in s.content_units
+        if u.kind == Kind.chart
+    )
+
+
+def test_four_native_items_do_not_select_a_two_item_only_family():
+    from deckdna.pptx.composing.native_plan import _compatible_native_archetypes
+
+    candidates = _compatible_native_archetypes([{"heading": "Факт"}] * 4, "cards")
+    assert "two_column" not in candidates

@@ -1,6 +1,6 @@
-"""Stage runner primitives — frozen interface.
+"""Stage runner primitives — frozen interface (docs/agents/INTERFACE_FREEZE.md §2).
 
-Stage handlers register here; the runner owns queueing and persistence.
+Agents 2/3 register stage handlers; Agent 1 owns the runner, queue, and persistence.
 """
 
 from __future__ import annotations

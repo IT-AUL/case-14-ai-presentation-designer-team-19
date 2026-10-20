@@ -59,3 +59,19 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+.details {
+  margin-top: 8px;
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.details summary {
+  cursor: pointer;
+}
+
+.details pre {
+  margin: 6px 0 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}

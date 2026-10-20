@@ -27,12 +27,21 @@
 }
 
 .thumb {
+  position: relative;
   display: block;
   flex: 1;
   min-width: 0;
   overflow: hidden;
   border-radius: 3px;
   box-shadow: 0 0 0 2px transparent, 0 0 0 3px var(--line);
+}
+
+.rebuilding {
+  position: absolute;
+  inset: 0;
+  background: var(--overlay);
+  backdrop-filter: blur(1.5px);
+  animation: global(dd-pulse) 1.4s ease-in-out infinite;
 }
 
 .current {

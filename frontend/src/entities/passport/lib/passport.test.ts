@@ -65,6 +65,15 @@ describe('quality passport parsing', () => {
     ])
   })
 
+  it('reads fact origins and research metrics when the service reports them', () => {
+    expect(parsePassport(recorded).research).toBeNull()
+    const passport = parsePassport({
+      ...recorded,
+      metrics: { ...recorded.metrics, content_origin: { user: 12, web: 6 }, research: { sources_count: 4, duration_s: 21.5, content_fill: 'expand' } },
+    })
+    expect(passport.research).toEqual({ origin: { user: 12, web: 6, model: 0 }, sources: 4, contentFill: 'expand', seconds: 21.5 })
+  })
+
   it('rejects payloads that are not a passport', () => {
     expect(() => parsePassport(null)).toThrow(PassportFormatError)
     expect(() => parsePassport({ schema_version: '1.0' })).toThrow(PassportFormatError)

@@ -12,15 +12,26 @@
     "id": { "type": "string" },
     "brief": {
       "type": "object",
+      "additionalProperties": false,
       "required": ["purpose", "audience", "language", "target_slide_count"],
       "properties": {
         "purpose": { "type": "string" },
         "audience": { "type": "string" },
         "language": { "type": "string" },
         "target_slide_count": { "type": "integer", "minimum": 3, "maximum": 40 },
+        "slide_count_policy": { "type": "string", "enum": ["preferred", "exact", "maximum"], "description": "ADR-047: omission preserves legacy preferred/shrink behavior" },
+        "requested_slide_count": { "type": "integer", "minimum": 3, "maximum": 40, "description": "ADR-047: original bound for a hard policy; derived from the input target and preserved when actual plan length changes" },
         "tone": { "type": "string" },
         "mandatory_sections": { "type": "array", "items": { "type": "string" } },
-        "forbidden_claims": { "type": "array", "items": { "type": "string" } }
+        "forbidden_claims": { "type": "array", "items": { "type": "string" } },
+        "content_fill": {
+          "type": "string",
+          "enum": ["expand", "shrink", "ask"],
+          "description": "ADR-030: when the content does not fill target_slide_count — expand (research/model fill), shrink (fewer slides) or ask (the plans endpoint returns a sufficiency report instead of plans)"
+        },
+        "key_message": { "type": "string", "description": "ADR-034 §3: the deck's main message (assistant answer)" },
+        "call_to_action": { "type": "string", "description": "ADR-034 §3: what the audience should do" },
+        "explain_slide": { "type": "boolean", "description": "ADR-033 §10: add the «Как выбирались визуализации» appendix slide" }
       }
     },
     "evidence_graph_id": { "type": "string" },
@@ -94,10 +105,13 @@
               "target_chars": { "type": "integer" },
               "asset_ref": { "type": "string" },
               "table_ref": { "type": "string" },
+              "locked": { "type": "boolean", "description": "ADR-030: edited by the user; later stages may shorten it to fit but must not rewrite its meaning" },
+              "origin": { "type": "string", "enum": ["user", "web", "model"], "description": "ADR-030: where the unit's facts come from" },
+              "source_id": { "type": "string", "description": "ADR-034 §0: id of the external source (PlanSet.research.sources[].id) behind a web/model unit" },
               "chart_spec": {
                 "type": "object",
                 "properties": {
-                  "chart_type": { "type": "string", "enum": ["bar", "line", "pie", "area", "scatter"] },
+                  "chart_type": { "type": "string", "enum": ["bar", "line", "pie", "area", "scatter", "bar_horizontal", "bar_stacked", "bar_stacked_100", "histogram", "doughnut", "kpi", "waterfall"], "description": "ADR-033 §4: the extra types are the data-insights catalog" },
                   "series_count": { "type": "integer", "maximum": 5 },
                   "has_axis_labels": { "type": "boolean" },
                   "has_units": { "type": "boolean" },
@@ -121,7 +135,19 @@
           }
         },
         "speaker_note": { "type": "string" },
-        "mandatory": { "type": "boolean" }
+        "mandatory": { "type": "boolean" },
+        "chart": {
+          "type": "object",
+          "description": "ADR-034 §4: chosen chart {type, reasons[], alternatives:[{type, reasons[]}], view_id}",
+          "properties": {
+            "type": { "type": "string" },
+            "reasons": { "type": "array", "items": { "type": "string" } },
+            "alternatives": { "type": "array", "items": { "type": "object" } },
+            "view_id": { "type": "string" }
+          }
+        },
+        "insight_ids": { "type": "array", "items": { "type": "string" } },
+        "supports_key_message": { "type": "boolean", "description": "ADR-034 §4: false — the slide does not support the deck's key message" }
       }
     }
   }

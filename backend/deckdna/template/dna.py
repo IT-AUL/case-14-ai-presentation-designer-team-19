@@ -1,4 +1,4 @@
-"""Design DNA из пакета PPTX/POTX: declared vs observed (contract D1).
+"""Design DNA из пакета PPTX/POTX: declared vs observed (handoff D1).
 
 Всё вычисляется из самого пакета — ни имён, ни индексов, ни цветов
 конкретных шаблонов здесь нет; на «невиданном» шаблоне, где макетов
@@ -23,12 +23,15 @@ EMU (как в ``schemas/design-dna.schema.json``).
 from __future__ import annotations
 
 import asyncio
+import hashlib
+import json
 import logging
 import math
+import os
 import re
 import zipfile
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from io import BytesIO
 from typing import Any
@@ -45,6 +48,7 @@ from deckdna.template.meta import is_meta_xml
 
 logger = logging.getLogger(__name__)
 
+ANALYZER_VERSION = "dna-1"
 A = autopsy.A
 P = autopsy.P
 R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -397,7 +401,9 @@ def _slide_features(slide: Any, index: int, layout_types: dict[str, str]) -> _Sl
 # --------------------------------------------------------------------------
 
 
-def _classify(feat: _SlideFeatures, total: int, median_size: float) -> tuple[str, float, str]:
+def _classify(
+    feat: _SlideFeatures, total: int, median_size: float, *, first: bool | None = None,
+) -> tuple[str, float, str]:
     """(роль, уверенность, доказательство) слайда. Только по признакам
     самого слайда и его макета."""
     text = feat.all_text
@@ -411,7 +417,9 @@ def _classify(feat: _SlideFeatures, total: int, median_size: float) -> tuple[str
         return "toc", 0.85, f"заголовок «{head[:40]}» и {len(feat.paragraphs)} пунктов списка"
     if feat.layout_type == "title" and feat.index <= max(1, total // 10):
         return "title", 0.95, "макет-титул в начале колоды"
-    if feat.index == 0 and feat.text_shapes <= 4 and not feat.has_table:
+    if (feat.index == 0 if first is None else first) and feat.text_shapes <= 4 and not (
+        feat.has_table or feat.has_chart
+    ):
         return "title", 0.8, "первый слайд с короткой подачей"
     contacts = bool(_EMAIL.search(text) or _PHONE.search(text) or _URL.search(text))
     if contacts and (last or _CONTACT_WORDS.search(text)) and feat.text_chars < 600:
@@ -448,9 +456,12 @@ def _roles(
     content_total = 1 + max(
         (f.index for f in features if f.index not in meta_indices), default=len(features) - 1
     )
+    first_content = min((f.index for f in features if f.index not in meta_indices), default=0)
     classified = [
-        (_classify(f, content_total if f.index < content_total else len(features), median_size), f)
-        for f in features
+        (("template_meta", .95, "явные служебные признаки шаблона")
+         if f.index in meta_indices else _classify(
+             f, content_total, median_size, first=f.index == first_content,
+         ), f) for f in features
     ]
     by_role: dict[str, list[tuple[float, str, str]]] = {}
     for (role, conf, evidence), f in classified:
@@ -718,7 +729,9 @@ def _backgrounds(
 # --------------------------------------------------------------------------
 
 
-def _anchors(prs: Any, sw: int, sh: int) -> list[dna.Anchor]:
+def _anchors(
+    prs: Any, sw: int, sh: int, source_parts: list[str] | None = None
+) -> list[dna.Anchor]:
     total = len(prs.slides)
     if not total:
         return []
@@ -736,6 +749,7 @@ def _anchors(prs: Any, sw: int, sh: int) -> list[dna.Anchor]:
         "dt": dna.Kind1.date,
     }
     for index, slide in enumerate(prs.slides):
+        slide_part = source_parts[index] if source_parts else str(slide.part.partname).lstrip("/")
         layout = slide.slide_layout
         for shape in slide.shapes:
             ptype = _ph_type(shape)
@@ -743,9 +757,9 @@ def _anchors(prs: Any, sw: int, sh: int) -> list[dna.Anchor]:
             if box is None:
                 continue
             if ptype in ph_kinds and shape.has_text_frame:
-                add(ph_kinds[ptype], box, index, str(slide.part.partname).lstrip("/"))
+                add(ph_kinds[ptype], box, index, slide_part)
             elif _is_logo_like(shape, box):
-                add(dna.Kind1.logo, box, index, str(slide.part.partname).lstrip("/"))
+                add(dna.Kind1.logo, box, index, slide_part)
         # логотипы, размещённые на макете/мастере, видны на каждом слайде
         # этого макета (если макет не скрывает shapes мастера)
         if layout is not None:
@@ -1064,7 +1078,123 @@ class DnaBuild:
     features: list[_SlideFeatures] = field(default_factory=list)
 
 
-def build_design_dna(
+PARSER_VERSION = ANALYZER_VERSION
+brandbook_cache_key = autopsy.brandbook_cache_key
+
+
+def template_cache_key(
+    pptx_bytes: bytes,
+    *,
+    parser_version: str | None = None,
+    schema_version: str | None = None,
+    fonts_hash: str | None = None,
+    renderer_version: str | None = None,
+) -> str:
+    """Ключ кэша: sha256(pptx_bytes + parser_version + schema_version + fonts + renderer)."""
+    if parser_version is not None:
+        p_ver = str(parser_version)
+    else:
+        dna_ver = PARSER_VERSION if PARSER_VERSION != "dna-1" else ANALYZER_VERSION
+        base_ver = autopsy.effective_parser_version()
+        p_ver = base_ver if dna_ver == "dna-1" else f"{base_ver}+{dna_ver}"
+    effective_fonts = (
+        fonts_hash
+        if fonts_hash is not None
+        else (
+            autopsy.FONTS_HASH
+            if autopsy.FONTS_HASH != autopsy._DEFAULT_FONTS_HASH
+            else hashlib.sha256(",".join(sorted(_SYSTEM_FONTS)).encode("utf-8")).hexdigest()[:16]
+        )
+    )
+    return autopsy.template_cache_key(
+        pptx_bytes,
+        parser_version=p_ver,
+        schema_version=schema_version,
+        fonts_hash=effective_fonts,
+        renderer_version=renderer_version,
+    )
+
+
+def _dna_cache_file(
+    raw: bytes,
+    analyzer_version: str | None = None,
+    *,
+    schema_version: str | None = None,
+    fonts_hash: str | None = None,
+    renderer_version: str | None = None,
+) -> autopsy.Path:
+    key = template_cache_key(
+        raw,
+        parser_version=analyzer_version,
+        schema_version=schema_version,
+        fonts_hash=fonts_hash,
+        renderer_version=renderer_version,
+    )
+    return autopsy._cache_dir() / f"{key}.dna.json"
+
+
+def _descriptions_cache_file(
+    raw: bytes,
+    language: str = "ru",
+    analyzer_version: str | None = None,
+    *,
+    schema_version: str | None = None,
+    fonts_hash: str | None = None,
+    renderer_version: str | None = None,
+) -> autopsy.Path:
+    key = template_cache_key(
+        raw,
+        parser_version=analyzer_version,
+        schema_version=schema_version,
+        fonts_hash=fonts_hash,
+        renderer_version=renderer_version,
+    )
+    return autopsy._cache_dir() / f"{key}.{language}.descriptions.json"
+
+
+def _load_cached_dna(
+    cache_file: autopsy.Path,
+    template_id: str,
+    analysis_id: str,
+    slide_ids: dict[int, str],
+    created_at: datetime,
+    schema_version: str,
+) -> DnaBuild | None:
+    if not cache_file.is_file():
+        return None
+    try:
+        payload = json.loads(cache_file.read_text(encoding="utf-8"))
+        design = dna.DesignDNA.model_validate(payload["design_dna"])
+        design.template_id = template_id
+        design.analysis_id = analysis_id
+        design.created_at = created_at
+        design.schema_version = schema_version
+        role_indices: dict[str, list[int]] = payload.get("role_indices") or {}
+        for role_obj in design.slide_roles:
+            indices = role_indices.get(role_obj.role, [])
+            role_obj.slide_ids = [
+                slide_ids.get(int(idx), str(idx)) for idx in indices
+            ]
+        slide_meta = {
+            int(k): dict(v) for k, v in (payload.get("slide_meta") or {}).items()
+        }
+        conflicts = [Conflict(**c) for c in (payload.get("conflicts") or [])]
+        confidence = dict(payload.get("confidence") or {})
+        features = [
+            _SlideFeatures(
+                **{
+                    **f,
+                    "table_dims": [tuple(d) for d in f.get("table_dims", [])],
+                }
+            )
+            for f in (payload.get("features") or [])
+        ]
+        return DnaBuild(design, slide_meta, conflicts, confidence, features)
+    except (ValueError, TypeError, KeyError, OSError):
+        return None
+
+
+def _build_design_dna_uncached(
     data: bytes,
     forensics: Any,
     template_id: str,
@@ -1073,14 +1203,22 @@ def build_design_dna(
     created_at: datetime,
     schema_version: str,
 ) -> DnaBuild:
-    """Design DNA пакета. ``slide_ids`` — индекс слайда → id записи в
-    ``GET /templates/{id}/slides``: роли ссылаются на них."""
     with zipfile.ZipFile(BytesIO(data)) as zf:
+        from deckdna.pptx.opc.package import OpcPackage
+
+        # Resolve source identities before python-pptx renames its in-memory
+        # slide parts. Only XML is needed here, not the package's media bytes.
+        source_parts = OpcPackage({
+            name: zf.read(name) for name in zf.namelist()
+            if name.startswith("ppt/slides/") or name in {
+                "ppt/presentation.xml", "ppt/_rels/presentation.xml.rels",
+            }
+        }).ordered_slide_parts()
         prs = Presentation(BytesIO(data))
         sw, sh = int(prs.slide_width), int(prs.slide_height)
         parts = {
             "themes": sorted(n for n in zf.namelist() if re.match(r"^ppt/theme/theme\d+\.xml$", n)),
-            "slides": [str(s.part.partname).lstrip("/") for s in prs.slides],
+            "slides": source_parts,
         }
         declared, theme_fonts = _declared(prs, zf, parts, sw, sh)
         palette = declared.themes[0].colors if declared.themes else {}
@@ -1090,6 +1228,8 @@ def build_design_dna(
         features = [
             _slide_features(slide, i, layout_types) for i, slide in enumerate(prs.slides)
         ]
+        for feature, part in zip(features, source_parts, strict=True):
+            feature.part = part
         (sizes, size_ctx, fonts, font_ctx, colors, color_ctx, runs_total) = _observed_runs(
             prs, theme_fonts, palette, clr_map
         )
@@ -1138,6 +1278,7 @@ def build_design_dna(
                     slide_index=f.index,
                     part=f.part,
                     role=role_of[f.index],
+                    content_is_template_meta=f.index in meta_indices,
                     cluster_id=cluster_of[f.index],
                     layout_part=f.layout_part,
                     mutability=(
@@ -1146,7 +1287,7 @@ def build_design_dna(
                 )
             )
 
-        anchors = _anchors(prs, sw, sh)
+        anchors = _anchors(prs, sw, sh, source_parts)
         capacities = _capacities(prs, features, _chart_series(zf))
         unsupported = _unsupported(prs, fonts, forensics, theme_fonts)
         conflicts = _conflicts(fonts, theme_fonts, runs_total, colors, palette)
@@ -1178,6 +1319,57 @@ def build_design_dna(
     }
     confidence = _confidence(design, features, roles, classified)
     return DnaBuild(design, slide_meta, conflicts, confidence, features)
+
+
+def build_design_dna(
+    data: bytes,
+    forensics: Any,
+    template_id: str,
+    analysis_id: str,
+    slide_ids: dict[int, str],
+    created_at: datetime,
+    schema_version: str,
+    *,
+    analyzer_version: str | None = None,
+    parser_version: str | None = None,
+    fonts_hash: str | None = None,
+    renderer_version: str | None = None,
+) -> DnaBuild:
+    """Design DNA пакета с дисковым кэшем по составному ключу ``template_cache_key``."""
+    cache_file = _dna_cache_file(
+        data,
+        parser_version or analyzer_version,
+        fonts_hash=fonts_hash,
+        renderer_version=renderer_version,
+    )
+    cached = _load_cached_dna(
+        cache_file, template_id, analysis_id, slide_ids, created_at, schema_version
+    )
+    if cached is not None:
+        return cached
+
+    build = _build_design_dna_uncached(
+        data, forensics, template_id, analysis_id, slide_ids, created_at, schema_version
+    )
+    try:
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        role_indices: dict[str, list[int]] = {}
+        for idx, meta in build.slide_meta.items():
+            role_indices.setdefault(meta["role"], []).append(idx)
+        payload = {
+            "design_dna": build.design_dna.model_dump(mode="json"),
+            "role_indices": role_indices,
+            "slide_meta": {str(k): v for k, v in build.slide_meta.items()},
+            "conflicts": [c.to_dict() for c in build.conflicts],
+            "confidence": build.confidence,
+            "features": [asdict(f) for f in build.features],
+        }
+        tmp_file = cache_file.with_suffix(f".{os.getpid()}.tmp")
+        tmp_file.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        tmp_file.replace(cache_file)
+    except OSError:
+        pass
+    return build
 
 
 def _confidence(design: dna.DesignDNA, features: list[_SlideFeatures],
@@ -1318,11 +1510,106 @@ async def _describe_batch(
     }
 
 
+def load_cached_descriptions(
+    package_bytes: bytes,
+    *,
+    language: str = "ru",
+    analyzer_version: str | None = None,
+    parser_version: str | None = None,
+    schema_version: str | None = None,
+    fonts_hash: str | None = None,
+    renderer_version: str | None = None,
+) -> dict[str, ExemplarDescriptionItem] | None:
+    if not package_bytes:
+        return None
+    cache_file = _descriptions_cache_file(
+        package_bytes,
+        language,
+        parser_version or analyzer_version,
+        schema_version=schema_version,
+        fonts_hash=fonts_hash,
+        renderer_version=renderer_version,
+    )
+    if not cache_file.is_file():
+        return None
+    try:
+        raw = json.loads(cache_file.read_text(encoding="utf-8"))
+        return {
+            part: ExemplarDescriptionItem.model_validate(item)
+            for part, item in raw.items()
+        }
+    except (ValueError, TypeError, KeyError, OSError):
+        return None
+
+
+def load_cached_template_analysis(
+    data: bytes,
+    template_id: str,
+    analysis_id: str,
+    slide_id_factory: Any,
+    created_at: datetime,
+    schema_version: str,
+    *,
+    language: str = "ru",
+    analyzer_version: str | None = None,
+    parser_version: str | None = None,
+    fonts_hash: str | None = None,
+    renderer_version: str | None = None,
+) -> tuple[
+    autopsy.TemplateForensics,
+    DnaBuild,
+    dict[int, str],
+    dict[str, ExemplarDescriptionItem] | None,
+] | None:
+    """Прочитать полный разбор шаблона из дискового кэша без повторного вызова
+    autopsy / build_design_dna / describe_exemplars."""
+    autopsy_file = autopsy._autopsy_cache_file(
+        data,
+        parser_version=parser_version,
+        fonts_hash=fonts_hash,
+        renderer_version=renderer_version,
+    )
+    if not autopsy_file.is_file():
+        return None
+    try:
+        raw_forensics = json.loads(autopsy_file.read_text(encoding="utf-8"))
+        forensics = autopsy.TemplateForensics(**raw_forensics)
+    except (ValueError, TypeError, KeyError, OSError):
+        return None
+    slide_ids = {i: slide_id_factory() for i in range(forensics.slides)}
+    dna_file = _dna_cache_file(
+        data,
+        parser_version or analyzer_version,
+        fonts_hash=fonts_hash,
+        renderer_version=renderer_version,
+    )
+    build = _load_cached_dna(
+        dna_file, template_id, analysis_id, slide_ids, created_at, schema_version
+    )
+    if build is None:
+        return None
+    cached_desc = load_cached_descriptions(
+        data,
+        language=language,
+        analyzer_version=analyzer_version,
+        parser_version=parser_version,
+        fonts_hash=fonts_hash,
+        renderer_version=renderer_version,
+    )
+    return forensics, build, slide_ids, cached_desc
+
+
 async def describe_exemplars(
     features: list[_SlideFeatures],
     gateway: ModelGateway,
     *,
     language: str = "ru",
+    package_bytes: bytes | None = None,
+    analyzer_version: str | None = None,
+    parser_version: str | None = None,
+    schema_version: str | None = None,
+    fonts_hash: str | None = None,
+    renderer_version: str | None = None,
 ) -> dict[str, ExemplarDescriptionItem]:
     """part -> description item for every exemplar the model successfully
     described. Empty dict (not an exception) on any failure or when the
@@ -1336,6 +1623,18 @@ async def describe_exemplars(
     """
     if not features or not can_describe(gateway):
         return {}
+    if package_bytes is not None:
+        cached = load_cached_descriptions(
+            package_bytes,
+            language=language,
+            analyzer_version=analyzer_version,
+            parser_version=parser_version,
+            schema_version=schema_version,
+            fonts_hash=fonts_hash,
+            renderer_version=renderer_version,
+        )
+        if cached is not None:
+            return cached
     batches = [
         features[i : i + _DESCRIBE_BATCH_SIZE]
         for i in range(0, len(features), _DESCRIBE_BATCH_SIZE)
@@ -1347,4 +1646,62 @@ async def describe_exemplars(
     by_index: dict[int, ExemplarDescriptionItem] = {}
     for result in batch_results:
         by_index.update(result)
-    return {f.part: by_index[f.index] for f in features if f.index in by_index}
+    out = {f.part: by_index[f.index] for f in features if f.index in by_index}
+    if out and package_bytes is not None:
+        cache_file = _descriptions_cache_file(
+            package_bytes,
+            language,
+            parser_version or analyzer_version,
+            schema_version=schema_version,
+            fonts_hash=fonts_hash,
+            renderer_version=renderer_version,
+        )
+        try:
+            cache_file.parent.mkdir(parents=True, exist_ok=True)
+            tmp_file = cache_file.with_suffix(f".{os.getpid()}.tmp")
+            tmp_file.write_text(
+                json.dumps(
+                    {k: v.model_dump(mode="json") for k, v in out.items()},
+                    ensure_ascii=False,
+                ),
+                encoding="utf-8",
+            )
+            tmp_file.replace(cache_file)
+        except OSError:
+            pass
+    return out
+
+
+def restyle_design_dna(design: dna.DesignDNA, data: bytes) -> dna.DesignDNA:
+    """Refresh style tokens from the effective package, preserving semantic analysis.
+
+    A branded package must not be composed with the original observed palette or
+    fonts. Exemplar descriptions, IDs, roles and geometry stay tied to the source.
+    No model call or template synthesis is needed for this token refresh.
+    """
+    with zipfile.ZipFile(BytesIO(data)) as zf:
+        prs = Presentation(BytesIO(data))
+        sw, sh = int(prs.slide_width), int(prs.slide_height)
+        parts = {"themes": sorted(
+            n for n in zf.namelist() if re.match(r"^ppt/theme/theme\d+\.xml$", n)
+        )}
+        declared, theme_fonts = _declared(prs, zf, parts, sw, sh)
+        palette = declared.themes[0].colors if declared.themes else {}
+        clr_map = _clr_map(prs)
+        _, _, fonts, font_ctx, colors, color_ctx, _ = _observed_runs(
+            prs, theme_fonts, palette, clr_map,
+        )
+        result = design.model_copy(deep=True)
+        result.declared.themes = declared.themes
+        result.observed.fonts = [
+            dna.Frequency(value=value, frequency=n,
+                          contexts=list(font_ctx.get(value, {})) or None)
+            for value, n in fonts.most_common()
+        ]
+        result.observed.colors = [
+            dna.Frequency(value=value, frequency=n,
+                          contexts=list(color_ctx.get(value, {})) or None)
+            for value, n in colors.most_common(_MAX_COLORS)
+        ]
+        result.observed.backgrounds = _backgrounds(prs, palette, clr_map)
+        return result

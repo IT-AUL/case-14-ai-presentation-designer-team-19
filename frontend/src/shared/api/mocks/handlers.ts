@@ -3,6 +3,7 @@ import type { RequestHandler } from 'msw'
 import type { MockContext } from './context'
 import { createRouter } from './http'
 import type { DelayRange } from './http'
+import { assistantHandlers } from './handlers/assistant'
 import { auditRoutes } from './routes/audits'
 import { contentPackRoutes } from './routes/contentPacks'
 import { exportRoutes } from './routes/exports'
@@ -50,6 +51,7 @@ export function createMockBackend(options: MockBackendOptions = {}): MockBackend
     loadPdf: options.loadPdf ?? loadPublicPdf,
   }
   const handlers = [
+    ...assistantHandlers(context),
     ...systemRoutes(context),
     ...providerSessionRoutes(context),
     ...projectRoutes(context),

@@ -1,10 +1,39 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 20px;
   max-width: var(--page-width);
   margin: 0 auto;
   padding: 28px 32px 64px;
+}
+
+.assistantStrip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface-2);
+}
+
+.assistantNote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.assistantNote > svg {
+  flex: none;
+  color: var(--focus);
+}
+
+.noteText {
+  animation: global(dd-fade) 0.22s ease-out;
 }
 
 .primaryLink,

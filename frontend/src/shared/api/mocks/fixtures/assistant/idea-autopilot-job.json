@@ -1,0 +1,26 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:51:33.046Z",
+  "method": "GET",
+  "path": "/jobs/job_be9f9e16695548e1ba17f30f9fb302d3",
+  "status": 200,
+  "body": {
+    "id": "job_be9f9e16695548e1ba17f30f9fb302d3",
+    "kind": "autopilot",
+    "state": "completed",
+    "stage": "generation",
+    "progress": 1,
+    "project_id": "prj_66f7c26832a2443fabb4bd1820a37f66",
+    "created_at": "2026-10-17T13:51:06.935861Z",
+    "started_at": "2026-10-17T13:51:06.936901Z",
+    "finished_at": "2026-10-17T13:51:32.530261Z",
+    "error": null,
+    "result_ids": {
+      "plan_id": "plan_8ba32af0beed4b58a6a5464cb2feac34",
+      "preview_id": "prev_406991278b824517916b2df40b8d34ec",
+      "generation_id": "run_06cd7e008b81489b9339e88f63a7e641",
+      "deck_plan_id": "plan-pack_8095fb457e8a4262a05b427ac5db1d54-balanced"
+    },
+    "result": null
+  }
+}

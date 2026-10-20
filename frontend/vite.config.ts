@@ -3,7 +3,8 @@ import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '')
+  const root = process.cwd()
+  const env = loadEnv(mode, root, '')
   const backendUrl = env.BACKEND_URL ?? 'http://localhost:8000'
 
   return {
@@ -13,6 +14,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5173,
+      watch: { ignored: [`${root}/dist*/**`, `${root}/playwright-report/**`, `${root}/test-results*/**`] },
       proxy: { '/api': { target: backendUrl, changeOrigin: true } },
     },
     preview: {
@@ -29,6 +31,8 @@ export default defineConfig(({ mode }) => {
       setupFiles: ['./src/shared/config/tests/setup.ts'],
       css: { modules: { classNameStrategy: 'non-scoped' } },
       include: ['src/**/*.test.{ts,tsx}'],
+      testTimeout: 30000,
+      hookTimeout: 30000,
     },
   }
 })

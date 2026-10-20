@@ -22,9 +22,15 @@ from deckdna.contracts.content_pack import ContentPack
 from deckdna.contracts.deck_plan import ContentUnit, DeckPlan, Kind, Purpose
 
 MAX_AGENDA_ITEMS = 7
-_SKIP = frozenset({
-    Purpose.title, Purpose.agenda, Purpose.thank_you, Purpose.qa, Purpose.cta,
-})
+_SKIP = frozenset(
+    {
+        Purpose.title,
+        Purpose.agenda,
+        Purpose.thank_you,
+        Purpose.qa,
+        Purpose.cta,
+    }
+)
 _EV_RE = re.compile(r"^ev_(?:sec|blk|lst)_(\d+)")
 
 
@@ -61,7 +67,9 @@ def agenda_items(plan: DeckPlan, pack: ContentPack) -> list[tuple[str, list[str]
     titled = [
         (s.title_intent.strip(), list(s.evidence_ids))
         for s in plan.slides
-        if s.purpose not in _SKIP and (s.title_intent or "").strip()
+        if s.purpose not in _SKIP
+        and s.purpose != Purpose.section_divider
+        and (s.title_intent or "").strip()
     ]
     if len(titled) >= 2:
         unique_titles: dict[str, list[str]] = {}
@@ -74,10 +82,7 @@ def agenda_items(plan: DeckPlan, pack: ContentPack) -> list[tuple[str, list[str]
     for slide in plan.slides:
         if slide.purpose in _SKIP:
             continue
-        sections = [
-            si for eid in slide.evidence_ids
-            if (si := _section_of(eid, pack)) is not None
-        ]
+        sections = [si for eid in slide.evidence_ids if (si := _section_of(eid, pack)) is not None]
         if sections:
             seen.setdefault(min(sections), None)
     items = [
@@ -87,8 +92,7 @@ def agenda_items(plan: DeckPlan, pack: ContentPack) -> list[tuple[str, list[str]
     ]
     # заголовок всей колоды (раздел-обложка источника) — не пункт повестки
     deck_titles = {
-        (s.title_intent or "").strip().casefold()
-        for s in plan.slides if s.purpose == Purpose.title
+        (s.title_intent or "").strip().casefold() for s in plan.slides if s.purpose == Purpose.title
     } | {(getattr(pack, "title", None) or "").strip().casefold()}
     unique: dict[str, list[str]] = {}
     for text, ev in items:
@@ -104,16 +108,52 @@ def sync_agenda(plan: DeckPlan, pack: ContentPack) -> DeckPlan:
     idx = next((i for i, s in enumerate(plan.slides) if s.purpose == Purpose.agenda), None)
     if idx is None:
         return plan
+    slide = plan.slides[idx]
+    if any(u.locked for u in slide.content_units):
+        return plan
     items = agenda_items(plan, pack)
     if len(items) < 2:
+        if plan.brief.slide_count_policy != "exact" and len(plan.slides) > 3:
+            from deckdna.planning.content_fill import annotate_unit_origins
+
+            trimmed = [s for i, s in enumerate(plan.slides) if i != idx]
+            reindexed = [
+                s if s.index == i else s.model_copy(update={"index": i})
+                for i, s in enumerate(trimmed)
+            ]
+            brief = plan.brief.model_copy(update={"target_slide_count": len(reindexed)})
+            return annotate_unit_origins(
+                plan.model_copy(update={"slides": reindexed, "brief": brief}),
+                pack,
+            )
         return plan
-    slide = plan.slides[idx]
-    kept = [u for u in slide.content_units if u.kind != Kind.bullet]
+    title = "План презентации" if (plan.language or "ru").startswith("ru") else "Agenda"
+    kept = [
+        u.model_copy(
+            update={
+                "text": title,
+                "origin": None,
+                "source_id": None,
+                "evidence_ids": [f"{pack.id}:meta"],
+            }
+        )
+        if u.kind == Kind.title
+        else u
+        for u in slide.content_units
+        if u.kind != Kind.bullet
+    ]
+    if not any(u.kind == Kind.title for u in kept):
+        kept.insert(
+            0,
+            ContentUnit(
+                role="title", kind=Kind.title, text=title, evidence_ids=[f"{pack.id}:meta"]
+            ),
+        )
     bullets = [
         ContentUnit(role="agenda-item", kind=Kind.bullet, text=text, evidence_ids=ev)
         for text, ev in items
     ]
-    new_slide = slide.model_copy(update={"content_units": kept + bullets})
+    new_slide = slide.model_copy(update={"title_intent": title, "content_units": kept + bullets})
     if slide.density_budget is not None:
         new_slide = new_slide.model_copy(
             update={
@@ -124,4 +164,8 @@ def sync_agenda(plan: DeckPlan, pack: ContentPack) -> DeckPlan:
         )
     slides = list(plan.slides)
     slides[idx] = new_slide
-    return plan.model_copy(update={"slides": slides})
+    # После layout_fit повестка пересоздаётся из заголовков. Не теряем
+    # модельное происхождение темы: метка нужна и в оглавлении колоды.
+    from deckdna.planning.content_fill import annotate_unit_origins
+
+    return annotate_unit_origins(plan.model_copy(update={"slides": slides}), pack)

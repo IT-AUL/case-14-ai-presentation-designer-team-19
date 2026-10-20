@@ -64,6 +64,6 @@ describe('deriveExportState', () => {
 
   it('surfaces other failures as errors', () => {
     const error = new ApiError({ code: 'internal_error', message: 'Рендер упал', status: 500 })
-    expect(deriveExportState(input({ file: null, mutation: { status: 'error', error } }))).toMatchObject({ status: 'error', message: 'Рендер упал' })
+    expect(deriveExportState(input({ file: null, mutation: { status: 'error', error } }))).toMatchObject({ status: 'error', message: 'Сервер не справился. Попробуйте ещё раз через минуту.' })
   })
 })

@@ -127,9 +127,8 @@ def test_cropped_edge_labels_are_not_fillable_content_slots():
     )
     assert report.bodies_eligible == report.bodies_filled == 1
     root = etree.fromstring(filled)
-    assert [t.text for t in root.iter(f"{{{A}}}t")] == [
-        "Edge label", "Right edge label", "Only body text"
-    ]
+    assert [t.text for t in root.iter(f"{{{A}}}t")] == ["Only body text"]
+    assert report.offslide_shapes_removed == 2
 
 
 def test_real_cropped_label_slide_is_not_a_prose_exemplar():

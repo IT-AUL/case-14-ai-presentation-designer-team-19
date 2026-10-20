@@ -23,6 +23,7 @@ from deckdna.ingestion.content_parsers import parse_file
 from deckdna.planning.story_director import plan_deck
 from deckdna.pptx.cloning.exemplar import _ranked_candidate_pool
 from deckdna.pptx.opc.package import OpcPackage
+from pptx import Presentation
 
 FIXTURE = Path("tests/fixtures/pptx/vk_tech_template.pptx")
 CONTENT = Path("tests/fixtures/content/poc_article.md")
@@ -115,9 +116,16 @@ def test_visual_needs_less_text_shrinking(reports):
     visual_shrunk = sum(s["text"]["bodies_shrunk"] for s in visual["slides"])
     balanced_shrunk = sum(s["text"]["bodies_shrunk"] for s in balanced["slides"])
     assert visual_shrunk < balanced_shrunk
-    visual_supplied = sum(s["text"]["texts_supplied"] for s in visual["slides"])
-    balanced_supplied = sum(s["text"]["texts_supplied"] for s in balanced["slides"])
-    assert visual_supplied == balanced_supplied
+    # Парные карточки объединяют два пункта в один слот: texts_supplied
+    # зависит от сетки донора. Проверяем сам исходный текст в готовой колоде.
+    deck = Presentation(reports["visual"]["artifacts"]["pptx"])
+    delivered = "".join(" ".join(
+        shape.text for slide in deck.slides for shape in slide.shapes if shape.has_text_frame
+    ).split())
+    for section in parse_file(CONTENT).sections:
+        for block in section.blocks:
+            for text in ([block.text] if block.text else []) + (block.items or []):
+                assert "".join(text.split()) in delivered, text
 
 
 @needs_render

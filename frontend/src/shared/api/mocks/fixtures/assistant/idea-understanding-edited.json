@@ -1,0 +1,74 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:51:05.787Z",
+  "method": "GET",
+  "path": "/content-packs/pack_8095fb457e8a4262a05b427ac5db1d54/understanding?use_llm=false",
+  "status": 200,
+  "body": {
+    "content_pack_id": "pack_8095fb457e8a4262a05b427ac5db1d54",
+    "blocks": [
+      {
+        "id": "s:sec-0",
+        "kind": "topic",
+        "title": "Идея",
+        "text": "Итоги продаж за год для совета директоров",
+        "source_ref": {
+          "artifact_id": "art_a5678889ba8d4566986cc2b04c50a107",
+          "heading_path": [
+            "Идея"
+          ]
+        }
+      },
+      {
+        "id": "b:sec-0:0",
+        "kind": "fact",
+        "title": "Идея",
+        "text": "Итоги продаж за год для совета директоров",
+        "source_ref": {
+          "artifact_id": "art_a5678889ba8d4566986cc2b04c50a107",
+          "heading_path": [
+            "Идея"
+          ]
+        }
+      },
+      {
+        "id": "s:sec-notes-1",
+        "kind": "topic",
+        "title": "Тезисы автора",
+        "text": "Обсудить итоги продаж и следующие шаги.",
+        "source_ref": {
+          "artifact_id": "user:notes"
+        }
+      },
+      {
+        "id": "b:sec-notes-1:0",
+        "kind": "fact",
+        "title": "Тезисы автора",
+        "text": "Обсудить итоги продаж и следующие шаги.",
+        "source_ref": {
+          "artifact_id": "user:notes"
+        }
+      }
+    ],
+    "summary": {
+      "capacity_slides": 3,
+      "main_points": [
+        "Идея",
+        "Тезисы автора"
+      ],
+      "assistant_note": "Материала мало, помогу на следующем шаге."
+    },
+    "datasets": [],
+    "context": {
+      "status": "not_requested",
+      "fields": []
+    },
+    "brief": {
+      "purpose": "Итоги продаж за год для совета директоров",
+      "language": "ru"
+    },
+    "interpretation": {
+      "status": "not_requested"
+    }
+  }
+}

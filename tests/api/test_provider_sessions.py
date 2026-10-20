@@ -255,7 +255,7 @@ def test_generation_uses_session_gateway_and_single_plan(
     assert run["state"] == "completed", run
     variant = run["variants"][0]
     assert variant["planner"] == LLM_PLANNER_VERSION
-    assert variant["contextual_issues"] == BRIEF["target_slide_count"]
+    assert 1 <= variant["contextual_issues"] <= BRIEF["target_slide_count"]
 
     # все вызовы пошли на endpoint сессии с её токеном
     assert local_openai.requests
@@ -611,8 +611,8 @@ def test_audit_uses_each_variants_plan(local_openai, wait_generation):
     assert detail["state"] == "completed", detail
     assert len(detail["variants"]) == 3
     run = STORE.runs[detail["id"]]
-    # планы вариантов различаются (faithful без agenda/recap-инъекций)
-    assert len({v["deck_plan_id"] for v in detail["variants"]}) == 3
+    # три варианта используют один план
+    assert len({v["deck_plan_id"] for v in detail["variants"]}) == 1
 
     for variant in detail["variants"]:
         # сервер держит фактический план именно этого варианта

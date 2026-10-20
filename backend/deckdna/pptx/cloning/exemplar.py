@@ -1,4 +1,4 @@
-"""Exemplar slide selection (exemplar-first strategy, see docs/ARCHITECTURE.md).
+"""Exemplar slide selection (exemplar-first strategy, SOLUTION_RU §2).
 
 Picks the slide to clone: a *content-like* slide — title plus real text
 blocks — on the template's most-used layout, preferring richer scenes.
@@ -26,7 +26,7 @@ from deckdna.pptx.composing.text_replace import (
     _is_title_run,
     count_content_slots,
 )
-from deckdna.pptx.opc.package import OpcPackage
+from deckdna.pptx.opc.package import OpcPackage, resolve_target
 
 P = "http://schemas.openxmlformats.org/presentationml/2006/main"
 A = "http://schemas.openxmlformats.org/drawingml/2006/main"
@@ -199,9 +199,7 @@ def run_profile(pkg: OpcPackage, slide_part: str) -> RunProfile:
         runs_nonempty=len(nonempty),
         tiny_runs=sum(1 for t in nonempty if len(t) <= _TINY_RUN_MAX),
         long_runs=sum(1 for t in nonempty if len(t) >= _LONG_RUN_MIN),
-        mean_nonempty_len=(
-            sum(len(t) for t in nonempty) / len(nonempty) if nonempty else 0.0
-        ),
+        mean_nonempty_len=(sum(len(t) for t in nonempty) / len(nonempty) if nonempty else 0.0),
         max_repeated_short_run=max(short_repeats.values()) if short_repeats else 0,
     )
 
@@ -215,9 +213,7 @@ def visual_richness(pkg: OpcPackage, slide_part: str) -> int:
     sp_tree = root.find(f".//{{{P}}}cSld/{{{P}}}spTree")
     if sp_tree is None:
         return 0
-    return sum(
-        1 for tag in ("pic", "graphicFrame", "grpSp") for _ in sp_tree.iter(f"{{{P}}}{tag}")
-    )
+    return sum(1 for tag in ("pic", "graphicFrame", "grpSp") for _ in sp_tree.iter(f"{{{P}}}{tag}"))
 
 
 class LayoutArchetype(Enum):
@@ -227,8 +223,8 @@ class LayoutArchetype(Enum):
     model to match a plan slide's ``purpose``/``key_message`` against a
     candidate's raw geometric signals (``content_slots``, ``long_runs``,
     ``visual_richness``, ...) — multi-hop numeric reasoning a small model
-    is unreliable at (the live-quality finding of 27.09 that motivated
-    this). A small,
+    is unreliable at ("Волна качества генерации
+    27.09" for the live-quality finding that motivated this). A small,
     named enum a weak model can pattern-match against a slide's own
     purpose is far more robust than asking it to weigh raw numbers.
 
@@ -491,12 +487,174 @@ def slide_capabilities(pkg: OpcPackage, slide_part: str) -> frozenset[str]:
     root = etree.fromstring(pkg.parts[slide_part])
     if root.find(f".//{{{A}}}tbl") is not None:
         caps.add("table")
-    if image_rids and any(
-        blip.get(f"{{{R_NS}}}embed") in image_rids
-        for blip in root.iter(f"{{{A}}}blip")
-    ):
-        caps.add("image")
+    if image_rids:
+        # то же правило, что у заливки картинок: настоящая рамка под фото,
+        # а не значок/полоска/общая на несколько карточек картинка
+        from deckdna.pptx.composing.image_fill import _blip_part_order
+
+        if _blip_part_order(pkg.parts[slide_part], slide_part, pkg.rels(slide_part)):
+            caps.add("image")
     return frozenset(caps)
+
+
+_DIAGRAM_ROOM_W = 0.6  # доля ширины слайда
+_DIAGRAM_ROOM_H = 0.35  # доля высоты: поток и воздух вокруг, не полоса над карточками
+
+
+def has_diagram_room(pkg: OpcPackage, slide_part: str) -> bool:
+    """Вместит ли образец поток шагов под заголовком (ADR-031 §6).
+
+    Схема занимает область под заголовком; текст образца уходит (слайд со
+    схемой несёт заголовок и сам поток), оформление опустевших карточек
+    убирается (``diagram_fill``). Образец годится, если после этого под
+    заголовком остаётся широкая полоса и карточки не «запечены» в
+    картинку-фон слайда (``slide_background_art_ratio``)."""
+    from deckdna.pptx.composing.diagram_fill import P as _P
+    from deckdna.pptx.composing.diagram_fill import (
+        _clearable,
+        _free_space_host,
+        _title_bottom,
+        layout_busy_boxes,
+    )
+
+    size = _presentation_slide_size(pkg)
+    if size is None:
+        return False
+    sw, sh = size
+    from deckdna.pptx.composing.text_budget import (
+        LAYOUT_ART_THRESHOLD,
+        slide_background_art_ratio,
+    )
+
+    if slide_background_art_ratio(pkg, slide_part) >= LAYOUT_ART_THRESHOLD:
+        return False
+    root = etree.fromstring(pkg.parts[slide_part])
+    tree = root.find(f"{{{_P}}}cSld/{{{_P}}}spTree")
+    if tree is None:
+        return False
+    # текст образца уходит (кроме заголовка) — как после заливки слайда
+    # со схемой; дальше то же правило, что у diagram_fill._add_diagram
+    for el in tree:
+        ph = el.find(f".//{{{_P}}}nvPr/{{{_P}}}ph")
+        if ph is not None and ph.get("type") in ("title", "ctrTitle"):
+            continue
+        for t in el.iter(f"{{{A}}}t"):
+            t.text = ""
+    clearable = _clearable(tree, sw, sh)
+    free = _free_space_host(
+        root,
+        sw,
+        sh,
+        ignore=frozenset(id(el) for el in clearable),
+        extra_busy=layout_busy_boxes(pkg, slide_part),
+        title_band=_title_bottom(tree, sh),
+    )
+    return free is not None and free[3] >= _DIAGRAM_ROOM_W * sw and free[4] >= _DIAGRAM_ROOM_H * sh
+
+
+_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+_CHART_ROOM_W = 0.4
+_CHART_ROOM_H = 0.4
+
+
+def has_chart_room(pkg: OpcPackage, slide_part: str) -> bool:
+    """Вместит ли образец график данных крупно (ADR-033 §6).
+
+    Либо у образца своя рамка графика не меньше 35% ширины и высоты, либо
+    под заголовком остаётся свободная область ≥ 40% × 40% слайда, когда
+    текст образца ушёл, а самое большое текстовое тело занято пунктами
+    слайда (1–2 факта рядом с графиком)."""
+    from deckdna.pptx.composing.diagram_fill import P as _P
+    from deckdna.pptx.composing.diagram_fill import (
+        _free_space_host,
+        _title_bottom,
+        layout_busy_boxes,
+    )
+    from deckdna.pptx.composing.table_fill import _el_box
+    from deckdna.pptx.composing.text_budget import (
+        LAYOUT_ART_THRESHOLD,
+        slide_background_art_ratio,
+    )
+
+    size = _presentation_slide_size(pkg)
+    if size is None:
+        return False
+    sw, sh = size
+    # обложка или разделитель с картинкой во весь слайд: график лёг бы
+    # поверх оформления
+    if slide_background_art_ratio(pkg, slide_part) >= LAYOUT_ART_THRESHOLD:
+        return False
+    root = etree.fromstring(pkg.parts[slide_part])
+    tree = root.find(f"{{{_P}}}cSld/{{{_P}}}spTree")
+    if tree is None:
+        return False
+    # картинка на полслайда и больше — оформление (обложка, разделитель),
+    # на слайде или в его макете
+    layout = next(
+        (
+            resolve_target(slide_part, r.target)
+            for r in pkg.rels(slide_part)
+            if r.type.endswith("/slideLayout")
+        ),
+        None,
+    )
+    from deckdna.pptx.composing.text_budget import _art_edges
+
+    for owner in (slide_part, layout):
+        part_xml = pkg.parts.get(owner) if owner else None
+        if not part_xml:
+            continue
+        rels = {r.id: r for r in pkg.rels(owner)}
+        for pic in etree.fromstring(part_xml).iter(f"{{{_P}}}pic"):
+            box = _el_box(pic)
+            if not box or box[2] * box[3] < 0.4 * sw * sh:
+                continue
+            # плавный градиент — фон, под ним график читается; контурная
+            # картинка (объёмная спираль обложки) — оформление
+            blip = pic.find(f".//{{{A}}}blip")
+            rid = blip.get(f"{{{_R}}}embed") if blip is not None else None
+            rel = rels.get(rid)
+            if rel is None:
+                return False
+            try:
+                edges = _art_edges(pkg.parts[resolve_target(owner, rel.target)])
+            except Exception:  # noqa: BLE001 — векторная/битая картинка: осторожно
+                return False
+            if edges >= LAYOUT_ART_THRESHOLD:
+                return False
+    # фон слайда цвета главного акцента (синий слайд-разделитель): серии
+    # графика слились бы с ним
+    from deckdna.pptx.composing.chart_colors import chart_colors, slide_background
+
+    _bg, theme, _cmap = slide_background(pkg.parts, slide_part)
+    if theme.get("accent1") and theme["accent1"] not in chart_colors(pkg.parts, slide_part).series:
+        return False
+    for frame in tree.iter(f"{{{_P}}}graphicFrame"):
+        if 'drawingml/2006/chart"' not in etree.tostring(frame).decode("utf-8", "ignore"):
+            continue
+        box = _el_box(frame)
+        if box and box[2] >= 0.35 * sw and box[3] >= 0.35 * sh:
+            return True
+    bodies = []
+    for el in tree:
+        ph = el.find(f".//{{{_P}}}nvPr/{{{_P}}}ph")
+        if ph is not None and ph.get("type") in ("title", "ctrTitle"):
+            continue
+        if el.find(f".//{{{A}}}t") is not None and (box := _el_box(el)) is not None:
+            bodies.append(box)
+        for t in el.iter(f"{{{A}}}t"):
+            t.text = ""
+    busy = list(layout_busy_boxes(pkg, slide_part))
+    if bodies:
+        busy.append(max(bodies, key=lambda b: b[2] * b[3]))
+    free = _free_space_host(
+        root,
+        sw,
+        sh,
+        extra_busy=tuple(busy),
+        title_band=_title_bottom(tree, sh),
+    )
+    return free is not None and free[3] >= _CHART_ROOM_W * sw and free[4] >= _CHART_ROOM_H * sh
 
 
 def is_team_roster_exemplar(pkg: OpcPackage, slide_part: str) -> bool:
@@ -509,13 +667,9 @@ def is_team_roster_exemplar(pkg: OpcPackage, slide_part: str) -> bool:
     root = etree.fromstring(pkg.parts[slide_part])
     labels = [(t.text or "").casefold().strip() for t in root.iter(f"{{{A}}}t")]
     name_fields = sum(
-        bool(re.search(r"\b(имя\s+фамилия|full\s+name|person\s+name)\b", t))
-        for t in labels
+        bool(re.search(r"\b(имя\s+фамилия|full\s+name|person\s+name)\b", t)) for t in labels
     )
-    role_fields = sum(
-        bool(re.search(r"\b(должность|position|job\s+title)\b", t))
-        for t in labels
-    )
+    role_fields = sum(bool(re.search(r"\b(должность|position|job\s+title)\b", t)) for t in labels)
     return name_fields >= 3 and role_fields >= 3
 
 
@@ -636,9 +790,7 @@ def select_exemplar_slides(
     if count < 1:
         return []
     visual = strategy == Strategy.visual
-    ranked, dominant_layout, layout_slide_count, profiles = _ranked_candidate_pool(
-        pkg, strategy
-    )
+    ranked, dominant_layout, layout_slide_count, profiles = _ranked_candidate_pool(pkg, strategy)
     # Found live (28.09): capacity-aware picks (below) routinely choose a
     # slide off the dominant layout -- reporting `dominant_layout` for
     # EVERY pick regardless of which slide_part was actually chosen was a
@@ -651,9 +803,19 @@ def select_exemplar_slides(
 
     caps_cache: dict[str, frozenset[str]] = {}
 
+    want_diagram = any("diagram" in n for n in need_list)
+    want_data_chart = any("data_chart" in n for n in need_list)
+
     def caps_of(part: str) -> frozenset[str]:
         if part not in caps_cache:
-            caps_cache[part] = slide_capabilities(pkg, part)
+            caps = slide_capabilities(pkg, part)
+            # ADR-031 §6: «схема» — не рамка образца, а место под неё
+            if want_diagram and has_diagram_room(pkg, part):
+                caps = caps | {"diagram"}
+            # ADR-033 §6: график данных — крупно, рядом 1–2 факта
+            if want_data_chart and has_chart_room(pkg, part):
+                caps = caps | {"data_chart"}
+            caps_cache[part] = caps
         return caps_cache[part]
 
     # Widened pool for need-satisfying picks: ranked candidates first,
@@ -674,6 +836,11 @@ def select_exemplar_slides(
     pool = ranked + extras
 
     need_cursor: dict[frozenset[str], int] = {}
+    # Ось вариантов на уровне образцов: когда носителей капабилити мало,
+    # все стратегии сходились на одном слайде (BE2). balanced и visual
+    # сдвигают цикл по пулу носителей — соседние data-слайды вариантов
+    # получают разные образцы, когда шаблон их предлагает.
+    need_offset = {Strategy.balanced: 1, Strategy.visual: 2}.get(strategy, 0)
 
     def pick(i: int) -> str:
         need = need_list[i]
@@ -684,15 +851,13 @@ def select_exemplar_slides(
             candidates = safe or matches
             if candidates:
                 need_cursor[need] = start + 1
-                return candidates[start % len(candidates)]
+                return candidates[(start + need_offset) % len(candidates)]
         return ranked[i % len(ranked)]
 
     picks = [pick(i) for i in range(count)]
 
     def long_runs_of(part: str) -> int:
-        return (
-            profiles[part].long_runs if part in profiles else run_profile(pkg, part).long_runs
-        )
+        return profiles[part].long_runs if part in profiles else run_profile(pkg, part).long_runs
 
     slots_cache: dict[str, int] = {}
     span_cache: dict[str, tuple[float, float]] = {}
@@ -716,7 +881,9 @@ def select_exemplar_slides(
         semantic_exclusions = set(entity_specific_parts)
         if not text_lengths_list and not purpose_list and not semantic_exclusions:
             picks = _rebalance_by_capacity(
-                picks, need_list, unit_counts_list,
+                picks,
+                need_list,
+                unit_counts_list,
                 {part: slots_of(part) for part in picks},
             )
             return [
@@ -740,26 +907,40 @@ def select_exemplar_slides(
         for i, target in enumerate(unit_counts_list):
             need = need_list[i]
             eligible = [
-                part for part in pool
+                part
+                for part in pool
                 if need <= caps_of(part)
                 and (purpose_list[i] == "team" or part not in excluded)
                 and (target == 0 or slots_of(part) > 0)
             ]
             if not eligible:
                 eligible = [
-                    part for part in pool
-                    if purpose_list[i] == "team" or part not in excluded
+                    part for part in pool if purpose_list[i] == "team" or part not in excluded
                 ]
             if not eligible:
                 eligible = pool
-            safe_eligible = [
-                part for part in eligible if not has_offslide_content_slots(pkg, part)
-            ]
+            safe_eligible = [part for part in eligible if not has_offslide_content_slots(pkg, part)]
             if safe_eligible:
                 eligible = safe_eligible
+            if target >= 1 and purpose_list[i] not in {
+                "",
+                "title",
+                "section_divider",
+                "thank_you",
+                "qa",
+                "cta",
+            }:
+                content_like = [
+                    part
+                    for part in eligible
+                    if (prof := profiles.get(part)) is not None and prof.is_content_like
+                ]
+                if content_like:
+                    eligible = content_like
             if "image" not in need:
                 no_donor_artwork = [
-                    part for part in eligible
+                    part
+                    for part in eligible
                     if "image" not in caps_of(part)
                     and slots_of(part) >= target
                     and slots_of(part) <= max(target + 2, target * 2)
@@ -768,8 +949,10 @@ def select_exemplar_slides(
                     eligible = no_donor_artwork
             if target >= 2:
                 broad = [
-                    part for part in eligible
-                    if span_of(part)[0] <= 0.35 and span_of(part)[1] >= 0.65
+                    part
+                    for part in eligible
+                    if span_of(part)[0] <= 0.35
+                    and span_of(part)[1] >= 0.65
                     and slots_of(part) >= target
                     and slots_of(part) <= max(target + 2, target * 2)
                 ]
@@ -778,20 +961,33 @@ def select_exemplar_slides(
             # Empty cards are a visible defect. Prefer a candidate with
             # enough slots but as little unused capacity as possible;
             # a shortage is worse because content would be dropped.
+            # balanced/visual дороже «платят» за повтор образца: обе оси
+            # ценят разнообразие раскладок — на шаблоне с двумя носителями
+            # капабилити варианты не должны клонировать один и тот же
+            # слайд на все позиции (BE2).
+            used_cost = {Strategy.balanced: 8, Strategy.visual: 5}.get(strategy, 3)
+
             def score(
                 part: str,
                 target: int = target,
                 need: frozenset[str] = need,
                 text_length: int = text_lengths_list[i],
+                used_cost: int = used_cost,
             ) -> tuple[int, int, int, int]:
                 slots = slots_of(part)
                 shortage = max(0, target - slots)
+                # таблице/графику/картинке без своего носителя в эталоне нужна
+                # хотя бы одна освобождаемая рамка — иначе элемент теряется
+                if need - caps_of(part) and slots == 0:
+                    shortage += 1
                 surplus = max(0, slots - target)
                 unwanted_image = int("image" in caps_of(part) and "image" not in need)
-                profile = profiles.get(part) or run_profile(pkg, part)
-                prose_mismatch = int(
-                    text_length > 80 and profile.mean_nonempty_len < 20
+                # донорский график/таблица без данных колоды = демо-цифры
+                unwanted_payload = sum(
+                    int(cap in caps_of(part) and cap not in need) for cap in ("chart", "table")
                 )
+                profile = profiles.get(part) or run_profile(pkg, part)
+                prose_mismatch = int(text_length > 80 and profile.mean_nonempty_len < 20)
                 # Found live (29.09, OR-007): capacity-fit alone routinely
                 # converged visual and balanced onto the IDENTICAL pick --
                 # surplus/prose_mismatch rarely tie between candidates, so
@@ -806,8 +1002,12 @@ def select_exemplar_slides(
                 richness_cost = -2 * visual_richness(pkg, part) if visual else 0
                 return (
                     shortage,
-                    surplus + 3 * prose_mismatch + (3 if part in used else 0)
-                    + 2 * unwanted_image + richness_cost,
+                    surplus
+                    + 3 * prose_mismatch
+                    + (used_cost if part in used else 0)
+                    + 2 * unwanted_image
+                    + 4 * unwanted_payload
+                    + richness_cost,
                     unwanted_image,
                     pool.index(part),
                 )

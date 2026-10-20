@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Annotated
+from typing import Annotated, Any
 
 from pydantic import AwareDatetime, BaseModel, Field
 
@@ -41,6 +41,35 @@ class ContentSupport(BaseModel):
     unsupported_claims: int | None = None
     numbers_verified: int | None = None
     numbers_failed: int | None = None
+    facts_from_user: int | None = None
+    facts_from_web: int | None = None
+    facts_from_model: int | None = None
+    web_sources: int | None = None
+
+
+class SpeakerNotes(BaseModel):
+    """ADR-032 §3: заметки докладчика (talk track) в PPTX."""
+
+    slides_with_notes: int | None = None
+    model_written: int | None = None
+    extractive: int | None = None
+    rejected: int | None = None
+
+
+class ContentOrigin(BaseModel):
+    """ADR-034 §0: число фактов колоды по происхождению (форма фронта)."""
+
+    user: int | None = None
+    web: int | None = None
+    model: int | None = None
+
+
+class ResearchMetrics(BaseModel):
+    """ADR-034 §0: сводка добора контента (форма фронта)."""
+
+    sources_count: int | None = None
+    duration_s: float | None = None
+    content_fill: str | None = None
 
 
 class Readability(BaseModel):
@@ -57,6 +86,9 @@ class PerStageItem(BaseModel):
 
 class Timings(BaseModel):
     total_seconds: float | None = None
+    render_ms: float | None = None
+    prefill_ms: float | None = None
+    decode_ms: float | None = None
     per_stage: list[PerStageItem] | None = None
 
 
@@ -65,11 +97,21 @@ class PerModelItem(BaseModel):
     calls: int | None = None
     input_tokens: int | None = None
     output_tokens: int | None = None
+    image_tokens: int | None = None
+    prefill_ms: float | None = None
+    decode_ms: float | None = None
+    cache_hit: bool | None = None
 
 
 class Usage(BaseModel):
     total_tokens: int | None = None
     model_calls: int | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    image_tokens: int | None = None
+    prefill_ms: float | None = None
+    decode_ms: float | None = None
+    cache_hit: bool | None = None
     per_model: list[PerModelItem] | None = None
 
 
@@ -79,8 +121,19 @@ class Metrics(BaseModel):
     style_fidelity: StyleFidelity | None = None
     content_support: ContentSupport | None = None
     readability: Readability | None = None
+    speaker_notes: SpeakerNotes | None = None
+    content_origin: ContentOrigin | None = None
+    research: ResearchMetrics | None = None
     timings: Timings
     usage: Usage | None = None
+    prefill_ms: float | None = None
+    decode_ms: float | None = None
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    image_tokens: int | None = None
+    cache_hit: bool | None = None
+    render_ms: float | None = None
+    repair_count: int | None = None
 
 
 class IssuesSummary(BaseModel):
@@ -89,6 +142,7 @@ class IssuesSummary(BaseModel):
     warning: int | None = None
     info: int | None = None
     fixed: int | None = None
+    repair_count: int | None = None
     dismissed: int | None = None
     unresolved: int | None = None
 
@@ -130,6 +184,7 @@ class Export(BaseModel):
 
 
 class QualityPassport(BaseModel):
+    deck_revision: int = Field(default=1, ge=1)
     schema_version: str
     run_id: str
     variant_id: str | None = None
@@ -140,3 +195,9 @@ class QualityPassport(BaseModel):
     fallbacks: list[Fallback] | None = None
     provenance: Provenance
     exports: list[Export]
+    # ADR-033 §10: по датасету — профиль, задача, выбор графика с причинами,
+    # альтернативы и выводы (форма — analysis/explain.analysis_report)
+    analysis: dict[str, Any] | None = None
+    # ADR-033 §9: брендбук — приоритет, что заменено (цвета, шрифты) и
+    # конфликты с шаблоном (форма — template/brandbook.BrandReport)
+    brand: dict[str, Any] | None = None

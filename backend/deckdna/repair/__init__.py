@@ -1,8 +1,8 @@
 """Bounded Repair — типизированные действия по issues аудита.
 
 planner.py только предлагает RepairAction (мутации нет),
-apply.py исполняет их на копии пакета
-(планирование и применение разделены).
+apply.py исполняет их на копии пакета (docs/pipeline/:
+планирование и применение разделены).
 """
 
 from deckdna.repair.apply import RepairApplyReport, apply_repairs

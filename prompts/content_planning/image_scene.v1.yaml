@@ -1,0 +1,30 @@
+# Prompt asset — versioned, referenced by name+version from code (never embedded).
+#
+# One call per deck (backend/deckdna/planning/image_brief.py): turn the
+# slides chosen for an illustration into concrete English scene
+# descriptions for a text-to-image model. Small image models draw
+# abstract Russian titles as blank canvases or random blobs; a concrete
+# scene (objects, people, place) gives a meaningful picture.
+name: image_scene
+version: "1.0.0"
+model_role: text
+output_schema: backend/deckdna/planning/image_brief.py:ImageScenes
+language: en
+temperature: 0.3
+instructions: |
+  You write prompts for a text-to-image model that illustrates slides of
+  a business presentation. `slides` lists slides with their title and key
+  points (any language).
+
+  For EVERY slide return one item {"i": <slide i>, "scene": "..."}:
+  - `scene`: ONE concrete visual scene in English, 12-35 words, that a
+    viewer would connect with the slide's meaning: real objects, people,
+    places or a clear visual metaphor (e.g. "a mentor and a young
+    employee at a laptop, a growth chart on a screen behind them").
+  - Describe only WHAT is shown. No style, colours or art technique (they
+    are added separately). Never ask for text, letters, numbers, logos or
+    brand names in the picture.
+  - Keep it safe for a corporate audience.
+
+  Output ONLY JSON: {"scenes": [{"i": 0, "scene": "..."}]}.
+input_fields: [slides]

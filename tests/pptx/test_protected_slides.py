@@ -60,9 +60,9 @@ def test_reorder_rejected_while_protected():
 
 def test_filter_actions_splits_without_raising():
     actions = [
-        _action("shorten_text", "s7"),   # protected -> rejected
+        _action("shorten_text", "s7"),  # protected -> rejected
         _action("shorten_text", "s12"),  # allowed
-        _action("map_color", "s8"),      # protected -> rejected
+        _action("map_color", "s8"),  # protected -> rejected
     ]
     allowed, rejected = PROTECTED.filter_actions(actions, SLIDE_INDEX)
     assert len(allowed) == 1 and len(rejected) == 2
@@ -108,10 +108,14 @@ def test_generate_carries_protected_verbatim(tmp_path):
         "target_slide_count": 10,
     }
     res = generate(
-        str(SUBMISSION), str(ARTICLE), brief, tmp_path / "out",
+        str(SUBMISSION),
+        str(ARTICLE),
+        brief,
+        tmp_path / "out",
         protected_slide_indices=PROT_IDX,
     )
-    assert res["slides_out"] == 10 + len(PROT_IDX)
+    expected_content_slides = (res.get("content_fill") or {}).get("target_slides", 10)
+    assert res["slides_out"] == expected_content_slides + len(PROT_IDX)
     assert res["compose_report"]["protected_indices"] == PROT_IDX
 
     tpl = OpcPackage.open(str(SUBMISSION))
@@ -138,19 +142,22 @@ def test_repair_skips_protected_slides(tmp_path):
         "target_slide_count": 10,
     }
     res = generate(
-        str(SUBMISSION), str(ARTICLE), brief, tmp_path / "out",
+        str(SUBMISSION),
+        str(ARTICLE),
+        brief,
+        tmp_path / "out",
         protected_slide_indices=PROT_IDX,
     )
     deck = res["artifacts"]["pptx"]
     before = Presentation(deck)
 
     report = apply_repairs(
-        deck, plan_repairs(audit_deck(deck)),
-        tmp_path / "fixed.pptx", protected=PROT_IDX,
+        deck,
+        plan_repairs(audit_deck(deck)),
+        tmp_path / "fixed.pptx",
+        protected=PROT_IDX,
     )
-    prot_skipped = [
-        r for r in report.results if "protected_slide" in (r.detail or "")
-    ]
+    prot_skipped = [r for r in report.results if "protected_slide" in (r.detail or "")]
     assert prot_skipped, "ожидались действия, отклонённые гардом"
 
     fixed = Presentation(str(tmp_path / "fixed.pptx"))
@@ -173,15 +180,20 @@ def test_apply_has_no_side_effects_on_protected_slides(tmp_path):
         "target_slide_count": 10,
     }
     res = generate(
-        str(SUBMISSION), str(ARTICLE), brief, tmp_path / "out",
+        str(SUBMISSION),
+        str(ARTICLE),
+        brief,
+        tmp_path / "out",
         protected_slide_indices=PROT_IDX,
     )
     deck = res["artifacts"]["pptx"]
     before = Presentation(deck)
 
     apply_repairs(
-        deck, plan_repairs(audit_deck(deck)),
-        tmp_path / "fixed.pptx", protected=PROT_IDX,
+        deck,
+        plan_repairs(audit_deck(deck)),
+        tmp_path / "fixed.pptx",
+        protected=PROT_IDX,
     )
 
     fixed = Presentation(str(tmp_path / "fixed.pptx"))

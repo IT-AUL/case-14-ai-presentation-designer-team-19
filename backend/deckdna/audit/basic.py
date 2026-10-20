@@ -1,9 +1,9 @@
 """Render Arena — базовые детерминированные проверки качества .pptx.
 
 Работают напрямую через python-pptx над готовым файлом (без Scene Graph).
-Правила (docs/AUDIT.md, стадия «Render Arena»); коды и severity —
-по frozen-таксономии официального Приложения 1 ТЗ,
-они публичные идентификаторы AuditIssue:
+Правила (docs/SOLUTION_RU.md, стадия 9 «Render Arena»); коды и severity —
+по frozen-таксономии docs/requirements/OFFICIAL_TRACEABILITY.md
+(Audit Appendix mapping), они публичные идентификаторы AuditIssue:
 
 - ``text.overflow`` — текст выходит за границы фигуры (оценка по метрикам
   шрифта, детерминированная, без рендера; error);
@@ -58,11 +58,12 @@ C_NS = "http://schemas.openxmlformats.org/drawingml/2006/chart"
 P_NS = "http://schemas.openxmlformats.org/presentationml/2006/main"
 NSMAP = {"a": A, "p": P_NS}
 
-# Frozen rule IDs — официальное Приложение 1 ТЗ, аудит-маппинг.
-# Не переименовывать без ADR: эти строки —
+# Frozen rule IDs — docs/requirements/OFFICIAL_TRACEABILITY.md, таблица
+# «Audit Appendix mapping». Не переименовывать без ADR: эти строки —
 # публичные идентификаторы для UI, coverage report и repair mapping.
 RULE_TEXT_OVERFLOW = "text.overflow"
 RULE_EMPTY_SLIDE = "integrity.empty_slide"
+RULE_FILLER_SLIDE = "integrity.filler_slide"
 RULE_ASPECT_RATIO = "image.aspect_ratio"
 RULE_RASTER_ONLY = "editability.raster_only"
 RULE_OUT_OF_BOUNDS = "layout.out_of_bounds"
@@ -78,6 +79,7 @@ RULE_FONT_SCALE = "template.font_scale"
 RULE_COLOR_PALETTE = "template.color_palette"
 RULE_PACKAGE = "integrity.package"
 RULE_CHART_METADATA = "chart.metadata"
+RULE_CHART_READABILITY = "chart.readability"
 RULE_ANCHOR_POSITION = "template.anchor_position"
 RULE_SLIDE_CLIP = "text.slide_clip"
 RULE_LAYOUT_ORIGIN = "template.layout_origin"
@@ -237,6 +239,13 @@ def _is_picture(shape) -> bool:
 # a genuinely empty slide reads as non-empty. The other _slide_census
 # caller (occupancy/density) keeps counting them -- they ARE real ink on
 # the slide for that purpose, just not evidence of substantive content.
+#
+# QA wave (LEAD-QA-DECK R4): the exclusion must apply only while the
+# synthetic heading carries NO text. ``add_missing_title`` is only called
+# with a non-empty title, so a ``DeckDNA heading`` whose text is present
+# is the slide's real title (e.g. a «Спасибо за внимание» closer) --
+# ignoring it reports a title-only slide as empty. The backdrop never
+# carries text and stays decorative either way.
 _SYNTHETIC_DECORATIVE_SHAPE_NAMES = frozenset(
     {"DeckDNA heading", "DeckDNA heading backdrop"}
 )
@@ -251,7 +260,11 @@ def _slide_census(
     pictures = 0
     content_shapes = 0
     for shape in _iter_shapes(slide.shapes):
-        if shape.name in exclude_names:
+        if shape.name in exclude_names and not (
+            getattr(shape, "has_table", False)
+            or getattr(shape, "has_chart", False)
+            or (shape.has_text_frame and shape.text_frame.text.strip())
+        ):
             continue
         if _is_picture(shape):
             pictures += 1
@@ -303,6 +316,19 @@ def _lst_style_sz(tx_body_el, lvl: int) -> float | None:
     return _defrpr_sz(tx_body_el, f"a:lstStyle/a:lvl{lvl}pPr/a:defRPr")
 
 
+def _tx_body_explicit_sz(tx_body) -> float | None:
+    """Наибольший явный sz в txBody плейсхолдера (rPr/defRPr/endParaRPr)."""
+    if tx_body is None:
+        return None
+    sizes = [
+        int(el.get("sz")) / 100
+        for el in tx_body.iter()
+        if etree.QName(el).localname in ("rPr", "defRPr", "endParaRPr") and el.get("sz")
+        and el.get("sz").isdigit()
+    ]
+    return max(sizes) if sizes else None
+
+
 def _placeholder_inherited_sz(shape, slide, lvl: int) -> float | None:
     """Размер из цепочки layout placeholder → master txStyles."""
     try:
@@ -316,16 +342,28 @@ def _placeholder_inherited_sz(shape, slide, lvl: int) -> float | None:
     for ph in layout.placeholders:
         if ph.placeholder_format.idx == ph_idx:
             tx = ph.element.find(f".//{{{P_NS}}}txBody")
-            sz = _lst_style_sz(tx, lvl)
+            sz = _lst_style_sz(tx, lvl) or _tx_body_explicit_sz(tx)
             if sz is not None:
                 return sz
             break
-    # master txStyles: title / body / other по типу placeholder'а
     try:
-        master_el = layout.slide_master.element
+        master = layout.slide_master
+        master_el = master.element
         ph_type = shape.placeholder_format.type
     except AttributeError:
         return None
+    # плейсхолдер мастера того же типа (Slidesgo: заголовок 35 pt задан
+    # здесь, а в titleStyle — 14 pt) — перед txStyles, как в PowerPoint
+    title_types = (PP_PLACEHOLDER.TITLE, PP_PLACEHOLDER.CENTER_TITLE)
+    for ph in master.placeholders:
+        mtype = ph.placeholder_format.type
+        same = (mtype in title_types) if ph_type in title_types else mtype == ph_type
+        if same:
+            tx = ph.element.find(f".//{{{P_NS}}}txBody")
+            sz = _lst_style_sz(tx, lvl) or _tx_body_explicit_sz(tx)
+            if sz is not None:
+                return sz
+            break
     if ph_type in (PP_PLACEHOLDER.TITLE, PP_PLACEHOLDER.CENTER_TITLE):
         style = "p:titleStyle"
     elif ph_type == PP_PLACEHOLDER.BODY:
@@ -777,6 +815,25 @@ def check_out_of_bounds(slide, slide_index: int, ctx: _Ctx) -> list[AuditIssue]:
             bbox["y"] + bbox["h"] - 1.0,
         )
         if overhang > tol:
+            # Full-bleed artwork is commonly authored a few percent beyond
+            # the page so anti-aliased edges never reveal a hairline. It has
+            # no text geometry to collide, and the existing edge-bleed gate
+            # already defines spans >=95% of an axis as intentional. Keep
+            # ordinary out-of-bounds shapes strict; ignore only non-text
+            # artwork spanning essentially the full slide axis.
+            # ADR-031: таблица и график — данные, не оформление. У рамки
+            # таблицы нет text_frame, и выросшая за низ слайда таблица на
+            # 115% высоты проходила как «фон навылет»
+            data_frame = getattr(shape, "has_table", False) or getattr(shape, "has_chart", False)
+            if (
+                not data_frame
+                and (not shape.has_text_frame or not shape.text_frame.text.strip())
+                and (
+                    bbox["w"] >= ctx.cfg.edge_bleed_span
+                    or bbox["h"] >= ctx.cfg.edge_bleed_span
+                )
+            ):
+                continue
             issues.append(
                 ctx.issue(
                     RULE_OUT_OF_BOUNDS,
@@ -1425,7 +1482,15 @@ def _backdrop_rgb(shape, slide, ctx, palette):
         return _UNRESOLVED
     cx, cy = bbox["x"] + bbox["w"] / 2, bbox["y"] + bbox["h"] / 2
     bg = None
-    for s2 in _iter_shapes(slide.shapes):
+    layers = []
+    layout = slide.slide_layout
+    if slide.element.get("showMasterSp", "1") not in ("0", "false"):
+        if layout.element.get("showMasterSp", "1") not in ("0", "false"):
+            layers.extend(s for s in _iter_shapes(layout.slide_master.shapes)
+                          if not s.is_placeholder)
+        layers.extend(s for s in _iter_shapes(layout.shapes) if not s.is_placeholder)
+    layers.extend(_iter_shapes(slide.shapes))
+    for s2 in layers:
         if s2._element is shape._element:
             break  # document order ≈ z-order: всё ниже нас просмотрено
         b2 = _shape_bbox(s2, ctx)
@@ -1436,7 +1501,8 @@ def _backdrop_rgb(shape, slide, ctx, palette):
             continue
         own = _fill_with_alpha(s2, palette)
         if own is _UNRESOLVED or isinstance(s2, Picture):
-            return _UNRESOLVED
+            bg = _UNRESOLVED
+            continue
         if own is None:
             continue
         rgb, alpha = own
@@ -1446,7 +1512,9 @@ def _backdrop_rgb(shape, slide, ctx, palette):
         # полупрозрачная подложка смешивается с тем, что под ней
         under = bg if bg is not None else _slide_bg_rgb(slide, ctx, palette)
         if under is _UNRESOLVED:
-            return _UNRESOLVED
+            # Выше может оказаться непрозрачная плашка, закрывающая эти слои.
+            bg = _UNRESOLVED
+            continue
         bg = _mix(rgb, alpha, under)
     if bg is not None:
         return bg
@@ -1801,6 +1869,34 @@ def check_chart_series(slide, slide_index: int, ctx: _Ctx) -> list[AuditIssue]:
                 proposed_actions=["split_slide", "reflow"],
             )
         )
+    return issues
+
+
+def check_chart_readability(slide, slide_index: int, ctx: _Ctx) -> list[AuditIssue]:
+    """Warn on small physical chart frames, including group transforms.
+
+    This is a geometry signal, not a claim about the plot/legend inside the
+    frame. A dashboard may explicitly use smaller configurable thresholds.
+    """
+    issues: list[AuditIssue] = []
+    min_w, min_h = ctx.cfg.chart_min_width_ratio, ctx.cfg.chart_min_height_ratio
+    for shape, box in _iter_bbox(slide.shapes, ctx, (0.0, 1.0), (0.0, 1.0)):
+        if not getattr(shape, "has_chart", False):
+            continue
+        if box["w"] >= min_w and box["h"] >= min_h:
+            continue
+        ratios = [box[key] / limit for key, limit in (("w", min_w), ("h", min_h)) if limit]
+        issues.append(ctx.issue(
+            RULE_CHART_READABILITY, "warning",
+            f"Диаграмма '{shape.name}' занимает {box['w']:.0%} ширины и "
+            f"{box['h']:.0%} высоты слайда (порог {min_w:.0%} × {min_h:.0%})",
+            slide, slide_index, [str(shape.shape_id)], box,
+            measured_value=round(min(ratios), 3), threshold=1.0,
+            evidence_kind="geometry",
+            evidence_detail=f"final chart frame w={box['w']:.4f}, h={box['h']:.4f}; "
+                            f"minimum w={min_w:.4f}, h={min_h:.4f}; slide-normalized",
+            proposed_actions=[],
+        ))
     return issues
 
 
@@ -2720,6 +2816,7 @@ RULES = (
     check_font_scale,
     check_color_palette,
     check_chart_metadata,
+    check_chart_readability,
     check_anchor_position,
     check_slide_clip,
     check_layout_origin,
@@ -2899,10 +2996,82 @@ def _package_blocker_issue(
 def _finalize_repairable(issues: list[AuditIssue]) -> list[AuditIssue]:
     """repairable — не «True по умолчанию», а факт из каталога правил:
     правило чинится, только если у repair-планировщика есть для него
-    обработчик (contract B5)."""
+    обработчик (handoff B5)."""
     for issue in issues:
         issue.repairable = issue.repairable and is_repairable(issue.rule_code)
     return issues
+
+
+# ADR-030: роли, которым тело не нужно по смыслу (как в
+# planning/validation.py) — их заголовок без тела не заглушка.
+_BODYLESS_PURPOSES = frozenset(
+    {"title", "agenda", "section_divider", "thank_you", "cta", "qa"}
+)
+
+
+def audit_filler_slides(
+    path: str | Path,
+    compose_report: dict,
+    *,
+    deck_revision: int = 0,
+    audit_run_id: str | None = None,
+    config: AuditConfig | None = None,
+) -> list[AuditIssue]:
+    """``integrity.filler_slide`` (ADR-030): контентный слайд, на котором
+    кроме заголовка почти ничего нет — ни тела, ни таблицы, ни графика,
+    ни поставленной картинки.
+
+    Правилу нужна роль слайда из плана (обложка и разделитель законно
+    состоят из одного заголовка), поэтому оно работает по отчёту
+    компоновки, а не только по файлу, и вызывается там, где этот отчёт
+    есть — в ``generate()``. Если число слайдов отчёта не совпадает с
+    файлом, правило честно молчит, а не угадывает соответствие."""
+    reports = compose_report.get("slides") or []
+    try:
+        prs = Presentation(str(path))
+    except Exception:  # noqa: BLE001 — целостность пакета проверяет audit_deck
+        return []
+    if len(reports) != len(prs.slides):
+        return []
+    cfg = config or default_audit_config()
+    ctx = _Ctx(prs, audit_run_id or uuid.uuid4().hex, deck_revision, cfg)
+    issues: list[AuditIssue] = []
+    for slide_index, (slide, report) in enumerate(zip(prs.slides, reports, strict=True)):
+        purpose = report.get("purpose")
+        if not purpose or purpose in _BODYLESS_PURPOSES or report.get("bibliography_page"):
+            continue
+        title = re.sub(r"\s", "", str(report.get("title") or ""))
+        body_chars = 0
+        has_data = False
+        for shape in _iter_shapes(slide.shapes):
+            if getattr(shape, "has_table", False) or getattr(shape, "has_chart", False):
+                has_data = True
+            if shape.name in _SYNTHETIC_DECORATIVE_SHAPE_NAMES or not shape.has_text_frame:
+                continue
+            text = re.sub(r"\s", "", shape.text_frame.text)
+            if text and text != title:  # заголовок слайда — не тело
+                body_chars += len(text)
+        images = report.get("images") or {}
+        placed_image = bool(images.get("images_filled") or images.get("images_created"))
+        if has_data or placed_image or body_chars >= cfg.filler_min_body_chars:
+            continue
+        issues.append(
+            ctx.issue(
+                RULE_FILLER_SLIDE,
+                "error",
+                "Слайд-заглушка: кроме заголовка почти нет содержания",
+                slide,
+                slide_index,
+                [],
+                None,
+                measured_value=body_chars,
+                threshold=cfg.filler_min_body_chars,
+                evidence_kind="geometry",
+                evidence_detail=f"purpose={purpose}, body chars={body_chars}",
+                proposed_actions=["add_content", "merge_slide", "remove_slide"],
+            )
+        )
+    return _finalize_repairable(issues)
 
 
 def audit_deck(

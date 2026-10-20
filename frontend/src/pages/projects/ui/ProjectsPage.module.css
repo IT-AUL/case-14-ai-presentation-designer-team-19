@@ -1,65 +1,112 @@
 .page {
   display: flex;
   flex-direction: column;
-  gap: 28px;
-  max-width: 1120px;
+  gap: 48px;
+  max-width: 1040px;
   margin: 0 auto;
-  padding: 40px 32px 64px;
+  padding: 56px 32px 80px;
 }
 
-.demo {
+.all {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.allHeader {
   display: flex;
   align-items: center;
-  gap: 20px;
-  width: 100%;
-  padding: 18px 20px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xl);
-  background: var(--surface);
-  text-align: left;
-  transition: border-color 0.15s;
+  justify-content: space-between;
+  gap: var(--space-3);
 }
 
-.demo:not(:disabled):hover {
-  border-color: var(--line-2);
+.heading {
+  margin: 0;
+  color: var(--ink);
+  font: var(--type-card-title);
+  letter-spacing: var(--tracking-card-title);
 }
 
-.demo:disabled {
-  cursor: progress;
-}
-
-.demoIcon {
+.toolbar {
   display: flex;
-  flex: none;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.search {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: min(280px, 100%);
+  height: 34px;
+  padding: 0 8px 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink-3);
+  transition: border-color var(--motion-fast);
+}
+
+.search:focus-within {
+  border-color: var(--ink-3);
+}
+
+.searchInput {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: var(--type-body);
+}
+
+.searchInput:focus {
+  outline: none;
+}
+
+.searchInput::-webkit-search-cancel-button {
+  display: none;
+}
+
+.searchClear {
+  border: 0;
+  background: transparent;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
-  border-radius: var(--radius-lg);
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  color: var(--ink-3);
+}
+
+.searchClear:hover {
   background: var(--sunken);
-  font-family: var(--font-mono);
-  font-size: 13px;
-  font-weight: 500;
+  color: var(--ink);
 }
 
-.demoText {
+.empty {
   display: flex;
-  flex: 1;
   flex-direction: column;
-  gap: 2px;
-}
-
-.demoTitle {
-  font-weight: 600;
-}
-
-.demoDescription {
+  align-items: flex-start;
+  gap: var(--space-3);
+  margin: 0;
+  padding: var(--space-6) var(--space-4);
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-xl);
   color: var(--ink-2);
-  font-size: 13px;
+  font: var(--type-body);
 }
 
-.demoAction {
-  flex: none;
-  color: var(--ink-2);
-  font-size: 13px;
+.empty p {
+  margin: 0;
+}
+
+@media (max-width: 720px) {
+  .page {
+    gap: 36px;
+    padding: 32px 16px 56px;
+  }
 }

@@ -1,7 +1,8 @@
 import { clsx } from 'clsx'
 import { Link } from 'react-router'
-import { formatNumber, formatPercent, pluralize } from '@/shared/lib/format'
-import { ArrowRight, Icon } from '@/shared/ui'
+import { formatIndex, formatNumber, formatPercent, pluralize } from '@/shared/lib/format'
+import { ArrowRight, Badge, Icon, Mono } from '@/shared/ui'
+import type { FilmstripSlot } from '../lib/filmstrip'
 import { resultSummary, sceneProgress, type ResultSummary } from '../lib/scene'
 import type { VariantCard } from '../lib/variants'
 import { SlideFan } from './SlideFan'
@@ -10,7 +11,9 @@ import styles from './StageScene.module.css'
 interface StageSceneProps {
   card: VariantCard
   failureMessage: string | null
-  auditHref: ((variantId: string) => string) | null
+  auditHref: ((variantId: string, slideNumber?: number) => string) | null
+  assistantNote?: string | null
+  activeSlot?: FilmstripSlot | null
 }
 
 function resultParts({ styleFidelity, autoFixed, openIssues }: ResultSummary): string[] {
@@ -24,12 +27,12 @@ function resultParts({ styleFidelity, autoFixed, openIssues }: ResultSummary): s
   ].filter((part): part is string => Boolean(part))
 }
 
-function Progress({ card }: { card: VariantCard }) {
+function Progress({ card, assistantNote }: { card: VariantCard; assistantNote?: string | null }) {
   const { phrase, steps } = sceneProgress(card)
   return (
     <>
       <p className={styles.phrase} aria-live="polite">
-        {phrase}
+        {assistantNote || phrase}
       </p>
       <ol className={styles.steps} aria-label="Этапы сборки">
         {steps.map((step) => (
@@ -64,16 +67,35 @@ function Result({ card, auditHref }: { card: VariantCard; auditHref: StageSceneP
   )
 }
 
-export function StageScene({ card, failureMessage, auditHref }: StageSceneProps) {
+export function StageScene({ card, failureMessage, auditHref, assistantNote, activeSlot }: StageSceneProps) {
   const { strategy, state, variant } = card
+  const showActiveSlide = activeSlot?.state === 'ready' && Boolean(activeSlot.imageUrl)
+
   return (
     <section className={styles.scene} aria-label={`Сборка варианта «${strategy.name}»`}>
       <header className={styles.head}>
         <h2 className={styles.name}>{strategy.name}</h2>
         <p className={styles.axis}>{strategy.axis}</p>
       </header>
-      <SlideFan key={`${card.key}:${state}`} state={state} variant={variant} name={strategy.name} />
-      {state === 'done' ? <Result card={card} auditHref={auditHref} /> : <Progress card={card} />}
+      {showActiveSlide && activeSlot?.imageUrl ? (
+        <div className={styles.activeSlide} data-testid="stage-active-slide">
+          <div className={styles.activeSlideFrame}>
+            <img
+              className={styles.activeSlideImg}
+              src={activeSlot.imageUrl}
+              alt={`Превью слайда ${activeSlot.slideNumber}: ${activeSlot.title}`}
+            />
+          </div>
+          <div className={styles.activeSlideCaption}>
+            <Badge tone="ok">✓ Готов</Badge>
+            <Mono>Слайд {formatIndex(activeSlot.slideNumber)}</Mono>
+            <span>{activeSlot.title}</span>
+          </div>
+        </div>
+      ) : (
+        <SlideFan key={`${card.key}:${state}`} state={state} variant={variant} name={strategy.name} />
+      )}
+      {state === 'done' ? <Result card={card} auditHref={auditHref} /> : <Progress card={card} assistantNote={assistantNote} />}
       {state === 'error' && failureMessage && <p className={styles.error}>{failureMessage}</p>}
     </section>
   )

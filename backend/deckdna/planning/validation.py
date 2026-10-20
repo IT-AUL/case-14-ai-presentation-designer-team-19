@@ -38,6 +38,27 @@ def _strip_none(obj: Any) -> Any:
     return obj
 
 
+# ADR-030: роли, которым тело не нужно по смыслу. Любой другой слайд
+# обязан нести хотя бы один содержательный unit — иначе это заглушка.
+_BODYLESS_PURPOSES = frozenset(
+    {"title", "agenda", "section_divider", "thank_you", "cta", "qa"}
+)
+_REF_FIELDS = ("table_ref", "chart_ref", "diagram_ref", "asset_ref")
+
+
+def _is_hollow(slide: dict[str, Any]) -> bool:
+    """Контентный слайд без тела: кроме заголовка — ни текста, ни
+    таблицы/графика/схемы/картинки."""
+    if slide.get("purpose") in _BODYLESS_PURPOSES:
+        return False
+    for unit in slide.get("content_units") or []:
+        if unit.get("kind") == "title":
+            continue
+        if (unit.get("text") or "").strip() or any(unit.get(f) for f in _REF_FIELDS):
+            return False
+    return True
+
+
 def validate_slide_count(target: int, config: GenerationConfig | None = None) -> None:
     """Raise `invalid_input` when the requested count is outside the
     configured bounds (or absolute schema guard rails)."""
@@ -56,7 +77,8 @@ def validate_deck_plan(
     - JSON-schema validation против schemas/deck-plan.schema.json;
     - slide count equals brief.target_slide_count;
     - count inside configured bounds;
-    - unique slide ids and contiguous indices.
+    - unique slide ids and contiguous indices;
+    - every content slide carries a body (ADR-030: no title-only fillers).
     """
     cfg = config or load_generation_config()
     plan_dict = to_schema_dict(plan) if isinstance(plan, BaseModel) else _strip_none(plan)
@@ -86,6 +108,11 @@ def validate_deck_plan(
         )
     cfg.require_slide_count(target)
 
+    from deckdna.contracts.deck_plan import Brief
+    from deckdna.planning.request_constraints import validate_count_constraint
+
+    validate_count_constraint(Brief.model_validate(brief), len(slides))
+
     if len(slides) != target:
         raise DeckDNAError(
             code="validation_failed",
@@ -109,4 +136,16 @@ def validate_deck_plan(
             message="slide indices are not contiguous from 0",
             stage="planning",
             details={"indices": indices},
+        )
+
+    hollow = [s.get("index") for s in slides if _is_hollow(s)]
+    if hollow:
+        raise DeckDNAError(
+            code="validation_failed",
+            message=(
+                "content slides without a body (title only) are not allowed: "
+                f"slides {hollow}"
+            ),
+            stage="planning",
+            details={"slides": hollow},
         )

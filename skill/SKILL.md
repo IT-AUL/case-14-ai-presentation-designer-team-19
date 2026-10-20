@@ -71,7 +71,7 @@ OUT_DIR/
     deck.pptx
     deck.pdf
     quality-passport.json
-    html/index.html      # + slide-N.png assets
+    html/index.html      # + assets/: media/fonts, text/tables as DOM, charts as SVG
   balanced/  (same shape)
   visual/    (same shape)
 ```

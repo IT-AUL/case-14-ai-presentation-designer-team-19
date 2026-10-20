@@ -1,0 +1,301 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:57:22.814Z",
+  "method": "GET",
+  "path": "/generations/run_06cd7e008b81489b9339e88f63a7e641",
+  "status": 200,
+  "body": {
+    "id": "run_06cd7e008b81489b9339e88f63a7e641",
+    "project_id": "prj_66f7c26832a2443fabb4bd1820a37f66",
+    "state": "completed",
+    "job_id": "job_be9f9e16695548e1ba17f30f9fb302d3",
+    "events_url": "/api/v1/jobs/job_be9f9e16695548e1ba17f30f9fb302d3/events",
+    "template_id": "tpl_650178f786314ae99de8fa0ed49fa22f",
+    "content_pack_id": "pack_8095fb457e8a4262a05b427ac5db1d54",
+    "deck_plan_id": "plan-pack_8095fb457e8a4262a05b427ac5db1d54-balanced",
+    "deck_plan": {
+      "schema_version": "1.0",
+      "id": "plan-pack_8095fb457e8a4262a05b427ac5db1d54-balanced",
+      "brief": {
+        "purpose": "Итоги продаж за год для совета директоров",
+        "audience": "",
+        "language": "ru",
+        "target_slide_count": 3,
+        "tone": null,
+        "mandatory_sections": null,
+        "forbidden_claims": null,
+        "content_fill": "shrink",
+        "key_message": null,
+        "call_to_action": null,
+        "explain_slide": null
+      },
+      "evidence_graph_id": "pack:pack_8095fb457e8a4262a05b427ac5db1d54",
+      "objective": "Итоги продаж за год для совета директоров",
+      "audience": "",
+      "language": "ru",
+      "sections": [
+        {
+          "id": "sec-0",
+          "title": "Идея",
+          "slide_ids": []
+        },
+        {
+          "id": "sec-notes-1",
+          "title": "Тезисы автора",
+          "slide_ids": [
+            "slide-1"
+          ]
+        }
+      ],
+      "slides": [
+        {
+          "id": "slide-0",
+          "index": 0,
+          "purpose": "title",
+          "title_intent": "Идея",
+          "key_message": "Итоги продаж за год для совета директоров",
+          "evidence_ids": [
+            "pack_8095fb457e8a4262a05b427ac5db1d54:meta"
+          ],
+          "content_units": [
+            {
+              "role": "title",
+              "kind": "title",
+              "text": "Идея",
+              "evidence_ids": [
+                "pack_8095fb457e8a4262a05b427ac5db1d54:meta"
+              ],
+              "target_chars": null,
+              "asset_ref": null,
+              "table_ref": null,
+              "chart_ref": null,
+              "diagram_ref": null,
+              "locked": null,
+              "origin": null,
+              "source_id": null,
+              "chart_spec": null
+            },
+            {
+              "role": "subtitle",
+              "kind": "subtitle",
+              "text": "Итоги продаж за год для совета директоров",
+              "evidence_ids": [
+                "pack_8095fb457e8a4262a05b427ac5db1d54:meta"
+              ],
+              "target_chars": null,
+              "asset_ref": null,
+              "table_ref": null,
+              "chart_ref": null,
+              "diagram_ref": null,
+              "locked": null,
+              "origin": null,
+              "source_id": null,
+              "chart_spec": null
+            }
+          ],
+          "desired_visual": null,
+          "density_budget": {
+            "level": "sparse",
+            "max_items": 0,
+            "max_chars": null
+          },
+          "speaker_note": null,
+          "mandatory": null,
+          "chart": null,
+          "insight_ids": null,
+          "supports_key_message": null
+        },
+        {
+          "id": "slide-1",
+          "index": 1,
+          "purpose": "overview",
+          "title_intent": "Тезисы автора",
+          "key_message": "Итоги продаж за год для совета директоров",
+          "evidence_ids": [
+            "pack_8095fb457e8a4262a05b427ac5db1d54:sec-0:b0",
+            "pack_8095fb457e8a4262a05b427ac5db1d54:sec-notes-1:b0"
+          ],
+          "content_units": [
+            {
+              "role": "title",
+              "kind": "title",
+              "text": "Тезисы автора",
+              "evidence_ids": [
+                "pack_8095fb457e8a4262a05b427ac5db1d54:sec-0:b0"
+              ],
+              "target_chars": null,
+              "asset_ref": null,
+              "table_ref": null,
+              "chart_ref": null,
+              "diagram_ref": null,
+              "locked": null,
+              "origin": null,
+              "source_id": null,
+              "chart_spec": null
+            },
+            {
+              "role": "body",
+              "kind": "paragraph",
+              "text": "Итоги продаж за год для совета директоров",
+              "evidence_ids": [
+                "pack_8095fb457e8a4262a05b427ac5db1d54:sec-0:b0"
+              ],
+              "target_chars": null,
+              "asset_ref": null,
+              "table_ref": null,
+              "chart_ref": null,
+              "diagram_ref": null,
+              "locked": null,
+              "origin": null,
+              "source_id": null,
+              "chart_spec": null
+            }
+          ],
+          "desired_visual": "none",
+          "density_budget": {
+            "level": "sparse",
+            "max_items": 2,
+            "max_chars": 80
+          },
+          "speaker_note": null,
+          "mandatory": null,
+          "chart": null,
+          "insight_ids": null,
+          "supports_key_message": null
+        },
+        {
+          "id": "slide-2",
+          "index": 2,
+          "purpose": "thank_you",
+          "title_intent": "Спасибо за внимание",
+          "key_message": "Итоги продаж за год для совета директоров",
+          "evidence_ids": [
+            "pack_8095fb457e8a4262a05b427ac5db1d54:meta"
+          ],
+          "content_units": [
+            {
+              "role": "title",
+              "kind": "title",
+              "text": "Спасибо за внимание",
+              "evidence_ids": [
+                "pack_8095fb457e8a4262a05b427ac5db1d54:meta"
+              ],
+              "target_chars": null,
+              "asset_ref": null,
+              "table_ref": null,
+              "chart_ref": null,
+              "diagram_ref": null,
+              "locked": null,
+              "origin": null,
+              "source_id": null,
+              "chart_spec": null
+            }
+          ],
+          "desired_visual": null,
+          "density_budget": {
+            "level": "sparse",
+            "max_items": 0,
+            "max_chars": null
+          },
+          "speaker_note": null,
+          "mandatory": null,
+          "chart": null,
+          "insight_ids": null,
+          "supports_key_message": null
+        }
+      ],
+      "provenance": {
+        "planner": "story-director/deterministic-0.1.0",
+        "prompt_version": "v0.1",
+        "schema_version": "1.0",
+        "model_id": "deterministic",
+        "input_hashes": [
+          "546e30f293fd428c1a27af23ef3ab0676fe886b848ba9e1f7ccf70b9cd1838a6"
+        ]
+      }
+    },
+    "variants": [
+      {
+        "id": "var_8faf1d9a59e84193a3615b0a8ca7b5e3",
+        "run_id": "run_06cd7e008b81489b9339e88f63a7e641",
+        "strategy": "balanced",
+        "status": "completed",
+        "rationale": "Альтернативные совместимые layout'ы, сбалансированный текст и визуал.",
+        "stage": null,
+        "started_at": "2026-10-17T13:51:18.027566Z",
+        "finished_at": "2026-10-17T13:51:31.800451Z",
+        "axes": {
+          "text_density": 0.5,
+          "layout_diversity": 0.5,
+          "visualization": 0.5
+        },
+        "deck_artifact_id": "art_1f25272a1fe9405e9465683fc8450437",
+        "montage_artifact_id": "art_e78db51a50de4e42839822aeafb93a77",
+        "metrics": {
+          "validity": 1,
+          "editability_pei": 3,
+          "issues_total": 5,
+          "style_fidelity": 0.9167,
+          "auto_fixed": 0
+        },
+        "audit_status": "completed",
+        "export_ids": [
+          "exp_5458d73dd6d94fbd811cede5c95a8305"
+        ],
+        "planner": "story-director/deterministic-0.1.0",
+        "contextual_issues": null,
+        "deck_plan_id": "plan-pack_8095fb457e8a4262a05b427ac5db1d54-balanced"
+      }
+    ],
+    "parent_run_id": null,
+    "created_at": "2026-10-17T13:51:18.008127Z",
+    "finished_at": "2026-10-17T13:51:32.530261Z",
+    "content_fill": {
+      "mode": "shrink",
+      "resolved": "none",
+      "needs_decision": false,
+      "requested_slides": 12,
+      "target_slides": 3,
+      "shortage_reason": "Собрал 3 слайда вместо 12: в материалах хватило подтверждённых фактов на 3 слайда.",
+      "before": {
+        "requested": 12,
+        "capacity": 3,
+        "status": "short",
+        "missing_slides": 9,
+        "covered_topics": [
+          "Тезисы автора"
+        ]
+      },
+      "after": {
+        "requested": 3,
+        "capacity": 3,
+        "status": "ok",
+        "missing_slides": 0,
+        "covered_topics": [
+          "Тезисы автора"
+        ]
+      },
+      "facts_by_origin": {
+        "user": 2,
+        "web": 1,
+        "model": 0
+      },
+      "web": {
+        "sources": [
+          {
+            "id": "src_rbc_1",
+            "title": "Обзор розничного рынка электроники",
+            "site": "rbc.ru",
+            "url": "https://www.rbc.ru",
+            "accessed_at": "2026-10-17T13:51:06Z",
+            "facts_count": 1
+          }
+        ]
+      },
+      "model_sections": 0,
+      "diagrams_detected": 0,
+      "interpretation": null,
+      "elapsed_s": 0.01
+    }
+  }
+}

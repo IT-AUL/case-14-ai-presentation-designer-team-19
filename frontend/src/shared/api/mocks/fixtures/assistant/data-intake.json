@@ -1,0 +1,38 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:51:37.639Z",
+  "method": "POST",
+  "path": "/projects/prj_dcfe27bda1874f76b03a28e7ee495aa1/intake",
+  "status": 202,
+  "request": [
+    "files",
+    "files",
+    "idea"
+  ],
+  "body": {
+    "job_id": "job_9f0c276847ec4d86a29c9c6a752896a9",
+    "template_id": "tpl_7c4f33420b0e4c1cb783c86d1cfb12c1",
+    "content_pack_id": "pack_e777e2ea640f4af2ab966756319e3556",
+    "brandbook_id": null,
+    "project_id": "prj_dcfe27bda1874f76b03a28e7ee495aa1",
+    "files": [
+      {
+        "name": "VK Tech шаблон.pptx",
+        "detected_kind": "template",
+        "kind": "template",
+        "accepted": true,
+        "reason": "презентация — шаблон оформления",
+        "size_bytes": 20525772
+      },
+      {
+        "name": "purchases.csv",
+        "detected_kind": "data",
+        "kind": "data",
+        "accepted": true,
+        "reason": "таблица",
+        "size_bytes": 664906
+      }
+    ],
+    "assistant_note": "Принял: шаблон, данные."
+  }
+}

@@ -1,4 +1,4 @@
-"""docs/contracts/API.md §12 idempotency replay.
+"""API.md §12 idempotency replay: hardening check #19.
 
 The middleware used to read STORE.idempotency before call_next with no
 reservation of the key, so two genuinely concurrent requests sharing an

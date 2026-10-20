@@ -1,0 +1,15 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:52:06.317Z",
+  "method": "POST",
+  "path": "/plans/plan_d578eef1413d4373b79bffa790333a90/style-previews",
+  "status": 202,
+  "request": {
+    "respond_async": true
+  },
+  "body": {
+    "preview_id": "prev_d66480fd27184d8684bcec46204480cb",
+    "job_id": "job_79e6951091864f71b03f8e75f7dbd546",
+    "events_url": "/api/v1/jobs/job_79e6951091864f71b03f8e75f7dbd546/events"
+  }
+}

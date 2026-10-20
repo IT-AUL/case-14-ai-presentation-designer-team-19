@@ -164,6 +164,10 @@ def validate(source: list[str], answer: FitText, budget: int) -> str | None:
         return f"модель вернула {len(texts)} абзацев вместо {len(source)}"
     if any(not t for t in texts):
         return "модель вернула пустой абзац"
+    for original, rewritten in zip(source, texts, strict=True):
+        for marker in ("Предположение:", "Assumption:"):
+            if original.startswith(marker) and not rewritten.startswith(marker):
+                return "модель убрала пометку предположения"
     total = sum(len(t) for t in texts)
     if total > math.ceil(budget * 1.15):
         return f"текст всё ещё длинный: {total} симв. при бюджете {budget}"

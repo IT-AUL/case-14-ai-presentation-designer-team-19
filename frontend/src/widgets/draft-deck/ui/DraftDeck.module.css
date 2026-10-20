@@ -1,0 +1,507 @@
+.link {
+  align-self: flex-start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.link:hover {
+  color: var(--focus);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  max-width: 920px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.groupTitle {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.emptyTable {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 15px;
+}
+
+.insightBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 0;
+}
+
+.datasetNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+}
+
+.datasetChip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: var(--type-caption);
+  text-decoration: none;
+  transition:
+    background-color var(--motion-fast),
+    border-color var(--motion-fast),
+    color var(--motion-fast);
+}
+
+.datasetChip:hover {
+  border-color: var(--ink-3);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.datasetChip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.datasetCount {
+  color: var(--ink-3);
+  font-variant-numeric: tabular-nums;
+}
+
+.insightList {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.insightList[data-muted],
+.thoughts[data-muted] {
+  opacity: 0.5;
+}
+
+.dataset {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  scroll-margin-top: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04);
+}
+
+.datasetHead {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 22px 26px 18px;
+  background: var(--surface-2);
+}
+
+.datasetName {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.datasetTitle {
+  margin: 0;
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: var(--tracking-title);
+  overflow-wrap: anywhere;
+}
+
+.datasetFile {
+  color: var(--ink-3);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.datasetProfile {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.datasetFact {
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+}
+
+.datasetWhy {
+  max-width: 68ch;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.datasetMore {
+  color: var(--ink-2);
+  font-size: 13px;
+}
+
+.datasetMoreToggle {
+  width: fit-content;
+  color: var(--ink-3);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.datasetMoreToggle:hover {
+  color: var(--ink);
+}
+
+.datasetMoreToggle:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.datasetDetails {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 72ch;
+  margin: 8px 0 0;
+  padding-left: 18px;
+  line-height: 1.5;
+}
+
+.insight {
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr);
+  gap: 20px;
+  padding: 20px 28px 18px;
+  border-top: 1px solid var(--line);
+  transition: background-color var(--motion-fast);
+}
+
+.insight[data-confirmed] {
+  box-shadow: inset 3px 0 0 var(--ok);
+}
+
+.insight[data-decision] {
+  box-shadow: inset 3px 0 0 var(--warn);
+}
+
+.insight[data-selected] {
+  background: var(--surface-2);
+  box-shadow: inset 3px 0 0 var(--focus);
+}
+
+.insightLead {
+  padding-top: 2px;
+  min-width: 0;
+}
+
+.figure {
+  display: block;
+  color: var(--ink);
+  font-size: 28px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.insightBody {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  min-width: 0;
+}
+
+.insightTitle {
+  max-width: 64ch;
+  margin: 0;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: var(--tracking-card-title);
+  overflow-wrap: anywhere;
+}
+
+.insightOpen {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.insightOpen:hover {
+  color: var(--focus);
+}
+
+.insightOpen:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.insightFact {
+  max-width: 68ch;
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.insightRows {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 68ch;
+}
+
+.insightRow {
+  display: grid;
+  grid-template-columns: 64px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.insightStep {
+  padding-top: 2px;
+  color: var(--ink-3);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.insightStepText {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+
+.insightChart {
+  width: min(100%, 360px);
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  background: var(--surface-2);
+}
+
+.insightChart svg {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  max-height: 80px;
+}
+
+.insightFooter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  width: 100%;
+  margin-top: 6px;
+}
+
+.insightSource {
+  min-width: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.insightActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.dataset > .link {
+  margin: 4px 28px 18px;
+}
+
+.dataset > .excluded {
+  margin: 0 28px 20px;
+}
+
+@media (max-width: 1100px) {
+  .insight {
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 16px;
+    padding: 18px 20px 16px;
+  }
+
+  .datasetHead {
+    padding: 20px 20px 18px;
+  }
+
+  .figure {
+    font-size: 22px;
+  }
+}
+
+@media (max-width: 640px) {
+  .insight {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .insightLead[aria-hidden] {
+    display: none;
+  }
+}
+
+.thoughts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.thought {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+}
+
+.thought[data-selected] {
+  box-shadow: 0 0 0 2px var(--focus);
+}
+
+.thoughtMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.thoughtOrigin {
+  color: var(--ink-3);
+  font-size: 12px;
+}
+
+.thoughtMain {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  align-items: start;
+}
+
+.thoughtMain[data-visual='figure'] {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.thoughtBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.thoughtTitle {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.thoughtText {
+  display: -webkit-box;
+  margin: 0;
+  overflow: hidden;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.thoughtFigure {
+  font-size: 22px;
+  white-space: nowrap;
+}
+
+.thoughtActions {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.excluded {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding: 10px 14px;
+  border: 1px dashed var(--line-2);
+  border-radius: var(--radius-md);
+}
+
+.excludedLabel {
+  color: var(--ink-3);
+  font-size: 13px;
+}
+
+.excludedItem {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+}
+
+.excludedTitle {
+  color: var(--ink-3);
+  text-decoration: line-through;
+  overflow-wrap: anywhere;
+}

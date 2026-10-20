@@ -9,7 +9,7 @@
 .grid {
   display: grid;
   flex: 1;
-  grid-template-columns: 148px minmax(0, 1fr) 420px;
+  grid-template-columns: 112px minmax(0, 1fr) 360px;
   min-height: 0;
 }
 
@@ -21,6 +21,17 @@
   padding: 20px 28px;
   overflow: auto;
   background: var(--stage);
+}
+
+@media (max-width: 1200px) {
+  .grid {
+    grid-template-columns: 96px minmax(0, 1fr) 320px;
+  }
+
+  .stage {
+    gap: 10px;
+    padding: 14px 16px;
+  }
 }
 
 .center {
@@ -76,4 +87,14 @@
 .skeletonCard {
   height: 64px;
   border-radius: var(--radius-lg);
+}
+
+@media (max-width: 1360px) {
+  .grid {
+    grid-template-columns: 96px minmax(0, 1fr) 320px;
+  }
+
+  .stage {
+    padding: 16px 20px;
+  }
 }

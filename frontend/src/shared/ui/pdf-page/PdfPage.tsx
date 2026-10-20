@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { usePdfDocument } from '@/shared/lib/pdf'
 import styles from './PdfPage.module.css'
 
@@ -102,7 +102,7 @@ export function PdfPage({ url, imageUrl, pageNumber, aspectRatio = 16 / 9, lazy 
   const accessibleName = failed ? `${name}: нет превью` : name
 
   return (
-    <div ref={frameRef} className={clsx(styles.frame, className)} style={{ aspectRatio: ratio }} data-state={renderState}>
+    <div ref={frameRef} className={clsx(styles.frame, className)} style={{ aspectRatio: ratio, '--page-aspect': ratio } as CSSProperties} data-state={renderState}>
       {image ? (
         visible ? (
           <img

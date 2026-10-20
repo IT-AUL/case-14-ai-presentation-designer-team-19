@@ -420,7 +420,10 @@ class TestXlsxParser:
 
     def test_dispatch_xlsx(self, tmp_path):
         pack = parse_file(_make_xlsx(tmp_path))
-        assert len(pack.tables) == 2
+        # таблицы листов как раньше; ADR-033 добавляет датасеты листов и
+        # таблицы их представлений (source_ref.range = id представления)
+        assert len([t for t in pack.tables if not t.source_ref.range]) == 2
+        assert len(pack.datasets) == 2
 
     def test_empty_workbook_keeps_one_section(self, tmp_path):
         from openpyxl import Workbook
@@ -572,3 +575,62 @@ def test_pdf_sections_tidy_caps_cover_and_repeated_subheadings():
         "Назначение: Вовлечь зал.",
         "Ошибка: Начинать с деталей.",
     ]
+
+
+def test_numeric_series_table_becomes_native_chart_any_format(tmp_path):
+    """Числовая таблица-ряд из любого формата → Chart (значения целы);
+    таблица разнородных метрик или с текстом в ячейках остаётся таблицей."""
+    md = tmp_path / "c.md"
+    md.write_text(
+        "# Рост\n\n| Год | Выручка | Клиенты |\n|---|---|---|\n"
+        "| 2022 | 1 200 | 40 |\n| 2023 | 2 500 | 95 |\n| 2024 | 4 100 | 180 |\n\n"
+        "# Метрики\n\n| Метрика | Значение |\n|---|---|\n"
+        "| Выручка | 120000 |\n| Конверсия | 3 |\n| NPS | 45 |\n\n"
+        "# Роли\n\n| Роль | Задача |\n|---|---|\n"
+        "| A | писать |\n| B | читать |\n| C | думать |\n",
+        encoding="utf-8",
+    )
+    pack = parse_file(md)
+    # ADR-033: таблицы с числами из markdown — ещё и датасеты; их графики
+    # и таблицы представлений помечены source_ref.range
+    legacy_charts = [c for c in pack.charts if not c.source_ref.range]
+    legacy_tables = [t for t in pack.tables if not t.source_ref.range]
+    assert len(legacy_charts) == 1 and len(legacy_tables) == 2
+    assert len(pack.datasets) == 2
+    chart = legacy_charts[0]
+    assert chart.categories == ["2022", "2023", "2024"]
+    assert [s.name for s in chart.series] == ["Выручка", "Клиенты"]
+    assert chart.series[0].values == [1200.0, 2500.0, 4100.0]
+    kinds = [b.kind.value for s in pack.sections for b in s.blocks]
+    assert kinds.count("chart_ref") == 1 and kinds.count("table_ref") == 2
+
+
+def test_docx_title_style_is_cover_and_tables_reach_the_flow(tmp_path):
+    """DOCX: стиль Title — название (обложка), не первый раздел; таблица
+    получает table_ref в потоке раздела (иначе не доходит до плана), а
+    числовая таблица-ряд — chart_ref."""
+    from docx import Document
+
+    doc = Document()
+    doc.add_heading("Отчёт о пилоте", 0)
+    doc.add_heading("Итоги", 1)
+    doc.add_paragraph("Пилот прошёл успешно.")
+    tbl = doc.add_table(rows=1, cols=2)
+    tbl.rows[0].cells[0].text, tbl.rows[0].cells[1].text = "Месяц", "Пользователи"
+    for m, v in [("Январь", "80"), ("Февраль", "145"), ("Март", "210")]:
+        cells = tbl.add_row().cells
+        cells[0].text, cells[1].text = m, v
+    doc.add_heading("Сравнение", 1)
+    tbl = doc.add_table(rows=1, cols=2)
+    tbl.rows[0].cells[0].text, tbl.rows[0].cells[1].text = "Критерий", "Итог"
+    for a, b in [("Скорость", "выше"), ("Цена", "ниже"), ("Качество", "то же")]:
+        cells = tbl.add_row().cells
+        cells[0].text, cells[1].text = a, b
+    path = tmp_path / "r.docx"
+    doc.save(path)
+    pack = parse_file(path)
+    assert pack.title_hint == "Отчёт о пилоте"
+    by_heading = {s.heading: [b.kind.value for b in s.blocks] for s in pack.sections}
+    assert by_heading["Итоги"] == ["paragraph", "chart_ref"]
+    assert by_heading["Сравнение"] == ["table_ref"]
+    assert len(pack.charts) == 1 and len(pack.tables) == 1

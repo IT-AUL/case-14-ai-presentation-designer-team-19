@@ -1,0 +1,187 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface-2);
+  color: var(--ink);
+  transition:
+    border-color var(--motion-fast),
+    background-color var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+
+.card:hover:not(:disabled) {
+  border-color: var(--line-2);
+  background: var(--surface);
+}
+
+.card[data-recommended] {
+  border-color: var(--line-2);
+}
+
+.card[data-selected],
+.card[data-checked] {
+  border-color: var(--ink);
+  box-shadow: var(--ring-selected);
+  background: var(--surface);
+}
+
+.buttonCard {
+  align-items: flex-start;
+  gap: var(--space-1);
+  width: 100%;
+  padding: 10px 12px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.buttonCard:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.buttonCard:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.containerCard {
+  cursor: pointer;
+}
+
+.containerCard:has(.srInput:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.trigger {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  border-radius: var(--radius-card);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.trigger:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.head,
+.headLabel {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+}
+
+.headLabel {
+  position: relative;
+  cursor: pointer;
+}
+
+.srInput {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.radioDot {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--line-2);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--inv);
+  transition:
+    border-color var(--motion-fast),
+    background-color var(--motion-fast);
+}
+
+.radioDot[data-checked] {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink);
+  font: var(--type-body);
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.card[data-selected] .title,
+.card[data-checked] .title,
+.trigger[data-checked] .title {
+  font-weight: 600;
+}
+
+.badgeWrap {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  margin-left: auto;
+}
+
+.keyCap {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  color: var(--ink-3);
+  font: var(--type-mono);
+  font-size: 11px;
+  line-height: 1;
+}
+
+.card[data-selected] .keyCap,
+.card[data-checked] .keyCap {
+  border-color: var(--line-2);
+  color: var(--ink-2);
+}
+
+.description {
+  margin: 0;
+  padding-left: 26px;
+  color: var(--ink-2);
+  font: var(--type-caption);
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.descriptionFlush {
+  padding-left: 0;
+}

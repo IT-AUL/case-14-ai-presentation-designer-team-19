@@ -1,0 +1,33 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:52:02.232Z",
+  "method": "GET",
+  "path": "/projects/prj_dcfe27bda1874f76b03a28e7ee495aa1/session",
+  "status": 200,
+  "body": {
+    "step": 4,
+    "completed_steps": [
+      1,
+      2,
+      3
+    ],
+    "skipped_steps": [],
+    "artifacts": {
+      "template_id": "tpl_7c4f33420b0e4c1cb783c86d1cfb12c1",
+      "content_pack_id": "pack_52549aa7639543a8b68b55c5f60d42a8",
+      "brandbook_id": null,
+      "plan_id": null,
+      "preview_id": null,
+      "generation_id": null
+    },
+    "brief": {
+      "purpose": "Итоги продаж за год для совета директоров",
+      "language": "ru",
+      "audience": "",
+      "target_slide_count": 8,
+      "content_fill": "expand"
+    },
+    "assistant_note": "Могу составить план по вашим ответам.",
+    "job_id": null
+  }
+}

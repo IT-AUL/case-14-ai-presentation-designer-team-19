@@ -4,7 +4,7 @@ import type { ReactNode } from 'react'
 import { ApiError } from '@/shared/api'
 import { RECONNECT_DELAYS_MS } from '@/shared/lib/polling'
 import { POLL_INTERVAL_MS } from '../model/state'
-import { generationKeys, useCancelGeneration, useGeneration } from './generationApi'
+import { generationKeys, useCancelGeneration, useGeneration, useSlideDrafts } from './generationApi'
 import * as requests from './requests'
 
 vi.mock('./requests')
@@ -77,5 +77,54 @@ describe('useGeneration polling', () => {
 
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 3)
     expect(requests.fetchGeneration).toHaveBeenCalledTimes(3)
+  })
+})
+
+describe('useSlideDrafts', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('stops polling when the endpoint returns null on 404/501', async () => {
+    vi.useFakeTimers()
+    vi.mocked(requests.fetchSlideDrafts).mockReset().mockResolvedValue(null)
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    renderHook(() => useSlideDrafts('var_balanced', true), { wrapper })
+
+    await vi.advanceTimersByTimeAsync(0)
+    expect(requests.fetchSlideDrafts).toHaveBeenCalledTimes(1)
+
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 3)
+    expect(requests.fetchSlideDrafts).toHaveBeenCalledTimes(1)
+  })
+
+  it('fetches slide drafts for a variant and stops polling once completed', async () => {
+    vi.useFakeTimers()
+    vi.mocked(requests.fetchSlideDrafts)
+      .mockReset()
+      .mockResolvedValueOnce({
+        variant_id: 'var_balanced',
+        state: 'running',
+        slides: [{ variant_id: 'var_balanced', index: 1, slide_id: 'slide-0', slide_key: 'var_balanced:1', preview_revision: 1, preview_artifact_id: 'art_1', status: 'draft' }],
+      })
+      .mockResolvedValueOnce({
+        variant_id: 'var_balanced',
+        state: 'completed',
+        slides: [{ variant_id: 'var_balanced', index: 1, slide_id: 'slide-0', slide_key: 'var_balanced:1', preview_revision: 2, preview_artifact_id: 'art_2', status: 'rendered' }],
+      })
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
+    const wrapper = ({ children }: { children: ReactNode }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>
+    renderHook(() => useSlideDrafts('var_balanced', true), { wrapper })
+    const state = () => client.getQueryState<{ slides: { preview_revision: number }[] }>(generationKeys.slideDrafts('var_balanced'))
+
+    await vi.advanceTimersByTimeAsync(0)
+    expect(state()?.data?.slides[0]?.preview_revision).toBe(1)
+
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+    expect(state()?.data?.slides[0]?.preview_revision).toBe(2)
+
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 3)
+    expect(requests.fetchSlideDrafts).toHaveBeenCalledTimes(2)
   })
 })

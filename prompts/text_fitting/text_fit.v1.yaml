@@ -1,6 +1,6 @@
 # Prompt asset — versioned, referenced by name+version from code (never embedded).
 name: text_fit
-version: "1.0.0"
+version: "1.1.0"
 model_role: text
 output_schema: schemas/text-fit.schema.json
 language: ru
@@ -17,6 +17,8 @@ instructions: |
     written in the input. Never add a number or fact that is not in the input.
   - Write in `language`. Keep the tone of a business presentation: short
     sentences, no filler, no ellipsis (…) at the end.
+  - Preserve an initial disclosure `Предположение:` or `Assumption:` exactly.
+    It marks unverified content and must not be removed to save space.
   - Do not add speaker notes, comments, quotes around the text or markdown.
   - `slide_title` is context only — do not repeat it inside the text.
   - Output ONLY JSON: {"paragraphs": ["...", "..."]}.

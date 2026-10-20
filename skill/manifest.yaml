@@ -1,7 +1,7 @@
 schema_version: "1.0"
 id: deckdna
 name: DeckDNA Presentation Designer
-version: "0.1.0"
+version: "0.3.0"
 description: >
   Converts an arbitrary PPTX/POTX template plus a content package into
   three editable, template-compliant presentation variants with built-in
@@ -171,7 +171,7 @@ tools:
     command: deckdna repair
     note: >-
       12 of 24 deterministic audit rule codes currently map to a repair
-      action; the rest are honestly
+      action ; the rest are honestly
       not_implemented per-issue rather than guessed at.
   - name: export_deck
     description: Export PPTX/PDF/HTML and Quality Passport.
@@ -187,3 +187,49 @@ tools:
       the async job-based API export endpoint's "html" format is
       separately tracked as not yet wired to this same render path
       (unrelated to this CLI/skill entrypoint).
+
+# ADR-032: the same skill as an MCP server — any MCP client (VK AI Space
+# agent builder, IDE agents) calls these tools step by step.
+# Tools are a thin layer over the REST API (docs/contracts/API.md); the
+# server version is this manifest's `version`. Setup: docs/MCP_RU.md.
+mcp:
+  command: deckdna mcp --transport stdio
+  http_command: deckdna mcp --transport http --host 0.0.0.0 --port 8765 [--api-url URL]
+  transports: [stdio, http]
+  doc: docs/MCP_RU.md
+  status: implemented
+  tools:
+    - name: analyze_template
+      description: Upload a PPTX/POTX template and build its Design DNA.
+    - name: upload_content
+      description: Content as one sentence, text or a file (incl. an old .pptx to re-layout).
+    - name: plan_deck
+      description: Content sufficiency estimate and the deck plan with fact origins.
+    - name: research_slide
+      description: Web facts or figures for one slide; homogeneous figures become a native chart.
+    - name: generate_variants
+      description: Build faithful/balanced/visual variants asynchronously (job id).
+    - name: get_job
+      description: Job state, progress, journal events; finished variants with resource URIs.
+    - name: audit_deck
+      description: Quality audit with repairable flags.
+    - name: repair_issues
+      description: Typed repairs of selected issues and re-audit.
+    - name: export_deck
+      description: Export PPTX/PDF/HTML/Quality Passport as artifact resources.
+    - name: understand_content
+      description: Semantic blocks, capacity and data insights from uploaded content.
+    - name: get_questions
+      description: Questions with reasons and recommended options for the user.
+    - name: answer_questions
+      description: Save the user's answers and return the complete brief.
+    - name: confirm_insights
+      description: Confirm or unconfirm only the insights explicitly accepted by the user.
+    - name: style_previews
+      description: Key slides in three styles; get_job returns the finished style_preview.
+    - name: regenerate_slide
+      description: Rebuild one slide with a preview and audit; preserve other slide XML bytes.
+  resources:
+    - uri: deckdna://templates/{template_id}/design-dna
+    - uri: deckdna://variants/{variant_id}/quality-passport
+    - uri: deckdna://artifacts/{artifact_id}

@@ -72,7 +72,25 @@ def stack(request, tmp_path_factory):
 
 def test_no_errors_any_format(stack):
     report = stack["report"]
-    assert report["slides_out"] == BRIEF["target_slide_count"]
+    # ADR-030: колода не длиннее запроса и без заглушек; короче — только
+    # когда контент кончился (раньше добивалась слайдами «Раздел»)
+    assert 3 <= report["slides_out"] <= BRIEF["target_slide_count"]
+    # ADR-031: ни одной заглушки, даже раскрытой. Картинка встаёт в пустой
+    # плейсхолдер или наибольший свободный прямоугольник, схема — в широкую
+    # область под заголовком; служебные слайды шаблона не образцы
+    slides = report["compose_report"]["slides"]
+    fillers = [
+        i["slide_index"] for i in report["audit_issues"]
+        if i["rule_code"] == "integrity.filler_slide"
+    ]
+    assert not fillers, fillers
+    lost = {
+        kind: n
+        for s in slides
+        for kind, n in (s.get("dropped_units") or {}).items()
+        if kind in ("image", "diagram") and n
+    }
+    assert not lost, lost
     assert stack["apply"].failed == 0
     assert stack["repaired"].exists()
     assert stack["pdf"].exists() and stack["pdf"].stat().st_size > 0

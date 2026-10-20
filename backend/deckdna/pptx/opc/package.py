@@ -1,4 +1,4 @@
-"""Minimal OPC package model (see docs/ARCHITECTURE.md, compile stage).
+"""Minimal OPC package model (PPTX_COMPILER.md §2, stage 0/8 groundwork).
 
 A .pptx is a ZIP of parts; every part may carry a ``.rels`` part holding
 typed relationships. This module is the authoritative owner of that graph:
@@ -28,12 +28,20 @@ ROOT_RELS = "_rels/.rels"
 CONTENT_TYPES = "[Content_Types].xml"
 PRESENTATION = "ppt/presentation.xml"
 
+CORE_PROPS_REL = f"{PKG_REL_NS}/metadata/core-properties"
+CORE_PROPS_PART = "docProps/core.xml"
+CORE_PROPS_CT = "application/vnd.openxmlformats-package.core-properties+xml"
+CP_NS = "http://schemas.openxmlformats.org/package/2006/metadata/core-properties"
+DC_NS = "http://purl.org/dc/elements/1.1/"
+DCTERMS_NS = "http://purl.org/dc/terms/"
+XSI_NS = "http://www.w3.org/2001/XMLSchema-instance"
+
 _SLIDE_PART_RE = re.compile(r"^ppt/slides/slide\d+\.xml$")
 _RELS_SUFFIX = ".rels"
 
 _SLIDE_REL = f"{OFFICE_REL_NS}/slide"
 
-# Zip-bomb guard. A real PPTX/POTX carries at most a
+# hardening check #20: zip-bomb guard. A real PPTX/POTX carries at most a
 # few thousand parts and rarely exceeds ~50x its compressed size once
 # unpacked (mostly-already-compressed media + verbose but not
 # pathological XML) -- both limits generous for any legitimate deck,
@@ -242,6 +250,28 @@ class OpcPackage:
             return []
         return parse_rels(self.parts[name])
 
+    def ordered_slide_parts(self) -> list[str]:
+        """Physical part identities in author-visible presentation order.
+
+        python-pptx renames slide parts in memory when accessing ``slides``;
+        those names cannot identify parts in this unchanged raw package.
+        """
+        root = etree.fromstring(self.parts[PRESENTATION])
+        relationships = {rel.id: rel for rel in self.rels(PRESENTATION)}
+        result: list[str] = []
+        ns = "http://schemas.openxmlformats.org/presentationml/2006/main"
+        for node in root.findall(f"{{{ns}}}sldIdLst/{{{ns}}}sldId"):
+            relationship = relationships.get(node.get(f"{{{OFFICE_REL_NS}}}id"))
+            if relationship is None or relationship.is_external or not relationship.is_slide:
+                raise DeckDNAError(code="package_corrupt", message="invalid slide relationship",
+                                   stage="opc.slides")
+            part = resolve_target(PRESENTATION, relationship.target)
+            if part not in self.parts:
+                raise DeckDNAError(code="package_corrupt", message="missing slide part",
+                                   stage="opc.slides")
+            result.append(part)
+        return result
+
     def internal_dependencies(self, part_name: str) -> list[tuple[Relationship, str]]:
         """(rel, resolved_part_name) for every internal rel of a part."""
         out = []
@@ -324,3 +354,83 @@ class OpcPackage:
                 if target not in scope or target not in self.parts:
                     dangling.append(f"{name} -> {rel.type_name} {target}")
         return dangling
+
+    # -- core properties ----------------------------------------------
+
+    def set_core_properties(
+        self,
+        *,
+        title: str,
+        subject: str | None = None,
+        creator: str | None = None,
+    ) -> None:
+        """Перезаписать dc:title/dc:subject/dc:creator пакета.
+
+        Метаданные шаблона (чужой заголовок, автор исходного файла) не
+        должны протекать в собранную колоду — выходной пакет описывает
+        свою тему. Часть/rel/override создаются, если шаблон их не нёс.
+        """
+        part = CORE_PROPS_PART
+        for rel in self.rels(""):
+            if rel.type == CORE_PROPS_REL:
+                part = resolve_target("", rel.target)
+                break
+        root = None
+        if part in self.parts:
+            try:
+                root = etree.fromstring(self.parts[part])
+            except etree.XMLSyntaxError:
+                root = None
+        if root is None:
+            root = etree.Element(
+                f"{{{CP_NS}}}coreProperties",
+                nsmap={
+                    "cp": CP_NS,
+                    "dc": DC_NS,
+                    "dcterms": DCTERMS_NS,
+                    "xsi": XSI_NS,
+                },
+            )
+        values = {"title": title, "subject": subject, "creator": creator}
+        for tag, value in values.items():
+            if not value:
+                continue
+            el = root.find(f"{{{DC_NS}}}{tag}")
+            if el is None:
+                el = etree.SubElement(root, f"{{{DC_NS}}}{tag}")
+            el.text = str(value)
+        if creator:
+            el = root.find(f"{{{CP_NS}}}lastModifiedBy")
+            if el is None:
+                el = etree.SubElement(root, f"{{{CP_NS}}}lastModifiedBy")
+            el.text = str(creator)
+        self.parts[part] = etree.tostring(
+            root, xml_declaration=True, encoding="UTF-8", standalone=True
+        )
+        rels = self.rels("")
+        if not any(rel.type == CORE_PROPS_REL for rel in rels):
+            used = {rel.id for rel in rels}
+            rid, n = "rIdCoreProps", 1
+            while rid in used:
+                n += 1
+                rid = f"rIdCoreProps{n}"
+            rels.append(
+                Relationship(id=rid, type=CORE_PROPS_REL, target=part)
+            )
+            self.parts[ROOT_RELS] = serialize_rels(rels)
+        ct_root = etree.fromstring(self.parts[CONTENT_TYPES])
+        overrides = {
+            el.get("PartName", "").lstrip("/")
+            for el in ct_root
+            if etree.QName(el).localname == "Override"
+        }
+        if part not in overrides:
+            el = etree.SubElement(ct_root, f"{{{CONTENT_TYPES_NS}}}Override")
+            el.set("PartName", f"/{part}")
+            el.set("ContentType", CORE_PROPS_CT)
+            self.parts[CONTENT_TYPES] = etree.tostring(
+                ct_root,
+                xml_declaration=True,
+                encoding="UTF-8",
+                standalone=True,
+            )

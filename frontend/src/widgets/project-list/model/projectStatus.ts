@@ -29,22 +29,22 @@ function runStage(generation: GenerationDetail): string {
       return count ? `Готово · ${count} ${pluralize(count, ['вариант', 'варианта', 'вариантов'])}` : 'Готово'
     }
     case 'running':
-      return 'Идёт генерация вариантов'
+      return 'Собираю презентацию'
     case 'queued':
-      return 'В очереди на генерацию'
+      return 'В очереди на сборку'
     case 'awaiting_user':
       return 'Ждёт решения пользователя'
     case 'failed':
-      return 'Ошибка генерации'
+      return 'Сборка не удалась'
     case 'canceled':
-      return 'Генерация отменена'
+      return 'Сборка остановлена'
   }
 }
 
 function setupStage(project: Project): ProjectStatusView {
   if (!project.template_id) return { label: 'Черновик', tone: 'neutral', stage: 'Нужен шаблон' }
   if (!project.content_pack_id) return { label: 'Черновик', tone: 'neutral', stage: 'Шаблон разобран · нужен бриф' }
-  return { label: 'Готов к генерации', tone: 'info', stage: 'Бриф и контент загружены' }
+  return { label: 'Готов к сборке', tone: 'info', stage: 'Бриф и контент загружены' }
 }
 
 export function projectStatus(project: Project, run: RunLookup): ProjectStatusView | null {
@@ -59,8 +59,8 @@ export function projectStatus(project: Project, run: RunLookup): ProjectStatusVi
 }
 
 export function projectHref(project: Pick<Project, 'id'>, runId: string | undefined, run: RunLookup): string {
-  if (runId && run.kind !== 'missing') return routes.variants(project.id, runId)
-  return routes.template(project.id)
+  if (runId && run.kind !== 'missing') return routes.polish(project.id, runId)
+  return routes.start(project.id)
 }
 
 export function sortProjects(projects: readonly Project[]): Project[] {

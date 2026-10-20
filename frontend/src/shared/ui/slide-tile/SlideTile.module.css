@@ -1,0 +1,133 @@
+.grid {
+  display: grid;
+  gap: 28px 24px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 1180px;
+}
+
+.grid[data-columns='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid[data-columns='4'] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.tile {
+  margin: 0;
+  min-width: 0;
+  transition: opacity 0.15s;
+}
+
+.muted {
+  opacity: 0.45;
+}
+
+.frameWrap {
+  position: relative;
+}
+
+.frame {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  box-shadow: var(--shadow-stage);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+button.frame {
+  cursor: pointer;
+}
+
+button.frame:hover {
+  box-shadow: 0 0 0 2px var(--line-2), var(--shadow-stage);
+}
+
+button.frame:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+
+.tile[data-selected] .frame {
+  box-shadow: 0 0 0 2px var(--focus), var(--shadow-stage);
+}
+
+.frame[aria-busy='true'] {
+  animation: global(dd-pulse) 1.6s ease-in-out infinite;
+}
+
+.image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.draft {
+  display: flex;
+  flex-direction: column;
+  gap: 8%;
+  height: 100%;
+  padding: 7% 7.5%;
+}
+
+.title {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--ink);
+  font-size: clamp(11px, 1.05vw, 15px);
+  font-weight: 600;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.visual {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: flex-end;
+  color: var(--ink-3);
+}
+
+.corner {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+}
+
+.caption {
+  margin-top: 10px;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+@media (max-width: 1360px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid[data-columns='4'] {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .frame[aria-busy='true'] {
+    animation: none;
+  }
+}

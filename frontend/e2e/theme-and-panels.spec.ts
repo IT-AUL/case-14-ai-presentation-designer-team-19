@@ -13,7 +13,7 @@ test('dark theme survives a reload', async ({ page }) => {
   const darkBackground = await page.evaluate(() => getComputedStyle(document.body).backgroundColor)
 
   await page.reload()
-  await expect(page.getByRole('heading', { level: 1, name: 'Проекты' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Новая презентация' })).toBeVisible()
   await expect(html).toHaveAttribute('data-theme', 'dark')
   expect(await page.evaluate(() => getComputedStyle(document.body).backgroundColor)).toBe(darkBackground)
 
@@ -24,7 +24,8 @@ test('dark theme survives a reload', async ({ page }) => {
 
 test('provider panel rejects a model above 35B', async ({ page }) => {
   await openApp(page)
-  await page.getByRole('button', { name: 'Модели', exact: true }).click()
+  await page.getByRole('button', { name: 'Настройки' }).click()
+  await page.getByRole('menuitem', { name: /Модели/ }).click()
   const panel = page.getByRole('dialog', { name: 'Провайдер моделей' })
   await expect(panel).toBeVisible()
   await expect(panel).toContainText('до 35B')
@@ -47,7 +48,8 @@ test('provider panel rejects a model above 35B', async ({ page }) => {
 
 test('about panel lists audit rules split into D and N', async ({ page }) => {
   await openApp(page)
-  await page.getByRole('button', { name: 'О системе' }).click()
+  await page.getByRole('button', { name: 'Настройки' }).click()
+  await page.getByRole('menuitem', { name: 'О системе' }).click()
   const panel = page.getByRole('dialog', { name: 'О системе' })
   const rules = panel.getByRole('region', { name: 'Правила аудита' })
   await expect(rules).toBeVisible()

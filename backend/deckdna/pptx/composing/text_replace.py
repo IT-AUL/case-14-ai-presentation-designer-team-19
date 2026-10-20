@@ -1,4 +1,4 @@
-"""Static text substitution into a cloned slide (`replace_text` op).
+"""Static text substitution into a cloned slide (PPTX_COMPILER.md §4 `replace_text`).
 
 Minimal version of the op: distribute content over *text bodies*, not
 individual runs — each content-eligible `p:txBody` is one slot. A slot
@@ -53,11 +53,44 @@ _MIN_TEXT_CX_EMU = 450_000
 # decorative typography (per-letter layout), not substitutable content.
 _TINY_RUN_MAX = 3
 _MAX_TINY_RATIO = 0.5
-_STOCK_PLACEHOLDERS = frozenset({
-    "product", "product name", "company", "company name", "your title",
-    "your text", "placeholder", "sample text", "lorem ipsum",
-    "текст", "заголовок", "название продукта", "название компании",
-})
+_DEMO_NUMBER_RE = re.compile(
+    r"\d\s*%|%\s*\d|\d{3,}|\d[.,]\d|[₽$€]\s*\d|\d\s*(?:₽|\$|€|млн|млрд|тыс|k\b|m\b)",
+    re.I,
+)
+_TEMPLATE_CREDIT_RE = re.compile(
+    r"\bcredits?\s*:|"
+    r"(?:presentation\s+)?template\s+(?:was\s+)?created\s+by|"
+    r"(?:keep|retain)\s+this\s+slide.{0,50}(?:attribution|credit)|"
+    r"includes\s+icons\s+by|"
+    r"infographics\s*(?:&|and)\s*images\s+by|"
+    r"\b(?:slidesgo|freepik|flaticon|storyset|slidescarnival|slidecarnival|allppt|fppt)\b|"
+    r"(?:укажите|сохраните).{0,50}автор\w*\s+шаблона",
+    re.I,
+)
+_DONOR_CONTACT_RE = re.compile(
+    r"(?:add)?youremail@|@freepik\.com|"
+    r"\byour(?:company|website|domain|email)\.(?:com|org|net|ru)\b|"
+    r"\bdo\s+you\s+have\s+any\s+questions\s*\?",
+    re.I,
+)
+_STOCK_PLACEHOLDERS = frozenset(
+    {
+        "product",
+        "product name",
+        "company",
+        "company name",
+        "your title",
+        "your text",
+        "placeholder",
+        "sample text",
+        "lorem ipsum",
+        "текст",
+        "заголовок",
+        "название продукта",
+        "название компании",
+        "идея",
+    }
+)
 
 # What happens to content slots the plan had no text for: they are
 # cleared (runs emptied). Deleting the shapes was the alternative —
@@ -101,6 +134,7 @@ class TextReplaceReport:
     # internal hand-off to card reflow: a valid KPI can be purely numeric,
     # while decorative donor labels such as ``01`` must remain ignorable.
     filled_shape_ids: tuple[str, ...] = ()
+    offslide_shapes_removed: int = 0
 
     def to_dict(self) -> dict:
         return {
@@ -121,6 +155,7 @@ class TextReplaceReport:
             "runs_title": self.runs_title,
             "title_placed": self.title_placed,
             "empty_slot_policy": self.empty_slot_policy,
+            "offslide_shapes_removed": self.offslide_shapes_removed,
         }
 
 
@@ -164,16 +199,36 @@ def _is_narrow_shape(tx_body: etree._Element) -> bool:
     return ext is not None and ext[0] < _MIN_TEXT_CX_EMU
 
 
-def _body_is_decorative(tx_body: etree._Element) -> bool:
+def _has_nonhorizontal_text_flow(tx_body: etree._Element) -> bool:
     body_pr = tx_body.find(f"{{{A}}}bodyPr")
-    if body_pr is not None and body_pr.get("vert"):
-        return True  # vertical/caption typography
+    if body_pr is not None and body_pr.get("vert") is not None:
+        return body_pr.get("vert") != "horz"
+    # Layout placeholders can declare vertical flow even when the slide's
+    # bodyPr is empty. Treating absence as horizontal rotated authored prose.
+    shape = _owning_shape(tx_body)
+    ph = shape.find(f"{{{P}}}nvSpPr/{{{P}}}nvPr/{{{P}}}ph") if shape is not None else None
+    return ph is not None and ph.get("orient") == "vert"
+
+
+def _body_is_decorative(tx_body: etree._Element) -> bool:
+    if _has_nonhorizontal_text_flow(tx_body):
+        return True
     return _is_tiny_run_body(tx_body) or _is_narrow_shape(tx_body)
 
 
-def _is_offslide_body(
-    tx_body: etree._Element, slide_size: tuple[int, int] | None
-) -> bool:
+def _is_system_body(tx_body: etree._Element) -> bool:
+    """Номер, дата и колонтитул — метаданные, а не место для прозы."""
+    shape = _owning_shape(tx_body)
+    ph = shape.find(f"{{{P}}}nvSpPr/{{{P}}}nvPr/{{{P}}}ph") if shape is not None else None
+    if ph is not None and ph.get("type") in {"sldNum", "dt", "ftr", "hdr"}:
+        return True
+    return any(
+        (fld.get("type") or "").lower().startswith(("slidenum", "datetime"))
+        for fld in tx_body.iter(f"{{{A}}}fld")
+    )
+
+
+def _is_offslide_body(tx_body: etree._Element, slide_size: tuple[int, int] | None) -> bool:
     """A top-level box crossing the page edge cannot hold authored prose.
 
     Some donor slides intentionally crop decorative number labels at the
@@ -315,16 +370,13 @@ def _para_line_height_emu(para: etree._Element, size_pt: float) -> float:
         if lnspc is not None:
             pts = lnspc.find(f"{{{A}}}spcPts")
             if pts is not None and pts.get("val"):
-                return int(pts.get("val")) / 100 * EMU_PER_PT
+                pts_pt = int(pts.get("val")) / 100.0
+                if size_pt * 1.0 <= pts_pt <= size_pt * 1.35:
+                    return pts_pt * EMU_PER_PT
+                return size_pt * LINE_HEIGHT_FACTOR * EMU_PER_PT
             pct = lnspc.find(f"{{{A}}}spcPct")
             if pct is not None and pct.get("val"):
-                return (
-                    size_pt
-                    * LINE_HEIGHT_FACTOR
-                    * int(pct.get("val"))
-                    / 100000
-                    * EMU_PER_PT
-                )
+                return size_pt * LINE_HEIGHT_FACTOR * int(pct.get("val")) / 100000 * EMU_PER_PT
     return size_pt * LINE_HEIGHT_FACTOR * EMU_PER_PT
 
 
@@ -376,10 +428,7 @@ def _fits_in_box(
         )
         return widest_line <= usable_w * (1 + tol)
     required_h, widest_word = _required_height_emu(tx_body, text, size_pt, usable_w)
-    return (
-        required_h <= usable_h * (1 + tol)
-        and widest_word <= usable_w * (1 + tol)
-    )
+    return required_h <= usable_h * (1 + tol) and widest_word <= usable_w * (1 + tol)
 
 
 def _set_body_sz(tx_body: etree._Element, size_pt: float) -> None:
@@ -397,6 +446,15 @@ def _set_body_sz(tx_body: etree._Element, size_pt: float) -> None:
         if defrpr is None:
             defrpr = etree.SubElement(ppr, f"{{{A}}}defRPr")
         defrpr.set("sz", value)
+        lnspc = ppr.find(f"{{{A}}}lnSpc")
+        if lnspc is not None:
+            pts = lnspc.find(f"{{{A}}}spcPts")
+            if pts is not None and pts.get("val"):
+                pts_val = int(pts.get("val", "0"))
+                if pts_val < size_pt * 100 or pts_val > size_pt * 135:
+                    for child in list(lnspc):
+                        lnspc.remove(child)
+                    etree.SubElement(lnspc, f"{{{A}}}spcPct", val="100000")
     for r in tx_body.iter(f"{{{A}}}r"):
         rpr = r.find(f"{{{A}}}rPr")
         if rpr is None:
@@ -423,12 +481,56 @@ def _shape_id(tx_body: etree._Element) -> str | None:
     return None
 
 
+def _step_down_candidates(
+    size_pt: float,
+    font_scale: list[float] | tuple[float, ...] | None,
+) -> list[float]:
+    if font_scale:
+        from deckdna.pptx.composing.font_scale import (
+            DISPLAY_FONT_PT,
+            scale_candidates,
+            snap_font_pt,
+        )
+
+        cands = list(
+            reversed(
+                scale_candidates(
+                    font_scale,
+                    FONT_FLOOR_PT,
+                    size_pt,
+                    include_tolerance_steps=False,
+                )
+            )
+        )
+        if size_pt >= DISPLAY_FONT_PT:
+            for disp in (60.0, 54.0, 48.0, 44.0, 40.0):
+                if disp <= size_pt and disp not in cands:
+                    cands.append(disp)
+        snapped_top = snap_font_pt(size_pt, font_scale, mode="down", min_pt=FONT_FLOOR_PT)
+        if snapped_top not in cands and snapped_top >= FONT_FLOOR_PT:
+            cands.insert(0, snapped_top)
+        floor_snap = snap_font_pt(FONT_FLOOR_PT, font_scale, mode="up", min_pt=FONT_FLOOR_PT)
+        if floor_snap not in cands:
+            cands.append(floor_snap)
+        if FONT_FLOOR_PT not in cands:
+            cands.append(FONT_FLOOR_PT)
+        return sorted(set(cands), reverse=True)
+    steps: list[float] = []
+    cur = size_pt
+    while cur > FONT_FLOOR_PT:
+        steps.append(cur)
+        cur = max(FONT_FLOOR_PT, cur - _SHRINK_STEP_PT)
+    steps.append(FONT_FLOOR_PT)
+    return steps
+
+
 def _fit_body(
     tx_body: etree._Element,
     text: str,
     hint: dict | None = None,
+    font_scale: list[float] | tuple[float, ...] | None = None,
 ) -> bool:
-    """Shrink the body's font in 1pt steps until the text fits its box.
+    """Shrink the body's font until the text fits its box.
 
     *hint* carries exemplar-measured fallbacks ({sz, w, h, wrap_none})
     for values the slide XML doesn't declare (placeholder inheritance).
@@ -442,7 +544,16 @@ def _fit_body(
     )
     if box is None:
         return False
-    usable_w, usable_h = box
+    # The audit measures a regular metric font. Bold donor copy can wrap
+    # onto another line in Office/LO even when that estimate fits exactly.
+    # Reserve width and height for bold text before replacing its copy.
+    bold = any(
+        el.get("b") in ("1", "true")
+        for el in tx_body.iter()
+        if etree.QName(el).localname in ("rPr", "defRPr", "endParaRPr")
+    )
+    reserve = 0.85 if bold else 1.0
+    usable_w, usable_h = (int(dimension * reserve) for dimension in box)
     if usable_w <= 0 or usable_h <= 0:
         return False
     body_pr = tx_body.find(f"{{{A}}}bodyPr")
@@ -450,12 +561,14 @@ def _fit_body(
         wrap_none = body_pr.get("wrap") == "none"
     else:
         wrap_none = bool(hint.get("wrap_none"))
-    size_pt = _body_font_size_pt(tx_body) or hint.get("sz", DEFAULT_FONT_PT)
-    fitted = size_pt
-    while fitted > FONT_FLOOR_PT and not _fits_in_box(
-        tx_body, text, fitted, usable_w, usable_h, wrap_none
-    ):
-        fitted = max(FONT_FLOOR_PT, fitted - _SHRINK_STEP_PT)
+    explicit_sz = _body_font_size_pt(tx_body)
+    size_pt = explicit_sz or hint.get("sz", DEFAULT_FONT_PT)
+    candidates = _step_down_candidates(size_pt, font_scale)
+    fitted = candidates[-1]
+    for cand in candidates:
+        if _fits_in_box(tx_body, text, cand, usable_w, usable_h, wrap_none):
+            fitted = cand
+            break
     wrap_switched = False
     if wrap_none and not _fits_in_box(tx_body, text, fitted, usable_w, usable_h, wrap_none):
         # Found live (28.09): a donor's single-line label (wrap="none",
@@ -472,15 +585,28 @@ def _fit_body(
             body_pr.set("wrap", "square")
         wrap_switched = True
         wrap_none = False
-        fitted = size_pt
-        while fitted > FONT_FLOOR_PT and not _fits_in_box(
-            tx_body, text, fitted, usable_w, usable_h, wrap_none
-        ):
-            fitted = max(FONT_FLOOR_PT, fitted - _SHRINK_STEP_PT)
-    if fitted >= size_pt and not wrap_switched:
+        fitted = candidates[-1]
+        for cand in candidates:
+            if _fits_in_box(tx_body, text, cand, usable_w, usable_h, wrap_none):
+                fitted = cand
+                break
+    if font_scale and explicit_sz is not None and fitted < 36.0:
+        from deckdna.pptx.composing.font_scale import in_font_scale, snap_font_pt
+
+        if not in_font_scale(fitted, font_scale):
+            near = snap_font_pt(fitted, font_scale, mode="nearest", min_pt=FONT_FLOOR_PT)
+            if _fits_in_box(tx_body, text, near, usable_w, usable_h, wrap_none):
+                fitted = near
+            else:
+                fitted = snap_font_pt(fitted, font_scale, mode="down", min_pt=FONT_FLOOR_PT)
+    if (
+        fitted >= size_pt
+        and not wrap_switched
+        and (not font_scale or explicit_sz is None or fitted == size_pt)
+    ):
         return False
     _set_body_sz(tx_body, fitted)
-    return True
+    return fitted < size_pt or wrap_switched
 
 
 def _xfrm_box(shape: etree._Element) -> tuple[etree._Element, int, int, int, int] | None:
@@ -497,10 +623,17 @@ def _xfrm_box(shape: etree._Element) -> tuple[etree._Element, int, int, int, int
 
 
 _TITLE_GROW_MAX_PT = 40.0
+_THANKS_TITLE_RE = re.compile(r"спасибо|благодар|thank", re.I)
 
 
 def _grow_title_box(
-    root: etree._Element, tx_body: etree._Element, text: str, hint: dict | None = None
+    root: etree._Element,
+    tx_body: etree._Element,
+    text: str,
+    hint: dict | None = None,
+    *,
+    cover: bool = False,
+    slide_size: tuple[int, int] | None = None,
 ) -> bool:
     """Рамка заголовка растёт вниз до высоты, нужной тексту при его кегле.
 
@@ -513,6 +646,12 @@ def _grow_title_box(
         return False
     own = _xfrm_box(shape)
     box = _usable_box_emu(tx_body)
+    if cover and own is None and hint and "box" in hint:
+        from deckdna.pptx.composing.font_scale import materialize_shape_xfrm
+
+        if materialize_shape_xfrm(shape, hint["box"]):
+            own = _xfrm_box(shape)
+            box = _usable_box_emu(tx_body)
     if own is None or box is None:
         return False
     ext, x, y, w, h = own
@@ -520,14 +659,34 @@ def _grow_title_box(
     if body_pr is not None and body_pr.get("wrap") == "none":
         return False
     size = _body_font_size_pt(tx_body) or (hint or {}).get("sz", DEFAULT_FONT_PT)
-    if size > _TITLE_GROW_MAX_PT:
+    is_cover_title = cover and not _THANKS_TITLE_RE.search(text or "")
+    if size > _TITLE_GROW_MAX_PT and not is_cover_title:
         return False  # дисплейный заголовок («Спасибо!» 80 pt) — только ужимать
-    need, _ = _required_height_emu(tx_body, text, size, box[0])
-    extra = int(need) - box[1]
+    bold = any(
+        el.get("b") in ("1", "true")
+        for el in tx_body.iter()
+        if etree.QName(el).localname in ("rPr", "defRPr", "endParaRPr")
+    )
+    reserve = 0.85 if bold and is_cover_title else 1.0
+    eff_w = max(1, int(box[0] * reserve))
+    grow_sz = size
+    if is_cover_title and size > _TITLE_GROW_MAX_PT:
+        for cand_sz in (size, 54.0, 48.0, 44.0, 40.0, 36.0, 32.0, 28.0):
+            if cand_sz > size:
+                continue
+            n_lines, widest_w = _wrap_metrics(text, cand_sz, eff_w)
+            if widest_w <= eff_w * 1.03 and n_lines <= 3:
+                grow_sz = cand_sz
+                break
+        else:
+            grow_sz = min(size, 32.0)
+    need, _ = _required_height_emu(tx_body, text, grow_sz, eff_w)
+    extra = int(need / reserve) - box[1]
     if extra <= 0:
         return False
     gap = int(0.08 * 914400)
     floor = None
+    below_shapes: list[tuple[etree._Element, int, int, int]] = []
     for other in root.iter(f"{{{P}}}sp", f"{{{P}}}pic", f"{{{P}}}graphicFrame", f"{{{P}}}grpSp"):
         if other is shape or any(a is other for a in shape.iterancestors()):
             continue
@@ -540,23 +699,59 @@ def _grow_title_box(
             xfrm = other.find(f"{{{P}}}xfrm")
         if xfrm is None or xfrm.find(f"{{{A}}}off") is None or xfrm.find(f"{{{A}}}ext") is None:
             continue
-        ox = int(xfrm.find(f"{{{A}}}off").get("x", 0))
-        oy = int(xfrm.find(f"{{{A}}}off").get("y", 0))
+        off_el = xfrm.find(f"{{{A}}}off")
+        ox = int(off_el.get("x", 0))
+        oy = int(off_el.get("y", 0))
         ow = int(xfrm.find(f"{{{A}}}ext").get("cx", 0))
         oh = int(xfrm.find(f"{{{A}}}ext").get("cy", 0))
         if oy < y + h or min(x + w, ox + ow) <= max(x, ox) or not oh:
             continue  # не под рамкой (фон во весь слайд начинается выше)
         floor = oy if floor is None else min(floor, oy)
-    # без фигуры под рамкой — не больше исходной высоты (1 → 2 строки):
-    # размер слайда здесь неизвестен, а за край уходить нельзя
-    two_lines = int(2 * size * LINE_HEIGHT_FACTOR * EMU_PER_PT) - box[1]
-    cap = max(h, two_lines)  # до двух строк заголовка, не дальше
+        if is_cover_title and (
+            slide_size is None or ow * oh < 0.5 * slide_size[0] * slide_size[1]
+        ):
+            below_shapes.append((off_el, oy, ow, oh))
+    # без фигуры под рамкой — не больше исходной высоты (1 → 2 строки,
+    # на обложке — до 3 строк): размер слайда здесь неизвестен, а за край уходить нельзя
+    max_lines = 3.2 if is_cover_title else 2.0
+    line_cap = int(max_lines * grow_sz * LINE_HEIGHT_FACTOR * EMU_PER_PT / reserve) - box[1]
+    cap = max(h, line_cap)
     room = (floor - gap - (y + h)) if floor is not None else cap
+    want_grow = min(extra, cap)
+    if is_cover_title and below_shapes and room < want_grow and slide_size is not None:
+        max_b = max(oy + oh for _, oy, _, oh in below_shapes)
+        max_shift = max(0, int(slide_size[1] * 0.92) - max_b)
+        shift = min(want_grow - max(0, room), max_shift)
+        if shift >= int(0.05 * 914400):
+            for off_el, oy, _, _ in below_shapes:
+                off_el.set("y", str(oy + shift))
+            room = max(0, room) + shift
     grow = max(0, min(extra, room, cap))
     if grow < int(0.05 * 914400):
         return False
     ext.set("cy", str(h + grow))
     return True
+
+
+_MIN_LN_PCT = 90000
+
+
+def _sane_line_spacing(tx_body: etree._Element, size_pt: float | None) -> None:
+    """Межстрочный интервал под прозу. Шаблоны для гигантских цифр KPI
+    («7», «10» в 166 pt) ставят lnSpc 16%: одна цифра — нормально, абзац —
+    строки ложатся друг на друга (живой дефект 29.09), а расчёт высоты
+    «верит», что текст влезает, и не ужимает кегль."""
+    for lnspc in tx_body.iter(f"{{{A}}}lnSpc"):
+        pct = lnspc.find(f"{{{A}}}spcPct")
+        pts = lnspc.find(f"{{{A}}}spcPts")
+        if pct is not None and int(pct.get("val", "100000")) < _MIN_LN_PCT:
+            pct.set("val", "100000")
+        elif pts is not None and size_pt:
+            pts_val = int(pts.get("val", "0"))
+            if pts_val < size_pt * 100 or pts_val > size_pt * 135:
+                for child in list(lnspc):
+                    lnspc.remove(child)
+                etree.SubElement(lnspc, f"{{{A}}}spcPct", val="100000")
 
 
 def _strip_hard_breaks(tx_body: etree._Element) -> None:
@@ -615,9 +810,34 @@ def _is_title_run(el: etree._Element) -> bool:
     return False
 
 
-def count_content_slots(
-    slide_xml: bytes, slide_size: tuple[int, int] | None = None
-) -> int:
+def _remove_offslide_text_shapes(root: etree._Element, slide_size: tuple[int, int] | None) -> int:
+    """Remove cropped top-level text boxes that cannot render authored copy.
+
+    Donor slides sometimes keep decorative edge labels with negative x or a
+    right edge beyond the page. Leaving them in the clone still triggers
+    ``layout.out_of_bounds`` even when slot selection correctly refuses to
+    fill them. Title placeholders are retained because they have an explicit
+    structural role and are handled by the title path separately.
+    """
+    if slide_size is None:
+        return 0
+    tree = root.find(f".//{{{P}}}cSld/{{{P}}}spTree")
+    if tree is None:
+        return 0
+    removed = 0
+    for shape in list(tree.findall(f"{{{P}}}sp")):
+        body = shape.find(f"{{{P}}}txBody")
+        if body is None or not _is_offslide_body(body, slide_size):
+            continue
+        runs = [t for t in body.iter(f"{{{A}}}t") if (t.text or "").strip()]
+        if any(_is_title_run(run) for run in runs):
+            continue
+        tree.remove(shape)
+        removed += 1
+    return removed
+
+
+def count_content_slots(slide_xml: bytes, slide_size: tuple[int, int] | None = None) -> int:
     """How many content slots ``replace_text_runs`` would actually fill
     on this slide -- the real, authoritative capacity signal for
     exemplar selection, not an approximation of it.
@@ -656,11 +876,15 @@ def count_content_slots(
         tx_body = _tx_body_of(el)
         if (
             tx_body is None
+            or _is_system_body(tx_body)
             or _body_is_decorative(tx_body)
             or _is_offslide_body(tx_body, slide_size)
         ):
             continue
         if _is_title_run(el):
+            continue
+        whole = "".join(t.text or "" for t in tx_body.iter(f"{{{A}}}t")).strip()
+        if _TEMPLATE_CREDIT_RE.search(whole):
             continue
         slots[id(tx_body)] = tx_body
     return len(slots)
@@ -672,6 +896,10 @@ def replace_text_runs(
     title_text: str | None = None,
     shape_hints: dict[str, dict] | None = None,
     slide_size: tuple[int, int] | None = None,
+    font_scale: list[float] | tuple[float, ...] | None = None,
+    *,
+    cover: bool = False,
+    kicker_text: str | None = None,
 ) -> tuple[bytes, TextReplaceReport]:
     """Distribute *texts* over the slide's content slots.
 
@@ -702,15 +930,15 @@ def replace_text_runs(
     body_order: list[int] = []
     body_elems: dict[int, etree._Element] = {}
     intended = {t.strip().casefold() for t in texts}
+    demo_checked: set[int] = set()
+    demo_keep: list[etree._Element] = []  # держит прокси тел живыми для id()
     if title_text:
         intended.add(title_text.strip().casefold())
     for el in all_runs:
         tx_body = el.getparent()
         while tx_body is not None and etree.QName(tx_body).localname != "txBody":
             tx_body = tx_body.getparent()
-        in_table = any(
-            etree.QName(a).localname == "tbl" for a in el.iterancestors()
-        )
+        in_table = any(etree.QName(a).localname == "tbl" for a in el.iterancestors())
         if in_table:
             # Ячейки таблицы — не текстовый слот: позиционная заливка
             # прозы в a:tc невалидна семантически. Но стоковый текст
@@ -720,6 +948,12 @@ def replace_text_runs(
             if (el.text or "").strip():
                 el.text = ""
                 table_cells_cleared += 1
+            continue
+        if tx_body is not None and _is_system_body(tx_body):
+            skipped += 1
+            continue
+        if _is_title_run(el) and (el.text or "").strip():
+            title_runs.append(el)
             continue
         if (
             tx_body is None
@@ -734,12 +968,33 @@ def replace_text_runs(
             original = (el.text or "").strip()
             if original.casefold() in _STOCK_PLACEHOLDERS and original.casefold() not in intended:
                 el.text = ""
+            elif tx_body is not None and id(tx_body) not in demo_checked:
+                # демо-данные шаблона («42%», «98,300,000», «150 ₽») — не
+                # оформление: чужие цифры в колоде — выдуманный факт.
+                # Проверяется ВЕСЬ текст рамки: «42» и «%» часто лежат в
+                # разных ранах. Порядковые «01», «02» остаются — нумерация.
+                demo_checked.add(id(tx_body))
+                demo_keep.append(tx_body)
+                whole = "".join(t.text or "" for t in tx_body.iter(f"{{{A}}}t")).strip()
+                if (
+                    _DEMO_NUMBER_RE.search(whole)
+                    or _TEMPLATE_CREDIT_RE.search(whole)
+                    or _DONOR_CONTACT_RE.search(whole)
+                ) and whole.casefold() not in intended:
+                    for t in tx_body.iter(f"{{{A}}}t"):
+                        t.text = ""
             continue
         if not (el.text or "").strip():
             skipped_empty += 1
             continue
         if _is_title_run(el):
             title_runs.append(el)
+            continue
+        whole_body = "".join(t.text or "" for t in tx_body.iter(f"{{{A}}}t")).strip()
+        if _TEMPLATE_CREDIT_RE.search(whole_body) and whole_body.casefold() not in intended:
+            for t in tx_body.iter(f"{{{A}}}t"):
+                t.text = ""
+            skipped += 1
             continue
         key = id(tx_body)
         if key not in body_runs:
@@ -752,6 +1007,49 @@ def replace_text_runs(
 
     def hint_for(tx_body: etree._Element) -> dict:
         return shape_hints.get(_shape_id(tx_body), {})
+
+    # Manually composed covers often have no title placeholder at all.
+    # Use their visual hierarchy rather than XML order (which usually puts
+    # the tiny kicker first). Other slide purposes keep the existing mapping.
+    if cover and title_text and not title_runs and body_order:
+
+        def prominence(key: int) -> tuple[int, float, int]:
+            body = body_elems[key]
+            box = _xy(_owning_shape(body))
+            size = float(_body_font_size_pt(body) or hint_for(body).get("sz") or DEFAULT_FONT_PT)
+            in_upper = 1 if (box is None or not slide_size or box[1] < slide_size[1] * 0.70) else 0
+            return in_upper, size, (box[2] * box[3] if box else 0)
+
+        main_key = max(body_order, key=prominence)
+        title_runs = body_runs[main_key]
+        body_order.remove(main_key)
+
+    if cover and title_text and title_runs:
+        title_shape = _owning_shape(_tx_body_of(title_runs[0]))
+        title_box = _xy(title_shape) if title_shape is not None else None
+        if title_box:
+            above = [
+                key
+                for key in body_order
+                if (box := _xy(_owning_shape(body_elems[key]))) is not None
+                and box[1] + box[3] <= title_box[1]
+            ]
+            kicker_key = max(
+                above, key=lambda k: _xy(_owning_shape(body_elems[k]))[1], default=None
+            )
+            for key in above:
+                runs = body_runs[key]
+                runs[0].text = kicker_text if key == kicker_key and kicker_text else ""
+                for el in runs[1:]:
+                    el.text = ""
+                if key == kicker_key and kicker_text:
+                    _fit_body(
+                        body_elems[key],
+                        kicker_text,
+                        hint_for(body_elems[key]),
+                        font_scale=font_scale,
+                    )
+            body_order = [key for key in body_order if key not in above]
 
     replaced = 0
     title_placed = False
@@ -767,9 +1065,91 @@ def replace_text_runs(
         title_body = _tx_body_of(title_runs[0])
         if title_body is not None:
             _strip_hard_breaks(title_body)
-            _grow_title_box(root, title_body, title_text, hint_for(title_body))
-            if _fit_body(title_body, title_text, hint_for(title_body)):
+            _sane_line_spacing(
+                title_body,
+                _body_font_size_pt(title_body) or hint_for(title_body).get("sz"),
+            )
+            _grow_title_box(
+                root,
+                title_body,
+                title_text,
+                hint_for(title_body),
+                cover=cover,
+                slide_size=slide_size,
+            )
+            if _fit_body(title_body, title_text, hint_for(title_body), font_scale=font_scale):
                 bodies_shrunk += 1
+
+    # Слот, пересекающийся с зоной заголовка, — шапочная мебель (кикер,
+    # рубрика внутри полосы заголовка), а не место для тезисов: залитый
+    # туда пункт читается как второй заголовок. Когда плейсхолдера
+    # заголовка нет вовсе, вызывающий дорисует его штатной плашкой
+    # (add_missing_title) в верхней полосе — те же слоты исключаем.
+    # Стоковый текст таких слотов всё равно очищается ниже.
+    if title_text:
+        title_zone: tuple[int, int, int, int] | None = None
+        if title_placed:
+            tshape = _owning_shape(title_runs[0])
+            title_zone = _xy(tshape) if tshape is not None else None
+        elif slide_size:
+            sw, sh = slide_size
+            title_zone = (int(0.025 * sw), int(0.045 * sh), int(0.95 * sw), int(0.12 * sh))
+        if title_zone is not None:
+            tx, ty, tw, th = title_zone
+            excluded: set[int] = set()
+            for key in body_order:
+                box = _xy(_owning_shape(body_elems[key]))
+                if box is None:
+                    continue
+                bx, by, bw, bh = box
+                # центр слота внутри зоны заголовка: тело, чей текст
+                # начинается у нижней кромки полосы и уходит вниз, —
+                # легитимный контент, а кикер/рубрика живут внутри полосы
+                cx, cy = bx + bw / 2, by + bh / 2
+                if tx <= cx <= tx + tw and ty <= cy <= ty + th:
+                    excluded.add(key)
+            if excluded:
+                # текст очистить сразу: цикл ниже увидит только оставшиеся
+                # тела, а стоковый кикер в вывод не должен попасть
+                for key in excluded:
+                    for el in body_runs[key]:
+                        el.text = ""
+                    replaced += len(body_runs[key])
+                body_order = [k for k in body_order if k not in excluded]
+
+    if 0 < len(texts) < len(body_order):
+
+        def _is_sub_ph(tb: etree._Element) -> bool:
+            sp = _owning_shape(tb)
+            ph = sp.find(f".//{{{P}}}nvSpPr/{{{P}}}nvPr/{{{P}}}ph") if sp is not None else None
+            return ph is not None and ph.get("type") == "subTitle"
+
+        def _is_any_ph(tb: etree._Element) -> bool:
+            sp = _owning_shape(tb)
+            return sp is not None and sp.find(f".//{{{P}}}nvSpPr/{{{P}}}nvPr/{{{P}}}ph") is not None
+
+        def _slot_area(tb: etree._Element) -> int:
+            h = hint_for(tb)
+            box = _usable_box_emu(tb) or (
+                (int(h["w"]), int(h["h"])) if "w" in h and "h" in h else None
+            )
+            return int(box[0]) * int(box[1]) if box and min(box) > 0 else 0
+
+        areas = {k: _slot_area(body_elems[k]) for k in body_order}
+        max_area = max(areas.values(), default=0)
+        all_ph = all(_is_any_ph(body_elems[k]) for k in body_order)
+        has_non_sub = any(not _is_sub_ph(body_elems[k]) for k in body_order)
+        if has_non_sub or (max_area > 0 and (len(texts) == 1 or all_ph)):
+            orig_pos = {k: idx for idx, k in enumerate(body_order)}
+            use_area = max_area > 0 and (len(texts) == 1 or all_ph)
+            body_order.sort(
+                key=lambda k: (
+                    has_non_sub and _is_sub_ph(body_elems[k]),
+                    use_area and 0 < areas[k] < max_area * 0.35,
+                    -areas[k] if len(texts) == 1 and use_area and areas[k] > 0 else 0,
+                    orig_pos[k],
+                )
+            )
 
     bodies_eligible = len(body_order)
     bodies_filled = 0
@@ -784,7 +1164,11 @@ def replace_text_runs(
                 el.text = ""
             _strip_hard_breaks(body_elems[key])
             _strip_empty_paragraphs(body_elems[key])
-            if _fit_body(body_elems[key], text, hint_for(body_elems[key])):
+            _sane_line_spacing(
+                body_elems[key],
+                _body_font_size_pt(body_elems[key]) or hint_for(body_elems[key]).get("sz"),
+            )
+            if _fit_body(body_elems[key], text, hint_for(body_elems[key]), font_scale=font_scale):
                 bodies_shrunk += 1
             if _body_overflows(body_elems[key], text, hint_for(body_elems[key])):
                 bodies_overflowing += 1
@@ -799,6 +1183,26 @@ def replace_text_runs(
                 el.text = ""
         replaced += len(runs)
 
+    # Одноранговые пункты — одним кеглем: донорские рамки иногда несут
+    # разные размеры (13,5 pt и 20 pt), и последний буллет выглядит
+    # заголовком. Выравнивание к медиане только вниз (>30% выше
+    # медианы): сноски 9 pt не тянут список за собой, а первое тело
+    # (возможный подзаголовок/лид) не участвует.
+    filled = body_order[:bodies_filled]
+    if len(filled) >= 3:
+        peers = [(k, _body_font_size_pt(body_elems[k])) for k in filled[1:]]
+        sizes = sorted(s for _, s in peers if s)
+        if len(sizes) >= 2:
+            median = (
+                sizes[len(sizes) // 2]
+                if len(sizes) % 2
+                else (sizes[len(sizes) // 2 - 1] + sizes[len(sizes) // 2]) / 2
+            )
+            for k, s in peers:
+                if s is not None and s > median * 1.3:
+                    _set_body_sz(body_elems[k], median)
+
+    offslide_shapes_removed = _remove_offslide_text_shapes(root, slide_size)
     xml = etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
     return xml, TextReplaceReport(
         runs_total=len(all_runs),
@@ -817,4 +1221,5 @@ def replace_text_runs(
         runs_title=len(title_runs) if title_placed else 0,
         title_placed=title_placed,
         filled_shape_ids=tuple(filled_shape_ids),
+        offslide_shapes_removed=offslide_shapes_removed,
     )

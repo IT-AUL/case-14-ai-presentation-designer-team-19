@@ -3,10 +3,8 @@ variant's pptx (plan_repairs -> apply_repairs), bump deck_revision, and
 re-audit the repaired deck — issue statuses follow the real audit, they are
 not hand-marked "fixed"."""
 
-import hashlib
 from pathlib import Path
 
-from conftest import inject_text_overflow
 from deckdna.api import app as app_module
 from deckdna.api.app import STORE, app
 from deckdna.contracts.audit_issue import AuditIssue, Severity, Status
@@ -30,8 +28,11 @@ BRIEF = {
 }
 
 
-def _generate_variant(wait_generation) -> str:
-    """Create project -> template -> pack -> generation; return variant_id."""
+def _variant_with_audit(wait_generation, squeeze: bool = False) -> tuple[str, str]:
+    """Create project -> template -> pack -> generation -> audit.
+
+    Returns (variant_id, audit_id).
+    """
     project = client.post(
         "/api/v1/projects", json={"name": "repair test", "target_slide_count": 10}
     ).json()
@@ -56,41 +57,29 @@ def _generate_variant(wait_generation) -> str:
     )
     assert gen.status_code == 202, gen.text
     wait_generation(client, gen.json()["generation_id"])
-    return gen.json()["variant_ids"][0]
+    variant_id = gen.json()["variant_ids"][0]
+    if squeeze:
+        # ADR-031: конвейер сам чинит переполнения до ревизии 1 — рамки
+        # колоды сжимаются, чтобы у repair-цикла были настоящие проблемы
+        from conftest import squeeze_text_frames
 
+        deck_id = client.get(f"/api/v1/variants/{variant_id}").json()["deck_artifact_id"]
+        art = STORE.artifacts[deck_id]
+        data = squeeze_text_frames(art.data)
+        import hashlib
 
-def _variant_with_audit(wait_generation) -> tuple[str, str]:
-    """Create project -> template -> pack -> generation -> audit.
-
-    Returns (variant_id, audit_id).
-    """
-    variant_id = _generate_variant(wait_generation)
+        STORE.artifacts[deck_id] = art.model_copy(
+            update={"data": data, "sha256": hashlib.sha256(data).hexdigest(),
+                    "size_bytes": len(data)}
+        )
+        # аудит конвейера был по несжатой колоде — POST /audits иначе отдал
+        # бы его; без него API честно аудирует текущие байты варианта
+        for audit_id in [a.id for a in STORE.audits.values() if a.variant_id == variant_id]:
+            STORE.audits.pop(audit_id)
+            STORE.issues.pop(audit_id, None)
     audit = client.post(f"/api/v1/variants/{variant_id}/audits", json={})
     assert audit.status_code == 202, audit.text
     return variant_id, audit.json()["audit_id"]
-
-
-def _corrupt_variant_deck(variant_id: str) -> None:
-    """Вносит реальный text.overflow в байты колоды варианта в STORE.
-
-    Чистая генерация на фикстурном шаблоне не обязана давать repairable
-    issues (auto-fix закрывает их до ревизии 1) — audit тогда нечего
-    чинить. Мутируем сам артефакт (data + sha256 + size_bytes), чтобы
-    детерминированный аудит увидел настоящий дефект, а не синтетическую
-    запись issue."""
-    variant = client.get(f"/api/v1/variants/{variant_id}").json()
-    artifact = STORE.artifacts[variant["deck_artifact_id"]]
-    data = inject_text_overflow(artifact.data)
-    artifact.data = data
-    artifact.sha256 = hashlib.sha256(data).hexdigest()
-    artifact.size_bytes = len(data)
-    # POST /audits идемпотентно отдаёт аудит, созданный внутри генерации
-    # на чистой колоде — удаляем его, чтобы следующий POST честно
-    # проаудировал мутированные байты (как API делает при удалении
-    # варианта).
-    for stale in [a for a in STORE.audits.values() if a.variant_id == variant_id]:
-        STORE.audits.pop(stale.id, None)
-        STORE.issues.pop(stale.id, None)
 
 
 def _issue_items(audit_id: str) -> list[dict]:
@@ -100,11 +89,7 @@ def _issue_items(audit_id: str) -> list[dict]:
 
 
 def test_repair_applies_real_fixes_and_reaudits(wait_generation):
-    variant_id = _generate_variant(wait_generation)
-    _corrupt_variant_deck(variant_id)
-    audit = client.post(f"/api/v1/variants/{variant_id}/audits", json={})
-    assert audit.status_code == 202, audit.text
-    audit_id = audit.json()["audit_id"]
+    variant_id, audit_id = _variant_with_audit(wait_generation, squeeze=True)
 
     issues = _issue_items(audit_id)
     repairable = [
@@ -289,7 +274,7 @@ def test_repair_invalidates_contextual_status_for_new_revision(
 
 
 def test_repair_loads_protected_slide_config(wait_generation, monkeypatch):
-    """pipeline.generate() threads protected_slide_
+    """hardening check #14: pipeline.generate() threads protected_slide_
     indices into auto-fix/compose, but API repair used to call
     apply_repairs() with no `protected` argument at all -- config was
     never loaded on this path, so a protected slide's issues were fair

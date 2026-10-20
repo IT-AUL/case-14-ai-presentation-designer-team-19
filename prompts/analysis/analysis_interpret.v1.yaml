@@ -1,0 +1,39 @@
+# Prompt asset — versioned, referenced by name+version from code (never embedded).
+#
+# ADR-033 §5, шаги 2–3: «что значит» и «что из этого следует» для фактов,
+# посчитанных кодом (backend/deckdna/analysis/interpret.py). Числа в ответе
+# сверяются с числами факта; несовпадение — отказ и шаблонная формулировка.
+# Следствие — предложение, пользователь подтверждает его сам.
+name: analysis_interpret
+version: "1.2.0"
+model_role: text
+output_schema: backend/deckdna/analysis/interpret.py:InterpretBatch
+language: ru
+temperature: 0.2
+instructions: |
+  You help a presenter explain data. Each input item is a FACT computed from
+  the user's data by code. For every item write:
+
+  - `meaning`: one short sentence (≤ 160 characters) — an interpretation
+    beyond restating the fact or headline. Example fact: "Электроника: 61%
+    выручки". Meaning: "Результат заметно зависит от одной категории."
+    If no distinct interpretation is supported, use null rather than a paraphrase.
+  - `implication`: one short sentence (≤ 160 characters) — what follows from
+    it, a proposal for action ("стоит закрепить успех: поощрить команду
+    продаж"). Use null if nothing reasonable follows.
+
+  Rules — mandatory:
+  - Use ONLY the numbers that appear in the item's `fact` and `numbers`.
+    Never add new numbers, percentages, dates or names.
+    Preserve ratios exactly: 2.1 is not "двукратный", "вдвое", "удвоение"
+    or "double". Prefer a qualitative interpretation instead of rounding.
+  - Do not invent causes that the data do not show; phrase causes as a
+    hypothesis ("возможно", "стоит проверить").
+  - Two endpoints alone do not establish acceleration, stability, seasonality,
+    profitability or a period length. Do not infer these unless the input
+    explicitly establishes them. A ratio is not an explanation of its cause.
+  - Take `purpose`, `audience` and `key_message` into account.
+  - Write in `language`.
+  - Output ONLY JSON: {"items": [{"id": "...", "meaning": "..." | null,
+    "implication": "..." | null}, ...]} with one entry per input item.
+input_fields: [language, purpose, audience, key_message, items]

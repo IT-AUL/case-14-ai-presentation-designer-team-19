@@ -1,0 +1,23 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:51:06.229Z",
+  "method": "POST",
+  "path": "/projects/prj_66f7c26832a2443fabb4bd1820a37f66/answers",
+  "status": 200,
+  "request": {
+    "answers": {
+      "audience": ""
+    }
+  },
+  "body": {
+    "brief": {
+      "purpose": "Итоги продаж за год для совета директоров",
+      "language": "ru",
+      "audience": "",
+      "target_slide_count": 3,
+      "content_fill": "expand"
+    },
+    "follow_up": {},
+    "assistant_note": "Учёл. Можно составлять план."
+  }
+}

@@ -24,3 +24,118 @@
   font-weight: 500;
   text-decoration: none;
 }
+
+.downloads {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.downloadsPendingNote {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.passportDrawerBody {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cardSub {
+  margin: 0;
+  color: var(--ink-3);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.sums {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+}
+
+.sumsTitle {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sumList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+}
+
+.sumRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12px;
+}
+
+.sumRow dt {
+  color: var(--ink-2);
+  font-weight: 500;
+}
+
+.sumRow dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
+.chatPanel {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--surface);
+}
+
+.slideDetails {
+  flex: none;
+  max-height: 40%;
+  overflow-y: auto;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  scrollbar-width: thin;
+}
+
+.chatSlot {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.slideDetails > summary {
+  padding: 14px 18px;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.slideDetails > summary:hover {
+  color: var(--ink);
+}
+
+.slideDetails > summary:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -4px;
+}

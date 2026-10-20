@@ -1,8 +1,9 @@
-import { api, unwrap } from '@/shared/api'
-import type { GenerationAccepted, GenerationCreate, GenerationDetail, Job } from '../model/types'
+import { api, requestOptionalJson, unwrap, type Schemas } from '@/shared/api'
+import type { GenerationAccepted, GenerationCreate, GenerationDetail, Job, SlideDraftsResponse } from '../model/types'
 
 export function submitGeneration(projectId: string, body: GenerationCreate): Promise<GenerationAccepted> {
-  return unwrap(api.POST('/api/v1/projects/{project_id}/generations', { params: { path: { project_id: projectId } }, body }))
+  const payload = { progressive_previews: true, ...body } as Schemas['GenerationCreate']
+  return unwrap(api.POST('/api/v1/projects/{project_id}/generations', { params: { path: { project_id: projectId } }, body: payload }))
 }
 
 export function submitRetry(generationId: string): Promise<GenerationAccepted> {
@@ -19,4 +20,8 @@ export function fetchJob(jobId: string): Promise<Job> {
 
 export function requestCancel(generationId: string): Promise<Job> {
   return unwrap(api.POST('/api/v1/generations/{run_id}/cancel', { params: { path: { run_id: generationId } } }))
+}
+
+export function fetchSlideDrafts(variantId: string, signal?: AbortSignal): Promise<SlideDraftsResponse | null> {
+  return requestOptionalJson<SlideDraftsResponse>(`/variants/${encodeURIComponent(variantId)}/slide-drafts`, { signal })
 }

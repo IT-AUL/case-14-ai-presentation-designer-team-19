@@ -26,7 +26,11 @@ function stateOf(variant: VariantSummary): VariantCardState {
   }
 }
 
-export function variantCards(phase: GenerationPhase, variants: readonly VariantSummary[] | undefined): VariantCard[] {
+export function variantCards(
+  phase: GenerationPhase,
+  variants: readonly VariantSummary[] | undefined,
+  requestedStrategies?: readonly string[],
+): VariantCard[] {
   if (variants && variants.length > 0) {
     return orderVariants(variants).map((variant) => ({
       key: variant.id,
@@ -36,7 +40,8 @@ export function variantCards(phase: GenerationPhase, variants: readonly VariantS
     }))
   }
   if (phase !== 'submitting' && phase !== 'running') return []
-  return STRATEGY_ORDER.map((strategy) => ({ key: strategy, strategy: strategyInfo(strategy), state: 'pending', variant: null }))
+  const strategies = requestedStrategies && requestedStrategies.length > 0 ? requestedStrategies : STRATEGY_ORDER
+  return strategies.map((strategy) => ({ key: strategy, strategy: strategyInfo(strategy), state: 'pending', variant: null }))
 }
 
 function parseTime(value: string | null | undefined): number | null {

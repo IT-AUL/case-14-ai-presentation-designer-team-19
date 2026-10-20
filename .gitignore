@@ -25,6 +25,7 @@ test-results-live/
 # Runtime output
 artifacts/
 out/
+tests/fixtures/output/
 *.local.yaml
 
 # Secrets — .env.example stays tracked

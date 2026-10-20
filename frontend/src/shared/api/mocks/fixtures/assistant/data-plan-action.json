@@ -1,0 +1,806 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:52:05.860Z",
+  "method": "POST",
+  "path": "/plans/plan_d578eef1413d4373b79bffa790333a90/slides/slide-1/actions",
+  "status": 200,
+  "request": {
+    "action": "shorten"
+  },
+  "body": {
+    "plan_id": "plan_d578eef1413d4373b79bffa790333a90",
+    "project_id": "prj_dcfe27bda1874f76b03a28e7ee495aa1",
+    "content_pack_id": "pack_52549aa7639543a8b68b55c5f60d42a8",
+    "plans": [
+      {
+        "strategy": "balanced",
+        "deck_plan": {
+          "schema_version": "1.0",
+          "id": "plan-pack_52549aa7639543a8b68b55c5f60d42a8-balanced",
+          "brief": {
+            "purpose": "Итоги продаж за год для совета директоров",
+            "audience": "",
+            "language": "ru",
+            "target_slide_count": 8,
+            "tone": null,
+            "mandatory_sections": null,
+            "forbidden_claims": null,
+            "content_fill": "shrink",
+            "key_message": null,
+            "call_to_action": null,
+            "explain_slide": null
+          },
+          "evidence_graph_id": "pack:pack_52549aa7639543a8b68b55c5f60d42a8",
+          "objective": "Итоги продаж за год для совета директоров",
+          "audience": "",
+          "language": "ru",
+          "sections": [
+            {
+              "id": "data",
+              "title": "Данные",
+              "slide_ids": [
+                "slide-2",
+                "slide-3",
+                "slide-4",
+                "slide-5"
+              ]
+            }
+          ],
+          "slides": [
+            {
+              "id": "slide-0",
+              "index": 0,
+              "purpose": "title",
+              "title_intent": "Итоги продаж за год для совета директоров",
+              "key_message": "Итоги продаж за год для совета директоров",
+              "evidence_ids": [
+                "pack_52549aa7639543a8b68b55c5f60d42a8:meta"
+              ],
+              "content_units": [
+                {
+                  "role": "title",
+                  "kind": "title",
+                  "text": "Итоги продаж за год для совета директоров",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:meta"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                }
+              ],
+              "desired_visual": null,
+              "density_budget": {
+                "level": "sparse",
+                "max_items": 1,
+                "max_chars": null
+              },
+              "speaker_note": null,
+              "mandatory": null,
+              "chart": null,
+              "insight_ids": null,
+              "supports_key_message": null
+            },
+            {
+              "id": "slide-1",
+              "index": 1,
+              "purpose": "overview",
+              "title_intent": "Ключевые выводы",
+              "key_message": "Выручка: рост в 2,1 раза за 24 месяца",
+              "evidence_ids": [
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-trend-i0",
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by1-i0",
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by2-i0",
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by0-i0"
+              ],
+              "content_units": [
+                {
+                  "role": "title",
+                  "kind": "title",
+                  "text": "Ключевые выводы",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-trend-i0"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                },
+                {
+                  "role": "bullet",
+                  "kind": "bullet",
+                  "text": "Выручка: рост в 2,1 раза за 24 месяца",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-trend-i0"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                },
+                {
+                  "role": "bullet",
+                  "kind": "bullet",
+                  "text": "Электроника: 61% выручки",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by1-i0"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                }
+              ],
+              "desired_visual": "none",
+              "density_budget": {
+                "level": "medium",
+                "max_items": 4,
+                "max_chars": null
+              },
+              "speaker_note": "Выводы посчитаны по данным; формулировки с числами сверены с файлами.",
+              "mandatory": null,
+              "chart": null,
+              "insight_ids": [
+                "ds-95b1eb6e-trend-i0",
+                "ds-95b1eb6e-by1-i0",
+                "ds-95b1eb6e-by2-i0",
+                "ds-95b1eb6e-by0-i0"
+              ],
+              "supports_key_message": null
+            },
+            {
+              "id": "slide-2",
+              "index": 2,
+              "purpose": "data",
+              "title_intent": "Выручка: рост в 2,1 раза за 24 месяца",
+              "key_message": "Выручка: с 1,2 млн ₽ (окт 2024) до 2,5 млн ₽ (сен 2026), рост в 2,1 раза",
+              "evidence_ids": [
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e",
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-trend-i0",
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-trend-i2"
+              ],
+              "content_units": [
+                {
+                  "role": "title",
+                  "kind": "title",
+                  "text": "Выручка: рост в 2,1 раза за 24 месяца",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                },
+                {
+                  "role": "chart",
+                  "kind": "chart",
+                  "text": null,
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": "chart-ds-95b1eb6e-trend",
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": {
+                    "chart_type": "line",
+                    "series_count": 1,
+                    "has_axis_labels": true,
+                    "has_units": true,
+                    "has_legend": false
+                  }
+                },
+                {
+                  "role": "bullet",
+                  "kind": "bullet",
+                  "text": "Рост ускорился во второй половине периода: +42% против +32%",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-trend-i2"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                }
+              ],
+              "desired_visual": "chart",
+              "density_budget": {
+                "level": "sparse",
+                "max_items": 2,
+                "max_chars": null
+              },
+              "speaker_note": "Данные: Purchases (8755 строк; 6 колонок; период 01.10.2024 – 30.09.2026; метрики: Сумма; разрезы: Регион, Категория, Канал; есть пропуски: Регион, Канал). Задача: динамика. Почему линия: 24 точки по месяцам, одна метрика, в задаче сказано про динамика. Свёртка: сумма по месяцам. Альтернативы: столбцы (24 периода, каждый столбцом); таблица (точные значения важнее формы). Не подошли: горизонтальные столбцы: ранжирование нужно для категорий, а не для времени; накопительные столбцы: нужно хотя бы два ряда для накопления.",
+              "mandatory": null,
+              "chart": {
+                "type": "line",
+                "reasons": [
+                  "24 точки по месяцам",
+                  "одна метрика",
+                  "в задаче сказано про динамика"
+                ],
+                "alternatives": [
+                  {
+                    "type": "bar",
+                    "reasons": [
+                      "24 периода, каждый столбцом"
+                    ]
+                  },
+                  {
+                    "type": "table",
+                    "reasons": [
+                      "точные значения важнее формы"
+                    ]
+                  }
+                ],
+                "view_id": "ds-95b1eb6e-trend",
+                "why": "Линия: 24 точки по месяцам, одна метрика; задача: динамика."
+              },
+              "insight_ids": [
+                "ds-95b1eb6e-trend-i0",
+                "ds-95b1eb6e-trend-i2"
+              ],
+              "supports_key_message": null
+            },
+            {
+              "id": "slide-3",
+              "index": 3,
+              "purpose": "data",
+              "title_intent": "Электроника: 61% выручки",
+              "key_message": "Электроника: 61% выручки (26,7 млн ₽)",
+              "evidence_ids": [
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e",
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by1-i0",
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by1-i1",
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by1-i2"
+              ],
+              "content_units": [
+                {
+                  "role": "title",
+                  "kind": "title",
+                  "text": "Электроника: 61% выручки",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                },
+                {
+                  "role": "chart",
+                  "kind": "chart",
+                  "text": null,
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": "chart-ds-95b1eb6e-by1",
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": {
+                    "chart_type": "bar_horizontal",
+                    "series_count": 1,
+                    "has_axis_labels": true,
+                    "has_units": true,
+                    "has_legend": false
+                  }
+                },
+                {
+                  "role": "bullet",
+                  "kind": "bullet",
+                  "text": "Электроника: в 3,9 раза больше, чем Одежда",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by1-i1"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                },
+                {
+                  "role": "bullet",
+                  "kind": "bullet",
+                  "text": "Три крупнейших значения «Категория» дают 89% выручки",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by1-i2"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                }
+              ],
+              "desired_visual": "chart",
+              "density_budget": {
+                "level": "medium",
+                "max_items": 3,
+                "max_chars": null
+              },
+              "speaker_note": "Данные: Purchases (8755 строк; 6 колонок; период 01.10.2024 – 30.09.2026; метрики: Сумма; разрезы: Регион, Категория, Канал; есть пропуски: Регион, Канал). Задача: сравнение. Почему горизонтальные столбцы: категории упорядочены по убыванию, в задаче сказано про динамика, но данные этого не позволяют. Свёртка: сумма по категориям. Альтернативы: столбцы (5 категорий одной метрики); круговая (5 долей одного целого). Не подошли: линия: нет оси времени; накопительные столбцы: нужно хотя бы два ряда для накопления.",
+              "mandatory": null,
+              "chart": {
+                "type": "bar_horizontal",
+                "reasons": [
+                  "категории упорядочены по убыванию",
+                  "в задаче сказано про динамика, но данные этого не позволяют"
+                ],
+                "alternatives": [
+                  {
+                    "type": "bar",
+                    "reasons": [
+                      "5 категорий одной метрики"
+                    ]
+                  },
+                  {
+                    "type": "pie",
+                    "reasons": [
+                      "5 долей одного целого"
+                    ]
+                  }
+                ],
+                "view_id": "ds-95b1eb6e-by1",
+                "why": "Горизонтальные столбцы: категории упорядочены по убыванию, в задаче сказано про динамика, но данные этого не позволяют; задача: сравнение."
+              },
+              "insight_ids": [
+                "ds-95b1eb6e-by1-i0",
+                "ds-95b1eb6e-by1-i1",
+                "ds-95b1eb6e-by1-i2"
+              ],
+              "supports_key_message": null
+            },
+            {
+              "id": "slide-4",
+              "index": 4,
+              "purpose": "data",
+              "title_intent": "Сайт: 45% выручки",
+              "key_message": "Сайт: 45% выручки (19,2 млн ₽)",
+              "evidence_ids": [
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e",
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by2-i0",
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by2-i1"
+              ],
+              "content_units": [
+                {
+                  "role": "title",
+                  "kind": "title",
+                  "text": "Сайт: 45% выручки",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                },
+                {
+                  "role": "chart",
+                  "kind": "chart",
+                  "text": null,
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": "chart-ds-95b1eb6e-by2",
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": {
+                    "chart_type": "bar",
+                    "series_count": 1,
+                    "has_axis_labels": true,
+                    "has_units": true,
+                    "has_legend": false
+                  }
+                },
+                {
+                  "role": "bullet",
+                  "kind": "bullet",
+                  "text": "Сайт: в 1,3 раза больше, чем Приложение",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by2-i1"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                }
+              ],
+              "desired_visual": "chart",
+              "density_budget": {
+                "level": "sparse",
+                "max_items": 2,
+                "max_chars": null
+              },
+              "speaker_note": "Данные: Purchases (8755 строк; 6 колонок; период 01.10.2024 – 30.09.2026; метрики: Сумма; разрезы: Регион, Категория, Канал; есть пропуски: Регион, Канал). Задача: сравнение. Почему столбцы: 3 категории одной метрики. Свёртка: сумма по категориям. Альтернативы: горизонтальные столбцы (категории упорядочены по убыванию); круговая (3 доли одного целого). Не подошли: линия: нет оси времени; накопительные столбцы: нужно хотя бы два ряда для накопления.",
+              "mandatory": null,
+              "chart": {
+                "type": "bar",
+                "reasons": [
+                  "3 категории одной метрики"
+                ],
+                "alternatives": [
+                  {
+                    "type": "bar_horizontal",
+                    "reasons": [
+                      "категории упорядочены по убыванию",
+                      "в задаче сказано про динамика, но данные этого не позволяют"
+                    ]
+                  },
+                  {
+                    "type": "pie",
+                    "reasons": [
+                      "3 доли одного целого"
+                    ]
+                  }
+                ],
+                "view_id": "ds-95b1eb6e-by2",
+                "why": "Столбцы: 3 категории одной метрики; задача: сравнение."
+              },
+              "insight_ids": [
+                "ds-95b1eb6e-by2-i0",
+                "ds-95b1eb6e-by2-i1"
+              ],
+              "supports_key_message": null
+            },
+            {
+              "id": "slide-5",
+              "index": 5,
+              "purpose": "data",
+              "title_intent": "Москва: 41% выручки",
+              "key_message": "Москва: 41% выручки (16,9 млн ₽)",
+              "evidence_ids": [
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e",
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by0-i0",
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by0-i1",
+                "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by0-i2"
+              ],
+              "content_units": [
+                {
+                  "role": "title",
+                  "kind": "title",
+                  "text": "Москва: 41% выручки",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                },
+                {
+                  "role": "chart",
+                  "kind": "chart",
+                  "text": null,
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": "chart-ds-95b1eb6e-by0",
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": {
+                    "chart_type": "bar_horizontal",
+                    "series_count": 1,
+                    "has_axis_labels": true,
+                    "has_units": true,
+                    "has_legend": false
+                  }
+                },
+                {
+                  "role": "bullet",
+                  "kind": "bullet",
+                  "text": "Москва: в 1,9 раза больше, чем Санкт-Петербург",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by0-i1"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                },
+                {
+                  "role": "bullet",
+                  "kind": "bullet",
+                  "text": "Три крупнейших значения «Регион» дают 76% выручки",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:ds-95b1eb6e-by0-i2"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                }
+              ],
+              "desired_visual": "chart",
+              "density_budget": {
+                "level": "medium",
+                "max_items": 3,
+                "max_chars": null
+              },
+              "speaker_note": "Данные: Purchases (8755 строк; 6 колонок; период 01.10.2024 – 30.09.2026; метрики: Сумма; разрезы: Регион, Категория, Канал; есть пропуски: Регион, Канал). Задача: сравнение. Почему горизонтальные столбцы: категории упорядочены по убыванию, длинные подписи читаются по горизонтали, в задаче сказано про динамика, но данные этого не позволяют. Свёртка: сумма по категориям. Альтернативы: столбцы (5 категорий одной метрики); круговая (5 долей одного целого). Не подошли: линия: нет оси времени; накопительные столбцы: нужно хотя бы два ряда для накопления.",
+              "mandatory": null,
+              "chart": {
+                "type": "bar_horizontal",
+                "reasons": [
+                  "категории упорядочены по убыванию",
+                  "длинные подписи читаются по горизонтали",
+                  "в задаче сказано про динамика, но данные этого не позволяют"
+                ],
+                "alternatives": [
+                  {
+                    "type": "bar",
+                    "reasons": [
+                      "5 категорий одной метрики"
+                    ]
+                  },
+                  {
+                    "type": "pie",
+                    "reasons": [
+                      "5 долей одного целого"
+                    ]
+                  }
+                ],
+                "view_id": "ds-95b1eb6e-by0",
+                "why": "Горизонтальные столбцы: категории упорядочены по убыванию, длинные подписи читаются по горизонтали; задача: сравнение."
+              },
+              "insight_ids": [
+                "ds-95b1eb6e-by0-i0",
+                "ds-95b1eb6e-by0-i1",
+                "ds-95b1eb6e-by0-i2"
+              ],
+              "supports_key_message": null
+            },
+            {
+              "id": "slide-6",
+              "index": 6,
+              "purpose": "custom",
+              "title_intent": "Тезисы автора",
+              "key_message": "Обсудить итоги продаж и следующие шаги.",
+              "evidence_ids": [
+                "pack_52549aa7639543a8b68b55c5f60d42a8:sec-notes-1:b0"
+              ],
+              "content_units": [
+                {
+                  "role": "title",
+                  "kind": "title",
+                  "text": "Тезисы автора",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:sec-notes-1:b0"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                },
+                {
+                  "role": "bullet",
+                  "kind": "bullet",
+                  "text": "Обсудить итоги продаж и следующие шаги.",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:sec-notes-1:b0"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                }
+              ],
+              "desired_visual": null,
+              "density_budget": {
+                "level": "sparse",
+                "max_items": 1,
+                "max_chars": null
+              },
+              "speaker_note": null,
+              "mandatory": null,
+              "chart": null,
+              "insight_ids": null,
+              "supports_key_message": null
+            },
+            {
+              "id": "slide-7",
+              "index": 7,
+              "purpose": "thank_you",
+              "title_intent": "Спасибо за внимание",
+              "key_message": "Итоги продаж за год для совета директоров",
+              "evidence_ids": [
+                "pack_52549aa7639543a8b68b55c5f60d42a8:meta"
+              ],
+              "content_units": [
+                {
+                  "role": "title",
+                  "kind": "title",
+                  "text": "Спасибо за внимание",
+                  "evidence_ids": [
+                    "pack_52549aa7639543a8b68b55c5f60d42a8:meta"
+                  ],
+                  "target_chars": null,
+                  "asset_ref": null,
+                  "table_ref": null,
+                  "chart_ref": null,
+                  "diagram_ref": null,
+                  "locked": null,
+                  "origin": null,
+                  "source_id": null,
+                  "chart_spec": null
+                }
+              ],
+              "desired_visual": null,
+              "density_budget": {
+                "level": "sparse",
+                "max_items": 1,
+                "max_chars": null
+              },
+              "speaker_note": null,
+              "mandatory": null,
+              "chart": null,
+              "insight_ids": null,
+              "supports_key_message": null
+            }
+          ],
+          "provenance": {
+            "planner": "data_story/v1",
+            "prompt_version": "v0.1",
+            "schema_version": "1.0",
+            "model_id": "deterministic",
+            "input_hashes": [
+              "3a6ccd02c4fff711748d1f7e195497609f4b72bc845906fcbaec18aa2ee40980"
+            ]
+          }
+        }
+      }
+    ],
+    "created_at": "2026-10-17T13:52:03.853777Z",
+    "updated_at": "2026-10-17T13:52:05.574068Z",
+    "content_fill": {
+      "mode": "shrink",
+      "resolved": "data",
+      "needs_decision": false,
+      "requested_slides": 8,
+      "target_slides": 8,
+      "before": {
+        "requested": 8,
+        "capacity": 8,
+        "status": "ok",
+        "missing_slides": 0,
+        "covered_topics": [
+          "Тезисы автора"
+        ]
+      },
+      "after": {
+        "requested": 8,
+        "capacity": 8,
+        "status": "ok",
+        "missing_slides": 0,
+        "covered_topics": [
+          "Тезисы автора"
+        ]
+      },
+      "facts_by_origin": {
+        "user": 1,
+        "web": 0,
+        "model": 0
+      },
+      "web": null,
+      "model_sections": 0,
+      "diagrams_detected": 0,
+      "interpretation": {
+        "interpreted": 0,
+        "rejected": 0,
+        "implications": 0,
+        "intent": null,
+        "rejections": []
+      },
+      "elapsed_s": 0.74
+    },
+    "sufficiency": {
+      "status": "ok",
+      "content_slides": 8,
+      "target_slides": 8
+    },
+    "research": {
+      "queries": [],
+      "sources": [],
+      "duration_s": 0.74
+    },
+    "key_message": null,
+    "template_id": "tpl_7c4f33420b0e4c1cb783c86d1cfb12c1"
+  }
+}

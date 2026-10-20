@@ -1,0 +1,29 @@
+# Prompt asset — versioned, referenced by name+version from code (never embedded).
+#
+# ADR-033 §3: намерение пользователя, когда в брифе и тексте вокруг таблицы
+# нет маркеров («рост», «доля», «сравнить»…). Ответ — одна задача из
+# перечня; вес она добавляет, но невозможное не делает возможным
+# (backend/deckdna/analysis/interpret.py:classify_intent).
+name: analysis_intent
+version: "1.0.0"
+model_role: text
+output_schema: backend/deckdna/analysis/interpret.py:IntentAnswer
+language: ru
+temperature: 0
+instructions: |
+  Classify what the presenter wants to show with their data.
+
+  Input: `text` — the presentation goal and the text around the table;
+  `columns` — the table's column names.
+
+  Answer with exactly one task:
+  - "trend" — change over time;
+  - "comparison" — compare or rank items;
+  - "composition" — shares of a whole;
+  - "distribution" — spread of values, typical value;
+  - "relationship" — how one measure depends on another;
+  - "none" — the text does not say.
+
+  Output ONLY JSON: {"task": "trend" | "comparison" | "composition" |
+  "distribution" | "relationship" | "none"}.
+input_fields: [text, columns]

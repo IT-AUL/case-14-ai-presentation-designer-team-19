@@ -4,17 +4,45 @@ variants:
     strategy: faithful
     difference_axis: layout_choice
     description: "Максимальная верность exemplar-паттернам шаблона, консервативная плотность."
+    # ADR-034 §5: тексты карточек стиля на шаге «Выбери стиль» (фронт их не хардкодит)
+    title_ru: "Строгий"
+    difference_ru: "Ближе всего к вашему шаблону: его привычные раскладки, спокойная плотность текста."
     weights: { exemplar_fidelity: 0.9, novelty: 0.1, text_density: 0.5, chart_preference: 0.4 }
+    density_level: dense
+    max_bullets_per_slide: 5
+    max_words_per_bullet: 12
+    visual_archetype_target_share: 0.50
+    max_bullets_archetype_share: 0.3334
+    closing_bullets: 3
+    data_takeaway_bullets: 3
   - id: balanced
     strategy: balanced
     difference_axis: layout_choice
     description: "Альтернативные совместимые layout'ы, сбалансированный текст и визуал."
+    title_ru: "Сбалансированный"
+    difference_ru: "Другие подходящие раскладки шаблона, текст и визуал поровну."
     weights: { exemplar_fidelity: 0.6, novelty: 0.5, text_density: 0.5, chart_preference: 0.5 }
+    density_level: medium
+    max_bullets_per_slide: 4
+    max_words_per_bullet: 12
+    visual_archetype_target_share: 0.75
+    max_bullets_archetype_share: 0.25
+    closing_bullets: 2
+    data_takeaway_bullets: 3
   - id: visual
     strategy: visual
     difference_axis: visualization_emphasis
     description: "Акцент на диаграммы/графики и более смелая группировка контента."
+    title_ru: "Визуальный"
+    difference_ru: "Больше графиков и схем, меньше текста, смелее группировка."
     weights: { exemplar_fidelity: 0.4, novelty: 0.7, text_density: 0.35, chart_preference: 0.9 }
+    density_level: sparse
+    max_bullets_per_slide: 3
+    max_words_per_bullet: 10
+    visual_archetype_target_share: 0.90
+    max_bullets_archetype_share: 0.10
+    closing_bullets: 1
+    data_takeaway_bullets: 2
 invariants:
   shared_evidence: true
   same_facts: true

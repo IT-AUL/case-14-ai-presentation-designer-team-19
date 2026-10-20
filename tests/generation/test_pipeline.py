@@ -15,6 +15,7 @@ import pytest
 from deckdna.errors import DeckDNAError
 from deckdna.generation.pipeline import generate
 from jsonschema import validate
+from pptx import Presentation
 
 FIXTURE = Path("tests/fixtures/pptx/vk_tech_template.pptx")
 CONTENT = Path("tests/fixtures/content/poc_article.md")
@@ -53,8 +54,11 @@ def test_all_artifacts_exist(report):
 
 def test_deck_matches_plan_size(report):
     result, _ = report
-    assert result["slides_out"] == BRIEF["target_slide_count"]
-    assert result["compose_report"]["slides_out"] == BRIEF["target_slide_count"]
+    # Короткий материал не дробится ради target; сборка следует финальному плану.
+    planned = len(result["deck_plan"]["slides"])
+    assert 3 <= planned <= BRIEF["target_slide_count"]
+    assert result["slides_out"] == result["compose_report"]["slides_out"] == planned
+    assert len(Presentation(result["artifacts"]["pptx"]).slides) == planned
 
 
 def test_quality_passport_validates_against_schema(report):
@@ -94,3 +98,97 @@ def test_bad_slide_count_typed(tmp_path):
         generate(FIXTURE, CONTENT, brief, tmp_path / "out")
     assert excinfo.value.code == "invalid_input"
     assert excinfo.value.stage == "planning"
+
+
+def test_style_previews_cover_subtitle_not_duplicated_in_two_columns(tmp_path, monkeypatch):
+    """F-69: render_style_previews не дублирует подзаголовок обложки во второй
+    текстовый слот/колонку на шаблонах с несколькими слотами обложки."""
+    import deckdna.pptx.exporting.previews as exp_previews
+    import deckdna.pptx.exporting.render as exp_render
+    from deckdna.contracts.deck_plan import (
+        Brief,
+        ContentUnit,
+        DensityBudget,
+        Kind,
+        Purpose,
+        SlidePlan,
+    )
+    from deckdna.generation.preview import render_style_previews
+    from deckdna.ingestion.content_parsers import parse_markdown
+    from deckdna.planning.story_director import plan_deck
+    from lxml import etree
+    from pptx.util import Inches
+
+    monkeypatch.setattr(exp_render, "render_pdf", lambda pptx, pdf: pdf)
+    monkeypatch.setattr(exp_previews, "pdf_page_pngs", lambda pdf: [b"png"])
+
+    prs = Presentation()
+    s = prs.slides.add_slide(prs.slide_layouts[6])
+    tbox = s.shapes.add_textbox(Inches(0.8), Inches(0.6), Inches(8.0), Inches(1.0))
+    tbox.text_frame.text = "Шаблонный заголовок презентации"
+    p_ns = "http://schemas.openxmlformats.org/presentationml/2006/main"
+    nv_pr = tbox._element.find(f"{{{p_ns}}}nvSpPr/{{{p_ns}}}nvPr")
+    etree.SubElement(nv_pr, f"{{{p_ns}}}ph", type="title")
+
+    col1 = s.shapes.add_textbox(Inches(0.8), Inches(2.2), Inches(4.0), Inches(2.5))
+    col1.text_frame.text = "Первая колонка подзаголовка в шаблоне"
+    col2 = s.shapes.add_textbox(Inches(5.2), Inches(2.2), Inches(4.0), Inches(2.5))
+    col2.text_frame.text = "Вторая колонка подзаголовка в шаблоне"
+
+    tpl_path = tmp_path / "two_col_cover.pptx"
+    prs.save(str(tpl_path))
+
+    subtitle_text = "Единая платформа аналитики и планирования"
+    pack = parse_markdown("# Стратегия\n\nПлатформа объединяет отчётность и витрины данных.\n")
+    base_plan = plan_deck(
+        pack,
+        Brief(
+            purpose=subtitle_text,
+            audience="руководство",
+            language="ru",
+            target_slide_count=3,
+        ),
+    )
+    cover = SlidePlan(
+        id="slide-0",
+        index=0,
+        purpose=Purpose.title,
+        title_intent="Стратегия развития 2026",
+        key_message=subtitle_text,
+        evidence_ids=["test:meta"],
+        content_units=[
+            ContentUnit(
+                role="title",
+                kind=Kind.title,
+                text="Стратегия развития 2026",
+                evidence_ids=["test:meta"],
+            ),
+            ContentUnit(
+                role="subtitle",
+                kind=Kind.subtitle,
+                text=subtitle_text,
+                evidence_ids=["test:meta"],
+            ),
+            ContentUnit(
+                role="body",
+                kind=Kind.bullet,
+                text=subtitle_text,
+                evidence_ids=["test:meta"],
+            ),
+        ],
+        density_budget=DensityBudget(level="sparse", max_words=60, max_bullets=4),
+    )
+    plan = base_plan.model_copy(update={"slides": [cover, *base_plan.slides[1:]]})
+
+    out_dir = tmp_path / "previews"
+    res = render_style_previews(
+        tpl_path, pack, plan, out_dir, slide_ids=["slide-0"], strategies=("balanced",)
+    )
+    assert res["styles"][0]["error"] is None
+    rendered = Presentation(str(out_dir / "balanced" / "preview.pptx"))
+    slide_texts = [
+        sh.text_frame.text.strip()
+        for sh in rendered.slides[0].shapes
+        if sh.has_text_frame and sh.text_frame.text.strip()
+    ]
+    assert slide_texts.count(subtitle_text) == 1, slide_texts

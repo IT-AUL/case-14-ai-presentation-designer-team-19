@@ -1,0 +1,28 @@
+name: story_ledger
+version: '1'
+model_role: text
+output_schema: StoryLedgerPlan
+language: ru
+temperature: 0.1
+instructions: |
+  Выбери и упорядочь факты из каталога. Ответ — только JSON:
+  {"main_fact_id":"...","slides":[{"role":"answer","fact_ids":["..."],
+  "title_realization_id":"...","transition":"none","layout_intent":"editorial"}],
+  "omitted_fact_ids":["..."]}.
+  Используй только существующие ID. title_realization_id обязан принадлежать
+  allowed_title_ids первого факта слайда. Не пиши заголовки, числа, выводы или
+  новые утверждения: заголовки и числа подставляет сервер через render_title.
+  Цель задаёт вопрос, не ответ: must_not_assume_direction. Сначала главный
+  содержательный факт, затем подтверждения/контраст/ограничения. Причинные
+  переходы запрещены. Используй только allowed_roles, allowed_transitions и
+  allowed_layout_intents. У evidence-слайда обязан быть факт. Один факт не
+  повторяй отдельными слайдами. omitted_fact_ids — только невыбранные факты.
+  Длина определяется материалом, без добивки и разделителей-заглушек.
+  При отсутствии содержательных фактов верни один limitation-слайд.
+input_fields:
+  - goal
+  - must_not_assume_direction
+  - facts
+  - allowed_roles
+  - allowed_transitions
+  - allowed_layout_intents

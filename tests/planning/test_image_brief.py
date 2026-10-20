@@ -107,6 +107,9 @@ def test_image_generation_config_reads_content_section():
         "max_per_deck": 5,
         "style_suffix": "custom style",
         "purposes": [Purpose.team],  # bad entry dropped, not fatal
+        "strategies": [Strategy.visual],  # default: visual variant only
+        "size": "1536x1024",
+        "max_text_units": 4,
     }
 
 

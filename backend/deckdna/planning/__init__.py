@@ -1,4 +1,4 @@
-"""Planning: Brief + ContentPack → DeckPlan (docs/ARCHITECTURE.md)."""
+"""Planning: Brief + ContentPack → DeckPlan (docs/pipeline/PLANNING_AND_VARIANTS.md)."""
 
 from deckdna.planning.config import GenerationConfig, load_generation_config
 from deckdna.planning.story_director import plan_deck, plan_deck_llm

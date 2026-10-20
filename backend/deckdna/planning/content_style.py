@@ -103,6 +103,7 @@ def _target_chars(slide: SlidePlan, unit_count: int) -> int | None:
 def _eligible(unit: ContentUnit) -> bool:
     return (
         unit.kind is Kind.bullet
+        and not unit.locked
         and bool(unit.text)
         and len(unit.text.strip()) >= _MIN_STYLE_LEN
     )
@@ -151,9 +152,7 @@ async def style_deck_content(
     async def run_batch(batch: list[dict]) -> list[StyleItem]:
         async with sem:
             try:
-                output = await gateway.text_json(
-                    PROMPT_NAME, {"items": batch}, ContentStyleOutput
-                )
+                output = await gateway.text_json(PROMPT_NAME, {"items": batch}, ContentStyleOutput)
             except Exception as exc:  # noqa: BLE001 — сбой провайдера = fallback батча
                 logger.warning(
                     "content_style batch (indices %s) failed, keeping source text: %s",
@@ -181,6 +180,9 @@ async def style_deck_content(
     if not rewritten_by_index:
         return plan
 
+    from deckdna.planning import story_rules as _sr
+
+    story_cfg = _sr.storyline_config(load_generation_config().raw)
     new_slides: list[SlidePlan] = []
     for si, slide in enumerate(plan.slides):
         updates: dict[int, str] = {
@@ -195,5 +197,24 @@ async def style_deck_content(
             unit.model_copy(update={"text": updates[ui]}) if ui in updates else unit
             for ui, unit in enumerate(slide.content_units)
         ]
-        new_slides.append(slide.model_copy(update={"content_units": new_units}))
+        updated_slide = slide.model_copy(update={"content_units": new_units})
+        db = slide.density_budget
+        lvl_val = getattr(getattr(db, "level", None), "value", None) if db else None
+        if lvl_val == "sparse":
+            slide_max_w = min(8, story_cfg.max_words_per_bullet)
+            slide_max_b = min(3, story_cfg.max_bullets_per_slide)
+        elif lvl_val == "medium":
+            slide_max_w = min(10, story_cfg.max_words_per_bullet)
+            slide_max_b = min(4, story_cfg.max_bullets_per_slide)
+        else:
+            slide_max_w = story_cfg.max_words_per_bullet
+            slide_max_b = story_cfg.max_bullets_per_slide
+        updated_slide = _sr.enforce_slide_density(
+            updated_slide,
+            max_bullets=slide_max_b,
+            max_words=slide_max_w,
+            overflow_to_notes=story_cfg.overflow_to_speaker_notes,
+            density_level=lvl_val,
+        )
+        new_slides.append(updated_slide)
     return plan.model_copy(update={"slides": new_slides})

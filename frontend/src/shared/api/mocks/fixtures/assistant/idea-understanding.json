@@ -1,0 +1,56 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:51:05.101Z",
+  "method": "GET",
+  "path": "/content-packs/pack_c635f3911ead4b15a5be18a60d7c3c6e/understanding?use_llm=false",
+  "status": 200,
+  "body": {
+    "content_pack_id": "pack_c635f3911ead4b15a5be18a60d7c3c6e",
+    "blocks": [
+      {
+        "id": "s:sec-0",
+        "kind": "topic",
+        "title": "Идея",
+        "text": "Итоги продаж за год для совета директоров",
+        "source_ref": {
+          "artifact_id": "art_a5678889ba8d4566986cc2b04c50a107",
+          "heading_path": [
+            "Идея"
+          ]
+        }
+      },
+      {
+        "id": "b:sec-0:0",
+        "kind": "fact",
+        "title": "Идея",
+        "text": "Итоги продаж за год для совета директоров",
+        "source_ref": {
+          "artifact_id": "art_a5678889ba8d4566986cc2b04c50a107",
+          "heading_path": [
+            "Идея"
+          ]
+        }
+      }
+    ],
+    "summary": {
+      "capacity_slides": 3,
+      "main_points": [
+        "Идея"
+      ],
+      "assistant_note": "Материала мало, помогу на следующем шаге."
+    },
+    "datasets": [],
+    "context": {
+      "status": "not_requested",
+      "fields": []
+    },
+    "brief": {
+      "purpose": "Итоги продаж за год для совета директоров",
+      "language": "ru",
+      "target_slide_count": 12
+    },
+    "interpretation": {
+      "status": "not_requested"
+    }
+  }
+}

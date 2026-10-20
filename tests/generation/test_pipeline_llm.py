@@ -133,7 +133,7 @@ def test_shared_gateway_provenance_is_scoped_per_generate(monkeypatch, tmp_path)
     assert rep1["planner"] == LLM_PLANNER_VERSION
     assert prov1["prompt_versions"] == {
         "storyline": "2.0.1",
-        "contextual_slide_audit": "1.1.0",
+        "contextual_slide_audit": "1.3.0",
     }
     assert {p["model_id"] for p in prov1["model_profiles"]} == {
         "mock-text",
@@ -150,7 +150,7 @@ def test_shared_gateway_provenance_is_scoped_per_generate(monkeypatch, tmp_path)
     prov2 = rep2["quality_passport"]["provenance"]
     assert rep2["planner"] == PLANNER_VERSION  # fallback, не LLM
     assert "storyline" not in prov2["prompt_versions"]
-    assert prov2["prompt_versions"] == {"contextual_slide_audit": "1.1.0"}
+    assert prov2["prompt_versions"] == {"contextual_slide_audit": "1.3.0"}
     assert {p["model_id"] for p in prov2["model_profiles"]} == {"mock-vision"}
 
     # Контроль накопления: gateway действительно помнит обе роли —
@@ -171,9 +171,14 @@ def test_llm_mode_uses_llm_planner_and_merges_contextual_issues(monkeypatch, tmp
 
     assert report["planner"] == LLM_PLANNER_VERSION
     assert report["contextual_audit"]["ran"] is True
-    # VLM-fail на каждом из 12 слайдов → 12 недетерминированных issues
+    # VLM-fail на каждом выбранном для проверки слайде (флаги или выборка ≤ 3).
     ctx = [i for i in report["audit_issues"] if not i["deterministic"]]
-    assert report["contextual_audit"]["issues"] == len(ctx) == BRIEF["target_slide_count"]
+    assert (
+        report["contextual_audit"]["issues"]
+        == len(ctx)
+        == report["contextual_audit"]["expected_slides"]
+    )
+    assert 1 <= len(ctx) <= len(report["deck_plan"]["slides"])
     assert all(i["rule_code"] == "content.nonempty" for i in ctx)
     assert all(i["severity"] == "error" for i in ctx)
     # провайдер реально вызван на обе стадии
@@ -185,7 +190,7 @@ def test_llm_mode_uses_llm_planner_and_merges_contextual_issues(monkeypatch, tmp
     prov = report["quality_passport"]["provenance"]
     assert prov["prompt_versions"] == {
         "storyline": "2.0.1",
-        "contextual_slide_audit": "1.1.0",
+        "contextual_slide_audit": "1.3.0",
     }
     # mock вне license-manifest → license/size_b остаются None и не сериализуются
     assert prov["model_profiles"] == [{"model_id": "mock", "provider": "mock"}]
@@ -460,11 +465,12 @@ def test_invalid_llm_plan_falls_back_to_deterministic(tmp_path):
     )
 
     assert report["planner"] == PLANNER_VERSION  # честный откат
-    assert report["slides_out"] == BRIEF["target_slide_count"]
+    assert 3 <= report["slides_out"] <= BRIEF["target_slide_count"]
+    assert report["slides_out"] == len(report["deck_plan"]["slides"])
     # storyline НЕ попадает в prompt_versions: его план отвергнут гейтом,
     # а slide_checks-вызов реально отработал и попадает честно.
     prov = report["quality_passport"]["provenance"]
-    assert prov["prompt_versions"] == {"contextual_slide_audit": "1.1.0"}
+    assert prov["prompt_versions"] == {"contextual_slide_audit": "1.3.0"}
     assert [p["model_id"] for p in prov["model_profiles"]] == ["mock"]
 
 

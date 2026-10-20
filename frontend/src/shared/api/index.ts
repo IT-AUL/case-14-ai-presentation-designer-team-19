@@ -1,7 +1,7 @@
 import type { components } from './schema'
 
 export { api, unwrap } from './client'
-export { ApiError, isApiError } from './errors'
+export { ApiError, humanError, isApiError } from './errors'
 export { uploadWithProgress } from './upload'
 export { artifactUrl } from './artifacts'
 export { isUnsupportedEndpoint, requestJson, requestOptionalJson } from './raw'

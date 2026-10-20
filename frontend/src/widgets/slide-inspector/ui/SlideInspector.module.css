@@ -3,10 +3,13 @@
   flex-direction: column;
   gap: 14px;
   min-width: 0;
+  height: 100%;
+  min-height: 0;
 }
 
 .toolbar {
   display: flex;
+  flex: none;
   align-items: center;
   gap: 10px;
 }
@@ -38,8 +41,52 @@
   white-space: nowrap;
 }
 
+.exemplar {
+  flex: none;
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--ink-3);
+  font-size: 11px;
+}
+
 .stage {
   position: relative;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  align-items: center;
+  justify-content: center;
+  container-type: size;
+}
+
+.stage > div:first-child {
+  flex: none;
+  width: min(100cqw, calc(100cqh * var(--page-aspect, 1.7777778)));
+  box-shadow: var(--shadow-stage);
+}
+
+.regeneratingOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--overlay);
+  backdrop-filter: blur(2px);
+  animation: global(dd-pulse) 1.4s ease-in-out infinite;
+}
+
+.regeneratingBadge {
+  padding: 8px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
   box-shadow: var(--shadow-stage);
 }
 
@@ -62,6 +109,7 @@
 
 .legend {
   display: flex;
+  flex: none;
   flex-wrap: wrap;
   gap: 14px;
   align-items: center;
@@ -174,6 +222,8 @@
   grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
   gap: 16px;
   align-items: start;
+  min-height: 0;
+  overflow: auto;
 }
 
 .column {

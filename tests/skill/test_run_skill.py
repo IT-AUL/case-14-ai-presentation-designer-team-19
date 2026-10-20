@@ -155,9 +155,7 @@ def test_run_skill_ambiguous_content_directory_is_honest_early_failure(tmp_path)
     content_dir.mkdir()
     (content_dir / "a.md").write_text("a")
     (content_dir / "b.md").write_text("b")
-    summary = run_skill(
-        template=UNSEEN_TEMPLATE, content=content_dir, out_dir=tmp_path / "out"
-    )
+    summary = run_skill(template=UNSEEN_TEMPLATE, content=content_dir, out_dir=tmp_path / "out")
     assert summary["status"] == "failed"
     assert summary["error"]["code"] == "invalid_input"
     assert summary["variants"] == []
@@ -204,9 +202,7 @@ def test_run_skill_rejects_nonempty_out_dir(tmp_path):
     out_dir = tmp_path / "out"
     out_dir.mkdir()
     (out_dir / "stale-deck.pptx").write_bytes(b"PK\x03\x04")
-    summary = run_skill(
-        template=UNSEEN_TEMPLATE, content=CONTENT_MD, out_dir=out_dir
-    )
+    summary = run_skill(template=UNSEEN_TEMPLATE, content=CONTENT_MD, out_dir=out_dir)
     assert summary["status"] == "failed"
     assert summary["error"]["code"] == "invalid_input"
     assert "not empty" in summary["error"]["message"]
@@ -217,13 +213,9 @@ def test_run_skill_rerun_after_early_failure_is_allowed(tmp_path):
     """A directory holding only the previous run's summary.json is safe
     to reuse — that run produced nothing that could go stale."""
     out_dir = tmp_path / "out"
-    first = run_skill(
-        template=tmp_path / "missing.pptx", content=CONTENT_MD, out_dir=out_dir
-    )
+    first = run_skill(template=tmp_path / "missing.pptx", content=CONTENT_MD, out_dir=out_dir)
     assert first["status"] == "failed"
-    second = run_skill(
-        template=tmp_path / "missing.pptx", content=CONTENT_MD, out_dir=out_dir
-    )
+    second = run_skill(template=tmp_path / "missing.pptx", content=CONTENT_MD, out_dir=out_dir)
     # rejected by the template check again — NOT by the nonempty-dir guard
     assert second["error"]["code"] == "invalid_input"
     assert "template not found" in second["error"]["message"]
@@ -250,9 +242,7 @@ def test_run_skill_unexpected_error_is_typed_envelope(tmp_path, monkeypatch):
     assert variant["status"] == "failed"
     assert variant["error"]["code"] == "internal_error"
     assert variant["error"]["details"]["exception"] == "RuntimeError"
-    dump = json.dumps(summary) + (
-        tmp_path / "out" / "summary.json"
-    ).read_text(encoding="utf-8")
+    dump = json.dumps(summary) + (tmp_path / "out" / "summary.json").read_text(encoding="utf-8")
     assert "canary-secret-123" not in dump  # exception TEXT never leaks
 
 
@@ -288,9 +278,7 @@ def _fake_report(variant_dir: Path) -> dict:
     }
 
 
-def test_run_skill_malformed_generate_report_is_typed_and_continues(
-    tmp_path, monkeypatch
-):
+def test_run_skill_malformed_generate_report_is_typed_and_continues(tmp_path, monkeypatch):
     """Postprocessing errors (report access, stat/hash) must also become
     a typed internal_error — and must not abort the remaining variants."""
 
@@ -350,9 +338,7 @@ def test_run_skill_artifact_ref_error_is_typed_envelope(tmp_path, monkeypatch):
     variant = summary["variants"][0]
     assert variant["error"]["code"] == "internal_error"
     assert variant["error"]["details"]["exception"] == "RuntimeError"
-    dump = json.dumps(summary) + (out_dir / "summary.json").read_text(
-        encoding="utf-8"
-    )
+    dump = json.dumps(summary) + (out_dir / "summary.json").read_text(encoding="utf-8")
     assert "canary-secret-456" not in dump
 
 
@@ -455,7 +441,13 @@ def test_run_skill_single_strategy_end_to_end_unseen_template(tmp_path):
     assert html_index.exists()
     html_text = html_index.read_text(encoding="utf-8")
     assert "<html" in html_text.lower()
-    assert any(html_index.parent.glob("slide-*.png"))
+    from lxml import html as html_parser
+
+    doc = html_parser.fromstring(html_text)
+    assert len(doc.xpath('//section[@class="slide"]')) == variant["slides_out"]
+    assert doc.xpath('//div[@class="text-frame"]//span')
+    assert all((html_index.parent / src).is_file() for src in doc.xpath("//img/@src"))
+    assert not list(html_index.parent.glob("slide-*.png"))
 
     # nothing in summary.json embeds raw artifact bytes
     raw = (out_dir / "summary.json").read_text(encoding="utf-8")
@@ -583,14 +575,14 @@ def test_run_skill_subprocess_invalid_template_nonzero_exit(tmp_path):
 
 
 # --------------------------------------------------------------------------
-# --llm: default mock provider (deterministic, offline) + a real local
+# --llm: explicit test mock provider (deterministic, offline) + a real local
 # OpenAI-compatible HTTP stub (no external key, no network)
 # --------------------------------------------------------------------------
 
 
 @needs_render
 def test_run_skill_llm_flag_with_default_mock_provider(tmp_path):
-    """`--llm` with the default DECKDNA_MOCK_PROVIDER=true must exercise
+    """`--llm` with the test's explicit DECKDNA_MOCK_PROVIDER=true must exercise
     the LLM/VLM code path fully offline and still complete the run."""
     summary = run_skill(
         template=UNSEEN_TEMPLATE,
@@ -640,9 +632,7 @@ def test_run_skill_llm_over_real_local_http_no_secret_leak(tmp_path, monkeypatch
         ]
     }
     local_openai.responses["SlideChecksResult"] = {
-        "verdicts": [
-            {"check": "5", "verdict": "fail", "rationale": "stub", "confidence": 0.9}
-        ]
+        "verdicts": [{"check": "5", "verdict": "fail", "rationale": "stub", "confidence": 0.9}]
     }
     monkeypatch.setattr(
         factory_module,

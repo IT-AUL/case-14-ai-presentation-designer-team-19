@@ -1,0 +1,43 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T14:04:31.012Z",
+  "method": "GET",
+  "path": "/generations/run_06cd7e008b81489b9339e88f63a7e641/variants",
+  "status": 200,
+  "body": {
+    "items": [
+      {
+        "id": "var_8faf1d9a59e84193a3615b0a8ca7b5e3",
+        "run_id": "run_06cd7e008b81489b9339e88f63a7e641",
+        "strategy": "balanced",
+        "status": "completed",
+        "rationale": "Альтернативные совместимые layout'ы, сбалансированный текст и визуал.",
+        "stage": null,
+        "started_at": "2026-10-17T13:51:18.027566Z",
+        "finished_at": "2026-10-17T13:51:31.800451Z",
+        "axes": {
+          "text_density": 0.5,
+          "layout_diversity": 0.5,
+          "visualization": 0.5
+        },
+        "deck_artifact_id": "art_1f25272a1fe9405e9465683fc8450437",
+        "montage_artifact_id": "art_e78db51a50de4e42839822aeafb93a77",
+        "metrics": {
+          "validity": 1,
+          "editability_pei": 3,
+          "issues_total": 5,
+          "style_fidelity": 0.9167,
+          "auto_fixed": 0
+        },
+        "audit_status": "completed",
+        "export_ids": [
+          "exp_5458d73dd6d94fbd811cede5c95a8305"
+        ],
+        "planner": "story-director/deterministic-0.1.0",
+        "contextual_issues": null,
+        "deck_plan_id": "plan-pack_8095fb457e8a4262a05b427ac5db1d54-balanced"
+      }
+    ],
+    "next_cursor": null
+  }
+}

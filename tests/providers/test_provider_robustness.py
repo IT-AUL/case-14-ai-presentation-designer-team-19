@@ -298,7 +298,5 @@ def test_client_pools_close_deterministically(keepalive_server):
     for _ in range(10):  # несколько разных event loops подряд
         asyncio.run(_text())
 
-    # Старый lazy-bind копил ~1 fd на цикл; допускаем лишь разовый фоновый
-    # дескриптор (resolver/epoll воркера под нагрузкой).
-    assert len(os.listdir("/proc/self/fd")) <= baseline + 1
+    assert len(os.listdir("/proc/self/fd")) == baseline
     asyncio.run(provider.aclose())

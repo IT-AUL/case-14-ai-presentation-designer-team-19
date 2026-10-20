@@ -1,4 +1,4 @@
-"""Render Arena — аудит готовых .pptx (docs/AUDIT.md)."""
+"""Render Arena — аудит готовых .pptx (docs/pipeline/AUDIT_AND_REPAIR.md)."""
 
 from deckdna.audit.basic import (
     RULE_ASPECT_RATIO,

@@ -1,4 +1,4 @@
-"""Content Ingestion: входные файлы → ContentPack (docs/ARCHITECTURE.md)."""
+"""Content Ingestion: входные файлы → ContentPack (docs/pipeline/CONTENT_INGESTION.md)."""
 
 from deckdna.ingestion.content_parsers import (
     PARSER_VERSION,

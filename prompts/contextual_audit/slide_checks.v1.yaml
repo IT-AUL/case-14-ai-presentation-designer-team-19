@@ -1,5 +1,5 @@
 name: contextual_slide_audit
-version: "1.1.0"
+version: "1.3.0"
 model_role: vision
 output_schema: schemas/audit-issue.schema.json
 language: ru
@@ -29,11 +29,22 @@ instructions: |
     object or complete editable textual expression; an introduction alone fails.
   - Distinguish quoted/rejected claims from claims the author endorses. Preserve
     negation, hypotheses and caveats when assessing source support.
+  - The labels "Предположение:" and "Assumption:" at the start of a bullet or
+    title are the product's own provenance marking for model-derived content.
+    They are honest disclosure, not service text: do not flag them as prompt
+    leakage or as unsupported facts. Technical slugs, JSON keys, file names,
+    strategy names (faithful/balanced/visual) and viz_reason-style rationales
+    are still leakage.
   - Use neighbor_titles for flow only; do not infer unseen neighboring content.
   - Incomplete source excerpts mean uncertain, not unsupported. Sources can have
     their original language. Never demand an assertion title for a bibliography.
 
   For each check return verdict: pass | fail | uncertain, plus short rationale
   and confidence 0-1. Never guess: if the image or text is insufficient, return
-  uncertain. Output ONLY JSON.
+  uncertain.
+
+  Output ONLY JSON of this exact shape, one item per check, in order 1-10;
+  `check` is the check NUMBER as a string, never the question text:
+  {"verdicts": [{"check": "1", "verdict": "pass", "rationale": "...",
+  "confidence": 0.9}, ..., {"check": "10", ...}]}
 input_fields: [slide_image, slide_text, title_intent, evidence_excerpt, deck_language, slide_purpose, neighbor_titles]

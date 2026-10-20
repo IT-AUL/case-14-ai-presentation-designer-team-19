@@ -1,4 +1,4 @@
-"""Исходы repair и fingerprint (contract D2): отчёт должен совпадать с фактом."""
+"""Исходы repair и fingerprint (handoff D2): отчёт должен совпадать с фактом."""
 
 from __future__ import annotations
 

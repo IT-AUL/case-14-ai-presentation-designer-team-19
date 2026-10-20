@@ -211,7 +211,7 @@ async def test_client_http_error_is_not_retryable(status):
 
 async def test_429_retry_succeeds_on_second_attempt():
     """The scenario found live (three variants hitting a rate-limited
-    provider concurrently): a single transient 429
+    provider concurrently, regression check): a single transient 429
     must not kill the whole call — a later attempt succeeding is accepted
     same as if there had been no failure at all."""
     calls = []
@@ -283,11 +283,66 @@ async def test_min_request_interval_spaces_out_concurrent_calls():
     provider._sleep = fake_sleep
     # 3 "concurrent" callers, as _plan_all_strategies fires across variants.
     await asyncio.gather(*(provider.text_json("storyline", {}, _Out) for _ in range(3)))
-    # first call never waits; the other two each queue behind the pace lock.
+    # ADR-031: _RequestPacer резервирует слоты на общей шкале времени и спит
+    # вне лока, поэтому задержка считается от момента вызова: старты в t,
+    # t+0.05, t+0.10 → ожидания 0.05 и 0.10. Прежний asyncio-lock спал под
+    # локом и каждый раз отсчитывал интервал заново (0.05, 0.05) — абсолютные
+    # моменты стартов те же, меняется только величина отдельного ожидания.
     assert len(started) == 2
     assert started[0] == pytest.approx(0.05, abs=0.01)
-    assert started[1] == pytest.approx(0.05, abs=0.01)
+    assert started[1] == pytest.approx(0.10, abs=0.01)
     await provider.aclose()
+
+
+def test_shared_pacer_spaces_gateways_across_threads():
+    """ADR-031: два gateway'я одного endpoint'а из разных потоков (у каждого
+    свой asyncio.run, как у параллельных вариантов) вместе соблюдают интервал."""
+    import threading
+    import time
+
+    from deckdna.providers.openai_compat import shared_pacer
+
+    starts: list[float] = []
+    lock = threading.Lock()
+
+    def handler(r):
+        with lock:
+            starts.append(time.monotonic())
+        return httpx.Response(
+            200, json={"choices": [{"message": {"content": json.dumps({"answer": "ok"})}}]}
+        )
+
+    interval = 0.05
+    url = "https://pacer-thread-test.example.com/v1"
+    assert shared_pacer(url, interval) is shared_pacer(url + "/", interval)
+
+    def run_variant() -> None:
+        provider = _provider(
+            handler,
+            base_url=url,
+            min_request_interval_s=interval,
+            pacer=shared_pacer(url, interval),
+        )
+
+        async def go() -> None:
+            for _ in range(3):
+                await provider.text_json("storyline", {}, _Out)
+            await provider.aclose()
+
+        asyncio.run(go())
+
+    threads = [threading.Thread(target=run_variant) for _ in range(2)]
+    for t in threads:
+        t.start()
+    for t in threads:
+        t.join()
+
+    assert len(starts) == 6
+    starts.sort()
+    gaps = [b - a for a, b in zip(starts, starts[1:], strict=False)]
+    # запас на дрожание планировщика; без общего пейсера пары запросов из
+    # двух потоков стартовали бы почти одновременно (зазор ≈ 0)
+    assert min(gaps) >= interval * 0.8
 
 
 async def test_min_request_interval_zero_disables_pacing():
@@ -396,3 +451,113 @@ def test_provider_name_sanitizes_schemeless_url():
     assert creds.provider_name == "llm.example.com:8443"
     assert "secret" not in creds.provider_name
     assert "user" not in creds.provider_name
+
+
+async def test_provider_deadline_prevents_timeout_stacking():
+    """Parallel pipeline п.5: таймауты провайдера не складываются в минуты; при
+    исчерпании дедлайна этапа повторные попытки не выполняются."""
+    from deckdna.providers.openai_compat import provider_deadline
+
+    calls = 0
+
+    def timeout_handler(request: httpx.Request) -> httpx.Response:
+        nonlocal calls
+        calls += 1
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    provider = _provider(timeout_handler, max_retries=2)
+    with pytest.raises(DeckDNAError) as exc:
+        await provider.text_json("storyline", {}, _Out)
+    assert exc.value.code == "provider_unavailable"
+    # TimeoutException не ретраится, чтобы таймауты не складывались
+    assert calls == 1
+
+    # При исчерпанном provider_deadline запрос прерывается сразу без обращения к сети
+    calls = 0
+    with provider_deadline(0.0), pytest.raises(DeckDNAError) as exc2:
+        await provider.text_json("storyline", {}, _Out)
+    assert exc2.value.code == "provider_unavailable"
+    assert calls == 0
+    await provider.aclose()
+
+
+async def test_service_role_disables_thinking_and_keeps_stable_prefix_before_payload():
+    """Vision audit gate п.4: chat_template_kwargs={'enable_thinking': False} для
+    служебных ролей, стабильный системный префикс (instructions + JSON-схема)
+    строго ДО переменной части (## <field> и image_url)."""
+    bodies: list[dict] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        bodies.append(json.loads(request.content))
+        return httpx.Response(
+            200,
+            json={
+                "choices": [{"message": {"content": json.dumps({"answer": "ok"})}}],
+                "usage": {
+                    "prompt_tokens": 200,
+                    "completion_tokens": 30,
+                    "total_tokens": 230,
+                    "prompt_tokens_details": {"cached_tokens": 120, "image_tokens": 64},
+                },
+                "timings": {"prompt_ms": 18.5, "predicted_ms": 42.0},
+            },
+        )
+
+    provider = _provider(handler)
+    await provider.text_json("storyline", {"brief": "first_variable_brief"}, _Out)
+    await provider.text_json("storyline", {"brief": "second_variable_brief"}, _Out)
+
+    for b in bodies:
+        assert b["chat_template_kwargs"] == {"enable_thinking": False}
+        assert b["response_format"]["type"] == "json_schema"
+        text = b["messages"][0]["content"]
+        idx_schema = text.index("Ответ — только JSON-объект строго по этой JSON Schema:")
+        idx_payload = text.index("\n\n## ")
+        assert idx_schema < idx_payload, "JSON schema must precede variable payload for APC"
+
+    # Общий префикс до первого "\n\n## " побайтно совпадает между разными запросами
+    p1 = bodies[0]["messages"][0]["content"].split("\n\n## ", 1)[0]
+    p2 = bodies[1]["messages"][0]["content"].split("\n\n## ", 1)[0]
+    assert p1 == p2 and len(p1) > 100
+
+    # Телеметрия провайдера и поля паспорта качества
+    tel = provider.telemetry_report()
+    model_tel = tel["text-model"]
+    assert model_tel["input_tokens"] == 400
+    assert model_tel["output_tokens"] == 60
+    assert model_tel["image_tokens"] == 128
+    assert model_tel["cache_hits"] == 2
+    assert model_tel["prefill_ms"] == pytest.approx(37.0)
+    assert model_tel["decode_ms"] == pytest.approx(84.0)
+
+    from deckdna.evaluation import measures
+    from deckdna.evaluation.quality_passport import assemble_quality_passport
+
+    snap = measures.telemetry_delta({}, tel)
+    assert snap["cache_hit"] is True
+    pptx_fixture = "tests/fixtures/pptx/synthetic_unseen.pptx"
+    qp = assemble_quality_passport(
+        pptx_fixture,
+        {"template": pptx_fixture, "slides": []},
+        [],
+        repair_count=1,
+        stage_timings=[
+            {"stage": "compose", "seconds": 1.0, "cached": False},
+            {"stage": "render", "seconds": 0.42, "cached": False},
+        ],
+        duration_seconds=1.5,
+        telemetry=snap,
+    )
+    assert qp.metrics.input_tokens == 400
+    assert qp.metrics.output_tokens == 60
+    assert qp.metrics.image_tokens == 128
+    assert qp.metrics.cache_hit is True
+    assert qp.metrics.prefill_ms == pytest.approx(37.0)
+    assert qp.metrics.decode_ms == pytest.approx(84.0)
+    assert qp.metrics.render_ms == pytest.approx(420.0)
+    assert qp.metrics.repair_count == 1
+    assert qp.metrics.timings.render_ms == pytest.approx(420.0)
+    assert qp.issues_summary.repair_count == 1
+    await provider.aclose()
+
+

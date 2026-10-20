@@ -1,0 +1,243 @@
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.intro {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  max-width: 640px;
+}
+
+.title {
+  margin: 0;
+  color: var(--ink);
+  font: 650 34px/1.12 var(--font-sans);
+  letter-spacing: -0.025em;
+}
+
+.lead {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.box {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-3xl);
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.04), 0 12px 32px -12px rgb(0 0 0 / 0.12);
+  transition:
+    border-color var(--motion-fast),
+    box-shadow var(--motion-fast);
+}
+
+.box:focus-within {
+  border-color: var(--ink-3);
+}
+
+.dragging {
+  border-color: var(--ink);
+  border-style: dashed;
+  background: var(--surface-2);
+}
+
+.topic {
+  width: 100%;
+  min-height: 96px;
+  padding: 22px 24px 8px;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font: 400 18px/1.5 var(--font-sans);
+  letter-spacing: -0.005em;
+  resize: none;
+  field-sizing: content;
+  max-height: 260px;
+}
+
+.topic::placeholder {
+  color: var(--ink-3);
+}
+
+.topic:focus {
+  outline: none;
+}
+
+.files {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: var(--space-2) 24px 0;
+  list-style: none;
+}
+
+.file {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  max-width: 100%;
+  padding: 5px 6px 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface-2);
+  font: var(--type-caption);
+}
+
+.fileName {
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+
+.fileRole {
+  color: var(--ink-3);
+}
+
+.fileRemove {
+  border: 0;
+  background: transparent;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: var(--ink-3);
+}
+
+.fileRemove:hover {
+  background: var(--sunken);
+  color: var(--ink);
+}
+
+.fileRemove:focus-visible,
+.attach:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: 14px 14px 14px 16px;
+}
+
+.attach {
+  background: transparent;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-2);
+  height: 36px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  color: var(--ink);
+  font: 500 13px/1 var(--font-sans);
+  transition:
+    background-color var(--motion-fast),
+    border-color var(--motion-fast);
+}
+
+.attach:hover {
+  border-color: var(--line-2);
+  background: var(--surface-2);
+}
+
+.hint {
+  flex: 1;
+  min-width: 0;
+  color: var(--ink-3);
+  font: var(--type-caption);
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+}
+
+.presetsLabel {
+  color: var(--ink-3);
+  font: var(--type-caption);
+  font-weight: 400;
+}
+
+.presetChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.presetChip {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: var(--type-caption);
+  cursor: pointer;
+  transition:
+    background-color var(--motion-fast),
+    border-color var(--motion-fast),
+    color var(--motion-fast);
+}
+
+.presetChip:hover {
+  border-color: var(--ink-3);
+  background: var(--surface-2);
+  color: var(--ink);
+}
+
+.presetChip[aria-pressed='true'],
+.presetChip[aria-pressed='true']:hover {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--inv);
+}
+
+.presetChip:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.error {
+  margin: 0;
+  color: var(--error);
+  font: var(--type-caption);
+}
+
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .title {
+    font-size: 28px;
+  }
+
+  .bar {
+    flex-wrap: wrap;
+  }
+
+  .hint {
+    order: 3;
+    flex-basis: 100%;
+  }
+}

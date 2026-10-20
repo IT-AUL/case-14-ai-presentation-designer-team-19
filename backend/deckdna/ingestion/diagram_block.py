@@ -11,7 +11,7 @@
   добавляют свои шаги по порядку (одна цепочка).
 
 Рендерится как SmartArt-like группа нативных редактируемых фигур
-(baseline: «SmartArt-like grouped editable shapes») —
+(«SmartArt-like grouped editable shapes») —
 не настоящий dgm/OOXML SmartArt.
 """
 

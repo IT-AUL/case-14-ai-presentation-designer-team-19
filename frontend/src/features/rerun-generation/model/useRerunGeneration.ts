@@ -2,6 +2,7 @@ import { useCallback } from 'react'
 import { useNavigate } from 'react-router'
 import { useRetryGeneration, whenGenerationAccepted } from '@/entities/generation'
 import { rememberRun } from '@/entities/project'
+import { humanError } from '@/shared/api'
 import { routes } from '@/shared/config'
 import { useToast } from '@/shared/ui'
 
@@ -26,7 +27,7 @@ export function useRerunGeneration(projectId: string): RerunGeneration {
           )
           navigate(routes.run(projectId, trackingId))
         },
-        onError: (error) => toast.show(error.message),
+        onError: (error) => toast.show(humanError(error)),
       })
     },
     [mutate, navigate, projectId, toast],

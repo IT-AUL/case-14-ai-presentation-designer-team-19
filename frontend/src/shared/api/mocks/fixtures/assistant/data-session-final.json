@@ -1,0 +1,36 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:52:53.557Z",
+  "method": "GET",
+  "path": "/projects/prj_dcfe27bda1874f76b03a28e7ee495aa1/session",
+  "status": 200,
+  "body": {
+    "step": 7,
+    "completed_steps": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "skipped_steps": [],
+    "artifacts": {
+      "template_id": "tpl_7c4f33420b0e4c1cb783c86d1cfb12c1",
+      "content_pack_id": "pack_52549aa7639543a8b68b55c5f60d42a8",
+      "brandbook_id": "brand_5c790b133e1d4219a514c225de271c87",
+      "plan_id": "plan_d578eef1413d4373b79bffa790333a90",
+      "preview_id": "prev_d66480fd27184d8684bcec46204480cb",
+      "generation_id": "run_6ee088c6d94a45f683bac5faa1f9a0ce"
+    },
+    "brief": {
+      "purpose": "Итоги продаж за год для совета директоров",
+      "language": "ru",
+      "audience": "",
+      "target_slide_count": 8,
+      "content_fill": "shrink"
+    },
+    "assistant_note": "Готово, можно посмотреть и доработать слайды.",
+    "job_id": null
+  }
+}

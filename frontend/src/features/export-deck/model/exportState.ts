@@ -1,5 +1,6 @@
 import type { CreateExportResult, ExportFormat } from '@/entities/passport'
 import type { DeckFile } from '@/entities/variant'
+import { humanError } from '@/shared/api'
 
 export type ExportStatus = 'idle' | 'creating' | 'ready' | 'unavailable' | 'error'
 
@@ -64,7 +65,7 @@ export function unavailableMessage(format: ExportFormat, hasPreviousFile: boolea
 }
 
 function errorMessage(error: unknown): string {
-  return error instanceof Error && error.message ? error.message : 'Не удалось собрать файл'
+  return humanError(error, 'Не удалось собрать файл')
 }
 
 export function deriveExportState({ format, file, currentRevision, supported, mutation }: ExportStateInput): ExportState {

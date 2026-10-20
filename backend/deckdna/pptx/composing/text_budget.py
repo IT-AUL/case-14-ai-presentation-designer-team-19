@@ -36,6 +36,7 @@ from deckdna.pptx.composing.text_replace import (
 )
 
 A = "http://schemas.openxmlformats.org/drawingml/2006/main"
+P = "http://schemas.openxmlformats.org/presentationml/2006/main"
 EMU_PER_PT = 12700
 
 READABLE_BODY_PT = 12.0
@@ -226,6 +227,55 @@ def layout_art_ratio(slide, sw: int, sh: int, cache: dict | None = None) -> floa
     return ratio
 
 
+def _art_edges(blob: bytes) -> float:
+    from io import BytesIO
+
+    from PIL import Image, ImageFilter
+
+    img = Image.open(BytesIO(blob)).convert("L").resize((320, 180))
+    edges = img.filter(ImageFilter.FIND_EDGES).crop((10, 45, 310, 165))
+    hist = edges.histogram()
+    return sum(hist[9:]) / max(1, sum(hist))
+
+
+def slide_background_art_ratio(pkg, slide_part: str) -> float:
+    """То же, что ``layout_art_ratio``, для собственного фона слайда
+    (``p:bg`` с картинкой): шаблон питча LCT рисует подложки карточек прямо
+    в фоне каждого слайда, а фигуры-карточки лежат точно поверх них
+    (ADR-031 §6). Убранная фигура обнажила бы карточку с демо-текстом."""
+    from deckdna.pptx.opc.package import resolve_target
+
+    root = etree.fromstring(pkg.parts[slide_part])
+    blip = root.find(f"{{{P}}}cSld/{{{P}}}bg//{{{A}}}blip")
+    if blip is None:
+        return 0.0
+    rid = blip.get("{http://schemas.openxmlformats.org/officeDocument/2006/relationships}embed")
+    for rel in pkg.rels(slide_part):
+        if rel.id == rid:
+            part = resolve_target(slide_part, rel.target)
+            try:
+                return _art_edges(pkg.parts[part])
+            except Exception:  # noqa: BLE001 — битая/векторная картинка
+                return 0.0
+    return 0.0
+
+
+def _numeric_demo(slide_xml: bytes) -> bool:
+    """Слайд под KPI: треть и больше его текстовых рамок — числа/проценты
+    («42%», «98,300,000»). Такой эталон без чисел в тексте колоды остаётся
+    пустыми кольцами и плашками (VK Education, 29.09)."""
+    from deckdna.pptx.composing.text_replace import _DEMO_NUMBER_RE
+
+    root = etree.fromstring(slide_xml)
+    texts = [
+        "".join(t.text or "" for t in body.iter(f"{{{A}}}t")).strip()
+        for body in root.iter("{http://schemas.openxmlformats.org/presentationml/2006/main}txBody")
+    ]
+    texts = [t for t in texts if t]
+    numeric = sum(1 for t in texts if _DEMO_NUMBER_RE.search(t) and len(t) <= 12)
+    return len(texts) >= 3 and numeric >= max(2, len(texts) / 3)
+
+
 def template_budgets(template_path) -> dict[str, dict]:
     """Бюджеты всех слайдов шаблона: ``{slide_part: slide_text_budget(...)}``.
 
@@ -251,5 +301,6 @@ def template_budgets(template_path) -> dict[str, dict]:
         # графика макета под контентом: слайд годится, только если пунктов
         # ровно столько, сколько мест (layout_fit._fits_rigid)
         budget["layout_art"] = layout_art_ratio(slide, sw, sh, art_cache) >= LAYOUT_ART_THRESHOLD
+        budget["numeric_demo"] = _numeric_demo(xml)
         out[part] = budget
     return out

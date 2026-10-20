@@ -14,7 +14,7 @@ It is a thin orchestration wrapper: every stage is the same public
 pipeline code the CLI already uses (`deckdna.generation.pipeline.generate`,
 `deckdna.pptx.exporting.render.render_html`). No template names, indices,
 layouts or colors are hardcoded — the pipeline underneath already proves
-arbitrary-template adaptation; this module only
+arbitrary-template adaptation , this module only
 drives it three times and reports the outcome honestly.
 
 Runs from any working directory, with or without `pip install -e .`:

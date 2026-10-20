@@ -21,6 +21,10 @@ export interface SlideInspectorProps {
   linkedKeys?: readonly string[]
   hoverKey: string | null
   mode: InspectorMode
+  regenerating?: boolean
+  exemplarLabel?: string | null
+  showFrames?: boolean
+  onShowFramesChange?: (show: boolean) => void
   onModeChange: (mode: InspectorMode) => void
   onPick: (key: string) => void
   onHover: (key: string | null) => void
@@ -69,7 +73,13 @@ function SlideFrame({ pdfUrl, imageUrl, slideNumber, children }: SlideFrameProps
 
 export function SlideInspector(props: SlideInspectorProps) {
   const { pdfUrl, pdfRevision, imageUrl, imageRevision, revision, slideNumber, slideCount, title, views, journal, activeKey, hoverKey, mode } = props
-  const [showAll, setShowAll] = useState(true)
+  const [innerShowAll, setInnerShowAll] = useState(false)
+  const showAll = props.showFrames ?? innerShowAll
+  const toggleFrames = () => {
+    const next = !showAll
+    setInnerShowAll(next)
+    props.onShowFramesChange?.(next)
+  }
   const renderRevision = imageUrl ? imageRevision : pdfRevision
   const staleRender = renderRevision !== null && renderRevision < revision
 
@@ -100,12 +110,17 @@ export function SlideInspector(props: SlideInspectorProps) {
         <div className={styles.title} title={title}>
           {title}
         </div>
+        {props.exemplarLabel && (
+          <Mono className={styles.exemplar} title="Макет-образец из шаблона">
+            {props.exemplarLabel}
+          </Mono>
+        )}
         <Segmented size="sm" label="Вид слайда" options={MODE_OPTIONS} value={mode} onChange={props.onModeChange} />
       </div>
 
       {mode === 'slide' ? (
         <>
-          <div className={styles.stage}>
+          <div className={styles.stage} aria-busy={props.regenerating || undefined}>
             <SlideFrame pdfUrl={pdfUrl} imageUrl={imageUrl} slideNumber={slideNumber}>
               <IssueOverlay
                 items={views}
@@ -118,6 +133,11 @@ export function SlideInspector(props: SlideInspectorProps) {
                 onHover={props.onHover}
               />
             </SlideFrame>
+            {props.regenerating && (
+              <div className={styles.regeneratingOverlay} role="status" aria-live="polite">
+                <span className={styles.regeneratingBadge}>Пересобираю только слайд {pad(slideNumber)}…</span>
+              </div>
+            )}
             {staleRender && (
               <p className={styles.staleChip} role="note">
                 <Icon as={AlertTriangle} size={14} />
@@ -126,13 +146,13 @@ export function SlideInspector(props: SlideInspectorProps) {
             )}
           </div>
           <div className={styles.legend}>
-            <button type="button" className={styles.frameToggle} aria-pressed={showAll} onClick={() => setShowAll((current) => !current)}>
+            <button type="button" className={styles.frameToggle} aria-pressed={showAll} onClick={toggleFrames}>
               <span className={styles.frameToggleBox} aria-hidden>
                 {showAll && <Icon as={Check} size={10} strokeWidth={3} />}
               </span>
               Все рамки
             </button>
-            {LEGEND.map((item) => (
+            {showAll && LEGEND.map((item) => (
               <span key={item.key} className={styles.legendItem}>
                 <span className={styles.swatch} data-kind={item.key} aria-hidden />
                 {item.label}

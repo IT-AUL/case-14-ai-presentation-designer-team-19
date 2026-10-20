@@ -13,6 +13,7 @@ export interface ProjectProgress {
   repaired: boolean
   exported: boolean
   reaudited: boolean
+  polishClear?: boolean
 }
 
 export type StepState = 'current' | 'done' | 'available' | 'locked'

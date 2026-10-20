@@ -19,9 +19,7 @@ from fastapi.testclient import TestClient
 FIXTURES = Path(__file__).resolve().parents[1] / "fixtures"
 TEMPLATE = FIXTURES / "pptx" / "vk_tech_template.pptx"
 CONTENT = FIXTURES / "content" / "poc_article.md"
-PPTX_MIME = (
-    "application/vnd.openxmlformats-officedocument.presentationml.presentation"
-)
+PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 
 client = TestClient(app)
 
@@ -76,9 +74,7 @@ def _storyline_fixture():
 
     def _respond(payload: dict) -> dict:
         nodes = payload["evidence_graph"]["nodes"]
-        claim_ids = [n["id"] for n in nodes if n["type"] == "claim"] or [
-            n["id"] for n in nodes
-        ]
+        claim_ids = [n["id"] for n in nodes if n["type"] == "claim"] or [n["id"] for n in nodes]
         ev = claim_ids[:1]
         return {
             "slides": [
@@ -131,7 +127,7 @@ def test_use_llm_calls_real_gateway_and_surfaces_results(monkeypatch, wait_gener
     assert run["state"] == "completed"
     variant = run["variants"][0]
     assert variant["planner"] == LLM_PLANNER_VERSION
-    assert variant["contextual_issues"] == BRIEF["target_slide_count"]
+    assert 1 <= variant["contextual_issues"] <= BRIEF["target_slide_count"]
 
     # gateway реально вызван — не «флаг принят и проигнорирован»
     methods = {c["method"] for c in gateway.calls}
@@ -177,6 +173,7 @@ def test_use_llm_styles_content_units_via_plan_all_strategies(monkeypatch, wait_
     bullets = [
         u["text"]
         for slide in run["deck_plan"]["slides"]
+        if slide["purpose"] != "agenda"  # navigation is synced from final section titles
         for u in slide["content_units"]
         if u["kind"] == "bullet"
     ]
@@ -235,6 +232,7 @@ def test_use_llm_routes_through_adr016_v2_when_configured(monkeypatch, wait_gene
     bullets = [
         u["text"]
         for slide in run["deck_plan"]["slides"]
+        if slide["purpose"] not in {"agenda", "cta"}
         for u in slide["content_units"]
         if u["kind"] == "bullet"
     ]

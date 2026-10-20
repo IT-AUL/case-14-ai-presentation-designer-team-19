@@ -1,101 +1,116 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router'
-import { CreateProjectDialog, defaultProjectName } from '@/features/create-project'
-import { useCreateProject, useProjects, type Project } from '@/entities/project'
-import { isApiError } from '@/shared/api'
-import { API_MODE, routes } from '@/shared/config'
-import { Button, EmptyState, Icon, PageHeader, Play, Plus, useToast } from '@/shared/ui'
-import { ProjectList, ProjectListSkeleton } from '@/widgets/project-list'
+import { CreateProjectDialog } from '@/features/create-project'
+import { useProjects } from '@/entities/project'
+import { humanError } from '@/shared/api'
+import { routes } from '@/shared/config'
+import { Button, EmptyState, Icon, Plus, Search, Segmented, X } from '@/shared/ui'
+import { ProjectListSkeleton, sortProjects } from '@/widgets/project-list'
+import { FILTER_LABEL, FILTER_ORDER, filterCounts, matchesFilter, matchesQuery, projectView, type ProjectFilter } from '../model/projectView'
+import { Composer } from './Composer'
+import { ContinueStrip } from './ContinueStrip'
+import { ProjectRows } from './ProjectRows'
 import styles from './ProjectsPage.module.css'
 
-const IS_MOCK = API_MODE === 'mock'
-
-const DEMO_DESCRIPTION = 'Готовый прогон: ДНК шаблона, план, три варианта, аудит и экспорт.'
-
-function seededProject(projects: readonly Project[] | undefined): Project | undefined {
-  const oldestFirst = [...(projects ?? [])].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at))
-  return oldestFirst.find((project) => project.template_id) ?? oldestFirst[0]
-}
+const CONTINUE_COUNT = 4
+const CONTINUE_MIN_PROJECTS = 6
+const SEARCH_MIN_PROJECTS = 6
 
 export function ProjectsPage() {
   const navigate = useNavigate()
-  const toast = useToast()
   const projects = useProjects()
-  const createDemo = useCreateProject()
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [filter, setFilter] = useState<ProjectFilter>('all')
 
-  const openDemo = () => {
-    const seeded = seededProject(projects.data)
-    if (seeded) {
-      navigate(routes.template(seeded.id))
-      return
-    }
-    createDemo.mutate(defaultProjectName('Демо'), {
-      onSuccess: (project) => navigate(routes.template(project.id)),
-      onError: (error) => toast.show(isApiError(error) ? error.message : 'Не удалось открыть демо'),
-    })
-  }
-
-  const list = projects.data ?? []
+  const list = useMemo(() => sortProjects(projects.data ?? []), [projects.data])
+  const counts = useMemo(() => filterCounts(list), [list])
+  const filtered = useMemo(() => list.filter((project) => matchesFilter(project, filter) && matchesQuery(project, query)), [list, filter, query])
+  const recent = list.length >= CONTINUE_MIN_PROJECTS ? list.filter((project) => projectView(project).filter === 'ready').slice(0, CONTINUE_COUNT) : []
+  const filterOptions = FILTER_ORDER.filter((value) => value === 'all' || counts[value] > 0).map((value) => ({
+    value,
+    label: `${FILTER_LABEL[value]} ${counts[value]}`,
+  }))
+  const searching = Boolean(query.trim()) || filter !== 'all'
 
   return (
     <div className={styles.page}>
-      <PageHeader
-        title="Проекты"
-        description="Шаблон и бриф на входе — три редактируемые колоды с аудитом на выходе."
-        actions={
-          <Button variant="primary" size="lg" onClick={() => setDialogOpen(true)}>
-            <Icon as={Plus} />
+      <Composer />
+
+      {recent.length > 0 && <ContinueStrip projects={recent} />}
+
+      <section className={styles.all} aria-labelledby="all-projects-title">
+        <div className={styles.allHeader}>
+          <h2 id="all-projects-title" className={styles.heading}>
+            Все проекты
+          </h2>
+          <Button variant="ghost" size="sm" onClick={() => setDialogOpen(true)}>
+            <Icon as={Plus} size={15} />
             Новый проект
           </Button>
-        }
-      />
+        </div>
 
-      {IS_MOCK && (
-        <button type="button" className={styles.demo} onClick={openDemo} disabled={createDemo.isPending}>
-          <span className={styles.demoIcon} aria-hidden>
-            <Icon as={Play} size={14} />
-          </span>
-          <span className={styles.demoText}>
-            <span className={styles.demoTitle}>Демо</span>
-            <span className={styles.demoDescription}>{DEMO_DESCRIPTION}</span>
-          </span>
-          <span className={styles.demoAction}>{createDemo.isPending ? 'Открываю…' : 'Открыть'}</span>
-        </button>
-      )}
+        {list.length >= SEARCH_MIN_PROJECTS && (
+          <div className={styles.toolbar}>
+            <Segmented options={filterOptions} value={filter} onChange={setFilter} label="Показать проекты" size="sm" />
+            <label className={styles.search}>
+              <Icon as={Search} size={15} />
+              <input
+                type="search"
+                className={styles.searchInput}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Найти по названию"
+                aria-label="Поиск по проектам"
+              />
+              {query && (
+                <button type="button" className={styles.searchClear} onClick={() => setQuery('')} aria-label="Очистить поиск">
+                  <Icon as={X} size={14} />
+                </button>
+              )}
+            </label>
+          </div>
+        )}
 
-      {projects.isPending ? (
-        <ProjectListSkeleton />
-      ) : projects.isError ? (
-        <EmptyState
-          title="Не удалось загрузить проекты"
-          description={isApiError(projects.error) ? projects.error.message : 'Сервис не ответил.'}
-          actions={
-            <Button size="lg" onClick={() => projects.refetch()}>
-              Повторить
+        {projects.isPending ? (
+          <ProjectListSkeleton />
+        ) : projects.isError ? (
+          <EmptyState
+            title="Не удалось загрузить проекты"
+            description={humanError(projects.error, 'Сервис не ответил.')}
+            actions={
+              <Button size="lg" onClick={() => projects.refetch()}>
+                Повторить
+              </Button>
+            }
+          />
+        ) : filtered.length ? (
+          <ProjectRows key={`${filter}:${query}`} projects={filtered} />
+        ) : searching ? (
+          <div className={styles.empty}>
+            <p>Ничего не нашлось.</p>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setQuery('')
+                setFilter('all')
+              }}
+            >
+              Показать все
             </Button>
-          }
-        />
-      ) : list.length ? (
-        <ProjectList projects={list} />
-      ) : (
-        <EmptyState
-          title="Проектов пока нет"
-          description="Начните с корпоративного шаблона или прошлой презентации."
-          actions={
-            <Button variant="primary" size="lg" onClick={() => setDialogOpen(true)}>
-              Создать первый проект
-            </Button>
-          }
-        />
-      )}
+          </div>
+        ) : (
+          <p className={styles.empty}>Здесь появятся ваши презентации. Начните с темы и шаблона выше.</p>
+        )}
+      </section>
 
       <CreateProjectDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
         onCreated={(project) => {
           setDialogOpen(false)
-          navigate(routes.template(project.id))
+          navigate(routes.start(project.id))
         }}
       />
     </div>

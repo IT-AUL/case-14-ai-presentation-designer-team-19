@@ -258,7 +258,7 @@ def test_generate_llm_path_over_real_http(tmp_path, local_openai, monkeypatch):
     prov = passport["provenance"]
     assert prov["prompt_versions"] == {
         "storyline": "2.0.1",
-        "contextual_slide_audit": "1.1.0",
+        "contextual_slide_audit": "1.3.0",
     }
     assert {
         (p["model_id"], p["provider"]) for p in prov["model_profiles"]
@@ -272,8 +272,9 @@ def test_generate_llm_path_over_real_http(tmp_path, local_openai, monkeypatch):
     # план разбит на батчи слайдов -> несколько storyline-вызовов, не один
     assert len(_calls(local_openai, "SlideOutlineBatch")) >= 1
     vision_calls = _calls(local_openai, "SlideChecksResult")
-    # один vision-вызов на слайд сгенерированной колоды
-    assert len(vision_calls) == report["slides_out"]
+    # Parallel pipeline: контекстный аудит проверяет только слайды с детерминированным флагом
+    # или выборку ≤ 3 слайдов
+    assert 1 <= len(vision_calls) <= report["slides_out"]
     for body in vision_calls:
         images = [
             c

@@ -22,7 +22,7 @@ const STAGE_PATTERNS: readonly (readonly [PipelineStage, RegExp])[] = [
   ['audit', /audit|check|lint|vlm|critic/],
   ['render', /render|pdf|preview|montage|export|html/],
   ['plan', /plan|story|outline|structure|narrative/],
-  ['layout', /layout|compos|compil|assembl|build|slot|fill|pptx|variant/],
+  ['layout', /layout|compos|compil|assembl|build|slot|fill|pptx|variant|icon|image|illustr|picture/],
   ['content', /content|ingest|pars|evidence|extract/],
   ['template', /template|analy[sz]|dna/],
 ]

@@ -1,0 +1,14 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:52:41.446Z",
+  "method": "GET",
+  "path": "/slides/sld_0cd5d62557334d4eac42ac037c6fcdf9/explain",
+  "status": 200,
+  "body": {
+    "slide_id": "sld_0cd5d62557334d4eac42ac037c6fcdf9",
+    "slide_plan_id": "slide-1",
+    "title": "Ключевые выводы",
+    "dataset": null,
+    "assistant_note": "На этом слайде нет графика из данных."
+  }
+}

@@ -83,6 +83,10 @@ def _prose_chars(pack: ContentPack) -> int:
 def needs_restructure(pack: ContentPack) -> bool:
     """Без модели: пересобирать только сплошной текст — меньше двух
     озаглавленных разделов при ≥ ``MIN_PROSE_CHARS`` символов прозы."""
+    from deckdna.ingestion.pptx_content import is_slide_deck
+
+    if is_slide_deck(pack):
+        return False
     headed = sum(1 for s in pack.sections if (s.heading or "").strip())
     return headed < 2 and _prose_chars(pack) >= MIN_PROSE_CHARS
 
@@ -264,6 +268,12 @@ async def restructure_pack(pack: ContentPack, gateway: object | None) -> Content
     """Пакет с разделами, построенными моделью (или запасной структурой)."""
     usable = _can_use(gateway)
     if _prose_chars(pack) < MIN_PROSE_CHARS or (not usable and not needs_restructure(pack)):
+        return pack
+    from deckdna.ingestion.pptx_content import is_slide_deck
+
+    if is_slide_deck(pack):
+        # ADR-032: старая презентация уже разбита автором на слайды —
+        # модель её не перекраивает (и не смешивает заметки с текстом)
         return pack
     sents, anchored = _stream(pack)
     if len(sents) < 4:

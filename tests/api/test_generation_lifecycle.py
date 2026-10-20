@@ -100,7 +100,7 @@ def _gate_generate(monkeypatch):
     return started, release
 
 
-def _wait_state(job_id: str, states: set[str], timeout: float = 120.0) -> dict:
+def _wait_state(job_id: str, states: set[str], timeout: float = 30.0) -> dict:
     deadline = time.monotonic() + timeout
     while True:
         job = _job(job_id)
@@ -141,7 +141,7 @@ def test_202_returns_before_generation_finishes(monkeypatch, wait_generation):
 
 @needs_render
 def test_generation_and_plans_reuse_stored_content_pack(monkeypatch, wait_generation):
-    """/plans and /generations must reuse the ContentPack
+    """hardening check #15: /plans and /generations must reuse the ContentPack
     saved at upload (correct per-unit artifact_id from parse_file(...,
     artifact_id=chosen.id)) instead of re-parsing a temp copy of the source
     file, which would default artifact_id to the temp filename and break
@@ -193,7 +193,7 @@ def test_generation_and_plans_reuse_stored_content_pack(monkeypatch, wait_genera
 
 @needs_render
 def test_audit_rejects_variant_with_no_completed_deck(monkeypatch):
-    """POST /variants/{id}/audits on a variant that
+    """hardening check #4: POST /variants/{id}/audits on a variant that
     hasn't finished generating must not fabricate a "completed" audit
     with made-up issues and metrics -- it has no deck to audit yet."""
     started, release = _gate_generate(monkeypatch)
@@ -291,8 +291,18 @@ def test_cancel_queued_generation_never_executes(
 def test_cancel_running_is_cooperative_and_terminal(
     monkeypatch, wait_generation
 ):
-    """Отмена во время работы: текущий вариант завершается честно,
-    остальные не стартуют; завершение не перезаписывает canceled."""
+    """Отмена во время работы: уже запущенные варианты честно доводятся
+    до конца; завершение не перезаписывает canceled.
+
+    Фаза 5 : compose/audit/render параллельны
+    между вариантами — все запрошенные варианты (капа API — 3) стартуют
+    одновременно, как только воркер подхватил run, а не один за другим.
+    Поэтому "следующий вариант не стартует" (старый последовательный
+    контракт) больше не наблюдаемо через публичный API: к моменту, когда
+    отмена вообще возможна, все варианты уже in-flight. Что остаётся
+    гарантией: отмена run/job необратима (не перезаписывается обратно в
+    completed), даже если все уже запущенные варианты успешно
+    доедут до конца и честно получат status=completed."""
     started, release = _gate_generate(monkeypatch)
     project_id, template_id, pack_id = _project_with_inputs()
     accepted = _generate(
@@ -320,7 +330,7 @@ def test_cancel_running_is_cooperative_and_terminal(
     statuses = {v["status"] for v in run["variants"]}
     assert _not_completed(statuses)
 
-    release.set()  # вариант-в-работе доводится до конца
+    release.set()  # оба in-flight варианта доводятся до конца параллельно
     # run/job уже в терминальном canceled — ждём финализации вариантов:
     # executor ещё помечает in-flight completed после generate().
     deadline = time.monotonic() + 120
@@ -334,13 +344,15 @@ def test_cancel_running_is_cooperative_and_terminal(
     # терминал не перезаписан: ни run, ни job не стали completed
     assert run["state"] == "canceled"
     assert _job(accepted["job_id"])["state"] == "canceled"
-    # честные итоги вариантов: in-flight завершён, незапущенный отменён
-    assert sorted(by_status) == ["canceled", "completed"]
+    # честные итоги вариантов: оба уже стартовавших варианта доехали до
+    # конца — терминальность самого run/job (выше) не зависит от того,
+    # что отдельные in-flight варианты всё же успешно завершились.
+    assert sorted(by_status) == ["completed", "completed"]
 
 
 def _not_completed(statuses: set[str]) -> bool:
-    # прямо после cancel: in-flight ещё running, остальные canceled,
-    # completed появиться не должно
+    # прямо после cancel: все запущенные варианты ещё running (заблокированы
+    # на gate), completed появиться не должно
     return "completed" not in statuses
 
 
@@ -427,7 +439,7 @@ def test_generation_failure_marks_failed_not_stuck(monkeypatch, wait_generation)
 
 
 def test_generation_rejects_template_from_another_project():
-    """A template_id that exists, just not in this
+    """hardening check #6: a template_id that exists, just not in this
     project, must not be usable to start a generation here."""
     project_a, template_a, pack_a = _project_with_inputs()
     project_b = client.post("/api/v1/projects", json={"name": "other"}).json()["id"]
@@ -439,7 +451,7 @@ def test_generation_rejects_template_from_another_project():
 
 
 def test_generation_rejects_content_pack_from_another_project():
-    """A pack from project A is not usable in B."""
+    """hardening check #6: a pack from project A is not usable in B."""
     project_a = client.post("/api/v1/projects", json={"name": "scope-a"}).json()["id"]
     pack_a_resp = client.post(
         f"/api/v1/projects/{project_a}/content-packs",
@@ -455,7 +467,7 @@ def test_generation_rejects_content_pack_from_another_project():
 
 
 def test_plans_reject_inputs_from_another_project():
-    """POST /plans has the same cross-project hole closed."""
+    """hardening check #6: POST /plans has the same cross-project hole."""
     project_a, template_a, pack_a = _project_with_inputs()
     project_b = client.post("/api/v1/projects", json={"name": "other-plans"}).json()["id"]
 

@@ -111,7 +111,8 @@ def render_prompt(spec: PromptSpec, payload: dict[str, Any]) -> str:
     """instructions + payload, сериализованный по spec.input_fields.
 
     Поля payload вне input_fields игнорируются; отсутствующие поля —
-    explicit null в выводе.
+    explicit null в выводе. Статическая системная часть (instructions)
+    всегда идёт строго первой до переменных секций ``## <field>``.
     """
     parts = [spec.instructions.strip()]
     for field in spec.input_fields:
@@ -119,10 +120,20 @@ def render_prompt(spec: PromptSpec, payload: dict[str, Any]) -> str:
         serialized = (
             value
             if isinstance(value, str)
-            else json.dumps(value, ensure_ascii=False, default=str)
+            else json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
         )
         parts.append(f"\n## {field}\n{serialized}")
     return "\n".join(parts) + "\n"
+
+
+def inject_schema_before_payload(text: str, schema_note: str) -> str:
+    """Вставить статическую JSON Schema сразу после системной инструкции,
+    до первой переменной секции ``## <field>`` (стабильный префикс для KV-кэша)."""
+    marker = "\n\n## "
+    idx = text.find(marker)
+    if idx < 0:
+        return text + schema_note
+    return text[:idx] + schema_note + text[idx:]
 
 
 def render_prompt_by_name(name: str, payload: dict[str, Any]) -> str:
@@ -131,3 +142,4 @@ def render_prompt_by_name(name: str, payload: dict[str, Any]) -> str:
     if prompt_name and version.isdigit():
         return render_prompt(load_prompt(prompt_name, version), payload)
     return render_prompt(load_prompt(name), payload)
+

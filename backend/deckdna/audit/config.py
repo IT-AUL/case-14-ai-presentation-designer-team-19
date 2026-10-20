@@ -45,6 +45,9 @@ class AuditConfig(BaseModel):
     out_of_bounds_tolerance: float = 0.005
     # integrity.duplicate_slide — jaccard-порог текстовой идентичности
     duplicate_similarity_threshold: float = 0.90
+    # integrity.filler_slide (ADR-030) — минимум символов тела (без
+    # заголовка) у контентного слайда без таблицы/графика/картинки
+    filler_min_body_chars: int = 20
     # integrity.placeholder_text — дополнительные WHOLE-ярус паттерны:
     # фигура флагается, если весь её нормализованный текст целиком
     # матчится любым паттерном (регистронезависимо). Маркер внутри
@@ -76,6 +79,9 @@ class AuditConfig(BaseModel):
     max_font_families: int = 2
     # density.chart_series — максимум серий (c:ser) в одной диаграмме
     max_chart_series: int = 5
+    # chart.readability — final frame fractions, after source-note reservation
+    chart_min_width_ratio: float = Field(default=.4, ge=0, le=1)
+    chart_min_height_ratio: float = Field(default=.4, ge=0, le=1)
     # density.occupancy — доля площади слайда под контентом
     occupancy_min: float = 0.25
     occupancy_max: float = 0.75

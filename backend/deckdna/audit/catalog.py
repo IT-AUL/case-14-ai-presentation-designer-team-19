@@ -10,7 +10,7 @@ repair-планировщик УМЕЕТ построить действие, а
 (``repair/planner.py::_RULE_HANDLERS`` минус ``NON_EXECUTABLE_RULES``).
 ``audit_deck`` проставляет флаг из этого каталога, а не «True по
 умолчанию»: issue с ``repairable=true`` без обработчика давал
-``unresolved`` и обещание, которого никто не выполнял (contract B5).
+``unresolved`` и обещание, которого никто не выполнял (handoff B5).
 Соответствие каталога планировщику проверяет
 ``tests/audit/test_rule_catalog.py`` — расхождение ломает сборку.
 
@@ -103,6 +103,10 @@ _RULES: tuple[RuleInfo, ...] = (
     # --- целостность ---
     _det("integrity.empty_slide", "Пустой слайд", "integrity", "error", None,
          "Убрать пустой слайд"),
+    # ADR-030: автоматического repair нет — тело добирается до вёрстки
+    # (research/, planning/complete.py), здесь только честный сигнал
+    _det("integrity.filler_slide", "Слайд-заглушка без содержания", "integrity",
+         "error", "filler_min_body_chars"),
     _det("integrity.duplicate_slide", "Повтор слайда", "integrity", "warning",
          "duplicate_similarity_threshold", "Убрать повторяющийся слайд"),
     _det("integrity.placeholder_text", "Осталась заглушка шаблона", "integrity",
@@ -113,6 +117,8 @@ _RULES: tuple[RuleInfo, ...] = (
          "blocker", "raster_only_slide_area"),
     _det("chart.metadata", "У диаграммы нет подписей осей или легенды",
          "integrity", "error"),
+    _det("chart.readability", "Диаграмма слишком мала для чтения",
+         "layout", "warning", "chart_min_height_ratio"),
     # --- смысл (VLM) ---
     _ctx("content.conclusion_title", "Заголовок — тема, а не вывод", "warning"),
     _ctx("content.title_alignment", "Заголовок не отражает содержание", "error"),

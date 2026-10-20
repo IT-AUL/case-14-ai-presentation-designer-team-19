@@ -107,65 +107,18 @@ def render_pdf(pptx_path: str | Path, out_path: str | Path) -> Path:
     return out_path
 
 
-def _slide_texts(pptx_path: Path) -> list[str]:
-    """Plain text of each slide (caption material for the HTML viewer)."""
-    from pptx import Presentation
-
-    texts: list[str] = []
-    for slide in Presentation(str(pptx_path)).slides:
-        parts = [
-            shape.text_frame.text.strip()
-            for shape in slide.shapes
-            if shape.has_text_frame and shape.text_frame.text.strip()
-        ]
-        texts.append("\n".join(parts))
-    return texts
-
-
 def render_html(pptx_path: str | Path, out_dir: str | Path) -> Path:
-    """Render *pptx_path* to an HTML viewer directory; returns index.html.
+    """Export positioned text, tables, SVG charts and package images to HTML."""
+    from deckdna.pptx.exporting.html import html_files
 
-    Slides go through the proven pdf→pdftoppm path into ``slide-*.png``
-    assets; ``index.html`` references them plus per-slide text captions.
-    Deliberately avoids ``soffice --convert-to html``: that filter emits a
-    single document with every slide image base64-embedded, which hits
-    libxml2 huge-text-node limits on real decks (OR-010 is a viewer, not
-    an editable format — ARCHITECTURE §12).
-    """
-    import html as _html
-
-    pptx_path = Path(pptx_path)
     out_dir = Path(out_dir)
+    files = html_files(pptx_path)
     out_dir.mkdir(parents=True, exist_ok=True)
-
-    slides = render_slides_png(pptx_path, out_dir)
-    texts = _slide_texts(pptx_path)
-
-    items = []
-    for i, png in enumerate(slides):
-        caption = texts[i] if i < len(texts) else ""
-        items.append(
-            '<div class="slide">\n'
-            f'  <h2>Slide {i + 1}</h2>\n'
-            f'  <img src="{_html.escape(png.name)}" alt="Slide {i + 1}">\n'
-            + (f'  <p class="caption">{_html.escape(caption)}</p>\n' if caption else "")
-            + "</div>"
-        )
-    index = out_dir / "index.html"
-    index.write_text(
-        "<!doctype html>\n"
-        '<html><head><meta charset="utf-8">'
-        f"<title>{_html.escape(pptx_path.stem)}</title>\n"
-        "<style>"
-        "body{font-family:sans-serif;margin:2em;background:#f7f7f7}"
-        ".slide{margin-bottom:2.5em}"
-        "img{max-width:100%;border:1px solid #ccc;background:#fff}"
-        ".caption{color:#555;font-size:.9em;white-space:pre-line;margin-top:.4em}"
-        "</style></head><body>\n"
-        f"<h1>{_html.escape(pptx_path.stem)}</h1>\n" + "\n".join(items) + "\n</body></html>\n",
-        encoding="utf-8",
-    )
-    return index
+    for name, data in files.items():
+        target = out_dir / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+    return out_dir / "index.html"
 
 
 def render_slides_png(

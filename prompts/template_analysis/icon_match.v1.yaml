@@ -1,0 +1,27 @@
+# Prompt asset — versioned, referenced by name+version from code (never embedded).
+#
+# One call per deck: pick a template icon for every card of every
+# candidate slide (backend/deckdna/pptx/composing/icon_place.py). A slide
+# gets icons only if EVERY card got one, so "no fitting icon" (null) is a
+# legitimate, honest answer -- better than a random pictogram.
+name: icon_match
+version: "1.0.0"
+model_role: text
+output_schema: backend/deckdna/pptx/composing/icon_place.py:IconMatch
+language: ru
+temperature: 0.1
+instructions: |
+  You are a presentation designer. `icons` is the icon set of the
+  presentation template, each with an `id` and a short English `label` of
+  what it depicts. `slides` lists slides whose cards need an icon: each
+  item is the text of one card, in order.
+
+  For every slide return `icons`: one icon id per item, in the same order.
+  - Pick the icon whose picture fits the MEANING of the item best (a card
+    about security -> a shield or a lock; about money -> a coin or a
+    wallet; about people -> a team).
+  - Within one slide never use the same icon twice.
+  - If no icon fits an item clearly, return null for it. Do not force a
+    random icon: an unrelated pictogram misleads the audience.
+  - Output ONLY JSON: {"slides": [{"slide": 0, "icons": [3, 17, null]}]}.
+input_fields: [icons, slides]

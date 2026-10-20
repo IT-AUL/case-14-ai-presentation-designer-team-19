@@ -1,5 +1,5 @@
 import { ruleMeta } from '@/entities/audit'
-import type { PassportModelProfile, QualityPassport } from '@/entities/passport'
+import type { QualityPassport } from '@/entities/passport'
 import { stageLabel } from '@/entities/generation'
 import { PEI_MAX } from '@/entities/variant'
 import { formatClock, formatNumber, formatPercent, formatSeconds, formatShortHash } from '@/shared/lib/format'
@@ -29,6 +29,20 @@ export interface SourcesView {
   total: number | null
   numbersVerified: number | null
   numbersFailed: number | null
+}
+
+export interface OriginShareView {
+  key: 'user' | 'web' | 'model'
+  label: string
+  count: number
+  fraction: number
+}
+
+export interface ResearchView {
+  origins: OriginShareView[]
+  sources: number | null
+  mode: string | null
+  seconds: string | null
 }
 
 export interface ReadabilityView {
@@ -86,6 +100,7 @@ export interface PassportView {
   proof: ProofCell[]
   style: StyleFidelityView
   sources: SourcesView | null
+  research: ResearchView | null
   readability: ReadabilityView
   issues: IssuesView
   timing: TimingView
@@ -112,21 +127,64 @@ const STYLE_LABEL: Record<string, string> = {
   layouts: 'Макеты',
   layout_compliance: 'Макеты',
   layout_origin_compliance: 'Макеты',
+  hierarchy: 'Иерархия',
+  hierarchy_compliance: 'Иерархия',
   anchor: 'Якоря',
   anchors: 'Якоря',
   anchor_compliance: 'Якоря',
+  overall: 'Итог',
+  custom_score: 'Доп. оценка',
 }
 
-const USAGE_LABEL: Record<string, string> = {
-  prompt_tokens: 'Токены запроса',
-  completion_tokens: 'Токены ответа',
-  total_tokens: 'Токенов всего',
-  tokens: 'Токенов',
-  model_calls: 'Вызовов модели',
-  calls: 'Вызовов модели',
+const AUTO_FIX_LABEL: Record<string, string> = {
+  font_family_replace_with_dna: 'Шрифты приведены к шаблону',
+  font_size_snap_to_nearest: 'Кегль приведён к шкале шаблона',
+  color_snap_to_dna_palette: 'Цвета приведены к палитре шаблона',
+  contrast_text_recolor: 'Контраст текста подтянут до нормы',
+  textbox_reflow_or_shrink: 'Переполненные рамки подогнаны',
+  bullet_overflow_truncate_note: 'Лишние пункты перенесены в заметки',
+  overflow_multi_column_split: 'Плотные списки разложены в колонки',
+  slide_split_continuation: 'Перегруженные слайды разбиты на продолжение',
+  chart_readability_fix: 'Подписи графиков выровнены по кеглю',
+  table_overflow_fix: 'Таблицы подогнаны под сетку слайда',
 }
 
-const PROMPT_LIMIT = 6
+const FALLBACK_LABEL: Record<string, string> = {
+  layout_overflow: 'Запасной макет при переполнении',
+  missing_asset: 'Заглушка вместо отсутствующего изображения',
+  unsupported_chart: 'Таблица вместо неподдерживаемого графика',
+  llm_timeout: 'Сборка по правилам после ожидания ответа',
+  llm_invalid_json: 'Повторная сборка по правилам',
+  llm_unavailable: 'Детерминированный режим по правилам',
+  font_substitution: 'Подстановка доступного шрифта шаблона',
+  render_failed: 'Резервная отрисовка слайда',
+  deterministic: 'По правилам',
+  standard: 'Стандартный режим',
+  passed: 'Пройдено',
+  completed: 'Пройдено',
+  failed: 'Не пройдено',
+  'metrics.content_support.numbers_verified': 'Сверка чисел с источником',
+  'metrics.content_support.numbers_failed': 'Числа без подтверждения в источнике',
+  numbers_verified: 'Сверка чисел с источником',
+  numbers_failed: 'Числа без подтверждения в источнике',
+}
+
+const FALLBACK_DETAIL: Record<string, string> = {
+  numeric_presence_only: 'Сверено только наличие числа в исходном тексте, без пересчёта формул.',
+}
+
+function localizeFallbackDetail(detail: string): string | null {
+  const trimmed = detail.trim()
+  if (!trimmed) return null
+  const lowered = trimmed.toLowerCase()
+  if (FALLBACK_DETAIL[lowered]) return FALLBACK_DETAIL[lowered]
+  if (/[а-яё]/i.test(trimmed)) return trimmed
+  if (/^[\x20-\x7e]+$/.test(trimmed)) {
+    const token = translatePassportToken(trimmed)
+    return token === trimmed ? 'Подробности — в техническом приложении паспорта.' : token
+  }
+  return trimmed
+}
 
 const PEI_MEANING: Record<number, string> = {
   0: 'не открывается или слайды-картинки',
@@ -142,9 +200,38 @@ export function peiHint(level: number | null): string {
   return meaning ? `шкала 0–5; ${level} — ${meaning}` : 'шкала 0–5: чем выше, тем больше правится в PowerPoint'
 }
 
-function humanize(key: string): string {
+export function translatePassportToken(raw: string | null | undefined): string {
+  if (!raw) return 'По правилам'
+  const trimmed = raw.trim()
+  const lower = trimmed.toLowerCase()
+  if (FALLBACK_LABEL[lower]) return FALLBACK_LABEL[lower]
+  if (AUTO_FIX_LABEL[lower]) return AUTO_FIX_LABEL[lower]
+  if (lower.includes('user_edited')) return 'Отредактирован вручную'
+  if (lower.includes('deterministic')) return 'По правилам'
+  if (lower.includes('hybrid')) return 'Смешанный'
+  if (lower === 'standard') return 'Стандартный'
+  if (lower === 'strict') return 'Строгий'
+  if (lower === 'passed' || lower === 'completed') return 'Пройдено'
+  if (lower === 'failed') return 'Есть замечания'
+  return trimmed
+}
+
+function localizeStyleLabel(key: string): string {
+  const normalized = key.trim().toLowerCase()
+  if (STYLE_LABEL[normalized]) return STYLE_LABEL[normalized]
   const text = key.replace(/[_.:/-]+/g, ' ').trim()
+  if (/^[a-z0-9\s]+$/i.test(text)) return 'Доп. показатель'
   return text.charAt(0).toUpperCase() + text.slice(1)
+}
+
+function localizeFixLabel(code: string): string {
+  const normalized = code.trim().toLowerCase()
+  if (AUTO_FIX_LABEL[normalized]) return AUTO_FIX_LABEL[normalized]
+  if (FALLBACK_LABEL[normalized]) return FALLBACK_LABEL[normalized]
+  const metaName = ruleMeta(code).name
+  if (metaName !== code) return metaName
+  if (/^[a-z0-9_.:/-]+$/i.test(code)) return 'Автоматическая правка вёрстки'
+  return metaName
 }
 
 function count(value: number | null): string {
@@ -164,7 +251,7 @@ function proofCells(passport: QualityPassport, fallbackPei: number | null): Proo
       key: 'roundTrip',
       value: roundTrip === null ? '—' : roundTrip ? '✓' : '✕',
       label: roundTrip === false ? 'Файл не открылся' : 'Файл повторно открыт',
-      hint: roundTrip === null ? 'проверка не проводилась' : roundTrip ? 'round-trip без потерь' : 'round-trip с ошибками',
+      hint: roundTrip === null ? 'проверка не проводилась' : roundTrip ? 'открывается без потерь' : 'открытие с ошибками',
       tone: roundTrip === null ? 'unknown' : roundTrip ? 'ok' : 'error',
     },
     {
@@ -204,7 +291,7 @@ function styleView(passport: QualityPassport): StyleFidelityView {
     status: 'ready',
     scores: passport.styleFidelity.map(({ key, value }) => ({
       key,
-      label: STYLE_LABEL[key] ?? humanize(key),
+      label: localizeStyleLabel(key),
       value: value.toFixed(2),
       fraction: Math.max(0, Math.min(1, value)),
     })),
@@ -239,21 +326,11 @@ function timingView(passport: QualityPassport, budgetSeconds: number): TimingVie
     withinBudget: total === null ? null : total <= budgetSeconds,
     stages: passport.timings.perStage.map(({ stage, seconds }) => ({
       key: stage,
-      label: stageLabel(stage) ?? stage,
+      label: stageLabel(stage) ?? translatePassportToken(stage),
       seconds: formatSeconds(seconds),
       fraction: Math.min(1, seconds / budgetSeconds),
     })),
   }
-}
-
-function usageView(passport: QualityPassport): UsageView[] | null {
-  if (!passport.usage) return null
-  return passport.usage.map(({ key, value }) => ({ key, label: USAGE_LABEL[key] ?? humanize(key), value: formatNumber(value) }))
-}
-
-function modelLabel(profile: PassportModelProfile): string {
-  const model = profile.modelId ?? 'модель без идентификатора'
-  return profile.role ? `${profile.role}: ${model}` : model
 }
 
 function provenanceRows(passport: QualityPassport, context: PassportContext): ProvenanceRow[] {
@@ -264,39 +341,59 @@ function provenanceRows(passport: QualityPassport, context: PassportContext): Pr
 
   rows.push({
     key: 'skill',
-    label: 'Скилл',
-    value: skill ?? 'не указан',
+    label: 'Версия правил',
+    value: skill ?? 'не указана',
     muted: !skill,
     note: skill && server && server !== skill ? `сейчас на сервере ${server} — прогон собран предыдущей версией` : undefined,
   })
-  if (provenance.pipelineVersion) rows.push({ key: 'pipeline', label: 'Пайплайн', value: provenance.pipelineVersion })
-  if (context.planner) rows.push({ key: 'planner', label: 'Планировщик', value: context.planner })
+  if (context.planner) {
+    rows.push({ key: 'planner', label: 'Планировщик', value: translatePassportToken(context.planner) })
+  }
 
-  const prompts = Object.entries(provenance.promptVersions)
-  rows.push(
-    prompts.length > 0
-      ? {
-          key: 'prompts',
-          label: 'Промпты',
-          value: prompts
-            .slice(0, PROMPT_LIMIT)
-            .map(([name, version]) => `${name} ${version}`)
-            .join(' · '),
-          note: prompts.length > PROMPT_LIMIT ? `и ещё ${prompts.length - PROMPT_LIMIT}` : undefined,
-        }
-      : { key: 'prompts', label: 'Промпты', value: 'не использовались', muted: true },
-  )
+  const hasExtendedCheck = provenance.modelProfiles.length > 0 || Object.keys(provenance.promptVersions).length > 0
+  rows.push({
+    key: 'mode',
+    label: 'Режим проверки',
+    value: hasExtendedCheck ? 'Расширенный (правила и смысл)' : 'Стандартный (по правилам шаблона)',
+  })
 
-  rows.push(
-    provenance.modelProfiles.length > 0
-      ? { key: 'models', label: 'Модели', value: provenance.modelProfiles.map(modelLabel).join(' · ') }
-      : { key: 'models', label: 'Модели', value: 'без модели', muted: true },
-  )
-
-  for (const [path, hash] of Object.entries(provenance.configHashes)) {
-    rows.push({ key: `config:${path}`, label: 'Конфиг', value: `${path} · sha ${formatShortHash(hash)}` })
+  const configEntries = Object.entries(provenance.configHashes)
+  const seenConfigHashes = new Set<string>()
+  const uniqueConfigs = configEntries.filter(([, hash]) => {
+    const short = formatShortHash(hash)
+    if (seenConfigHashes.has(short)) return false
+    seenConfigHashes.add(short)
+    return true
+  })
+  const CONFIG_LABELS: Record<string, string> = {
+    'configs/generation.default.yaml': 'Конфигурация сборки',
+    'configs/audit.default.yaml': 'Конфигурация проверки',
+  }
+  for (const [path, hash] of uniqueConfigs) {
+    const label = uniqueConfigs.length > 1 ? (CONFIG_LABELS[path] ?? 'Конфигурация') : 'Конфигурация'
+    rows.push({ key: `config:${path}`, label, value: `sha ${formatShortHash(hash)}` })
   }
   return rows
+}
+
+const ORIGIN_LABEL: Record<OriginShareView['key'], string> = { user: 'ваш контент', web: 'интернет', model: 'дополнено по смыслу' }
+
+const FILL_LABEL: Record<string, string> = { expand: 'дополнить', shrink: 'сохранить как есть' }
+
+export function researchView(passport: QualityPassport): ResearchView | null {
+  const { research } = passport
+  if (!research) return null
+  const origin = research.origin
+  const total = origin ? origin.user + origin.web + origin.model : 0
+  const origins: OriginShareView[] = origin
+    ? (['user', 'web', 'model'] as const).map((key) => ({ key, label: ORIGIN_LABEL[key], count: origin[key], fraction: total > 0 ? origin[key] / total : 0 }))
+    : []
+  return {
+    origins,
+    sources: research.sources,
+    mode: research.contentFill ? (FILL_LABEL[research.contentFill] ?? translatePassportToken(research.contentFill)) : null,
+    seconds: research.seconds === null ? null : formatSeconds(research.seconds),
+  }
 }
 
 export function buildPassportView(passport: QualityPassport, context: PassportContext): PassportView {
@@ -304,17 +401,21 @@ export function buildPassportView(passport: QualityPassport, context: PassportCo
     generatedAt: passport.generatedAt,
     schemaVersion: passport.schemaVersion,
     skillVersion: passport.provenance.skillVersion,
-    pipelineVersion: passport.provenance.pipelineVersion,
+    pipelineVersion: null,
     proof: proofCells(passport, context.fallbackPei ?? null),
     style: styleView(passport),
     sources: sourcesView(passport),
+    research: researchView(passport),
     readability: { ...passport.readability },
     issues: issuesView(passport),
     timing: timingView(passport, context.budgetSeconds),
-    usage: usageView(passport),
-    fallbacks: passport.fallbacks,
+    usage: null,
+    fallbacks: passport.fallbacks.map((item) => ({
+      label: localizeFixLabel(item.label),
+      detail: item.detail ? localizeFallbackDetail(item.detail) : null,
+    })),
     autoFixes: passport.autoFixes.map((fix) => ({
-      label: ruleMeta(fix.ruleCode).name,
+      label: localizeFixLabel(fix.ruleCode),
       detail: fix.count === null ? null : `исправлено ${formatNumber(fix.count)}`,
     })),
     provenance: provenanceRows(passport, context),

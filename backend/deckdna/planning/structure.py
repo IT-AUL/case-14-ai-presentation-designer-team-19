@@ -61,7 +61,7 @@ MAX_CONCURRENT_STRUCTURE_CALLS = 4
 # slide_brief затем может утечь как title через content_writer's
 # fallback (_fallback_units возвращает slide_brief как title_intent),
 # давая title-only слайд с обманчиво-«содержательным» заголовком.
-# Живой баг, найден на 3 сгенерированных декax.
+# Живой баг, найден на 3 сгенерированных декax .
 # Fix: dividers protected тем же способом, что title/thank_you/cta --
 # никогда не уходят в LLM, Stage 1 честно копирует baseline.
 _STRUCTURE_PROTECTED_PURPOSES = _PROTECTED_OUTLINE_PURPOSES | frozenset({Purpose.section_divider})
@@ -146,6 +146,13 @@ def _compact_graph(graph: EvidenceGraph) -> dict:
     return {"id": graph.id, "nodes": nodes}
 
 
+def _compact_ledger(ledger, brief: Brief | None = None) -> dict:
+    """Компактный каталог из FactLedger для промпта Stage 1."""
+    from deckdna.planning.story_rules import build_fact_ledger_catalog
+
+    return build_fact_ledger_catalog(ledger, brief=brief)
+
+
 async def _run_structure_batch(
     gateway: ModelGateway,
     batch_slides: list[SlidePlan],
@@ -210,6 +217,8 @@ async def plan_structure_llm(
     design_dna: DesignDNA | None = None,
     config: GenerationConfig | None = None,
     strategy: Strategy = Strategy.balanced,
+    *,
+    fact_ledger: object | None = None,
 ) -> DeckStructure:
     """Stage 1 (ADR-016): purpose + evidence pool + one-line slide_brief
     per slide. See the module docstring for the full design rationale."""
@@ -218,9 +227,28 @@ async def plan_structure_llm(
         from deckdna.planning.config import load_generation_config
 
         cfg = load_generation_config()
+    from deckdna.planning.request_constraints import resolve_count_goal
+
+    brief = resolve_count_goal(brief)
     validate_slide_count(brief.target_slide_count, cfg)
 
-    baseline = plan_deck(pack, brief, cfg, strategy=strategy)
+    if pack.datasets or fact_ledger is not None:
+        from deckdna.planning.story_director import plan_deck_llm
+
+        plan = await plan_deck_llm(
+            pack, brief, gateway, design_dna, cfg, strategy, fact_ledger=fact_ledger
+        )
+        return DeckStructure(
+            id=plan.id,
+            brief=plan.brief,
+            evidence_graph_id=plan.evidence_graph_id,
+            language=plan.language,
+            slides=[_fallback_structure(slide) for slide in plan.slides],
+            used_llm=0,
+            total_slides=len(plan.slides),
+        )
+
+    baseline = plan_deck(pack, brief, cfg, strategy=strategy, fact_ledger=fact_ledger)
     graph: EvidenceGraph = build_evidence_graph(pack)
     known_evidence_ids = {n.id for n in graph.nodes}
     capacities = design_dna.capacities if design_dna else None
@@ -239,15 +267,18 @@ async def plan_structure_llm(
     mapped_slides = []
     protected_by_index: dict[int, list[str]] = {}
     for base in baseline.slides:
-        resolved = list(dict.fromkeys(
-            eid for old in base.evidence_ids
-            for eid in aliases.get(old, [old])
-        ))
-        protected_by_index[base.index] = list(dict.fromkeys(
-            eid for unit in base.content_units
-            if unit.role == "equation" or unit.kind in {Kind.table, Kind.chart, Kind.diagram}
-            for old in unit.evidence_ids or [] for eid in aliases.get(old, [])
-        ))
+        resolved = list(
+            dict.fromkeys(eid for old in base.evidence_ids for eid in aliases.get(old, [old]))
+        )
+        protected_by_index[base.index] = list(
+            dict.fromkeys(
+                eid
+                for unit in base.content_units
+                if unit.role == "equation" or unit.kind in {Kind.table, Kind.chart, Kind.diagram}
+                for old in unit.evidence_ids or []
+                for eid in aliases.get(old, [])
+            )
+        )
         mapped_slides.append(base.model_copy(update={"evidence_ids": resolved}))
     baseline = baseline.model_copy(update={"slides": mapped_slides})
 
@@ -308,9 +339,9 @@ async def plan_structure_llm(
                 index=base.index,
                 purpose=item.purpose,
                 slide_brief=item.slide_brief,
-                evidence_ids=list(dict.fromkeys(
-                    item.evidence_ids + protected_by_index[base.index]
-                )),
+                evidence_ids=list(
+                    dict.fromkeys(item.evidence_ids + protected_by_index[base.index])
+                ),
                 mandatory=base.mandatory,
             )
         )

@@ -139,9 +139,14 @@ def test_build_gateway_requires_config_when_flag_off():
     assert "provider_base_url" in exc.value.details["missing"]
 
 
-def test_default_settings_use_mock():
+def test_explicit_test_environment_uses_mock():
+    # tests/conftest.py явно включает изоляцию. Продуктовый default — false.
     gateway = build_gateway(Settings())
     assert isinstance(gateway, MockProvider)
+
+
+def test_runtime_default_never_silently_uses_mock():
+    assert Settings.model_fields["mock_provider"].default is False
 
 
 async def test_self_referential_model_stops_at_depth_cap():

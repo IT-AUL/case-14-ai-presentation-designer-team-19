@@ -9,8 +9,8 @@
 .tabs {
   display: flex;
   flex: none;
-  gap: 18px;
-  padding: 0 16px;
+  gap: 16px;
+  padding: 0 18px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -46,6 +46,41 @@
   gap: 8px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--line);
+}
+
+.primaryFilterRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.primaryFilterRow .segments {
+  flex: 1;
+}
+
+.moreButton {
+  flex: none;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xs);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.moreButtonActive {
+  border-color: var(--ink);
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.moreFilters {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 4px;
 }
 
 .segments {
@@ -378,4 +413,30 @@
   border-radius: var(--radius-xs);
   background: var(--sunken);
   font-size: 11px;
+}
+
+.panelHeader {
+  flex: none;
+  padding: 24px 24px 14px;
+}
+
+.panelHeader h1 {
+  margin: 0 0 10px;
+  color: var(--ink);
+  font-size: 23px;
+  font-weight: 600;
+  line-height: 1.22;
+  letter-spacing: -0.02em;
+}
+
+.panelHeader p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.tab:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -4px;
 }

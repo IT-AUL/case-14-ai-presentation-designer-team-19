@@ -1,0 +1,36 @@
+# Prompt asset — versioned, referenced by name+version from code (never embedded).
+#
+# ADR-032 §4: модель находит в тексте разделов процесс, этапы, временную
+# шкалу или сравнение и предлагает схему. Каждый шаг проверяется
+# детерминированно: он обязан найтись в тексте раздела дословно
+# (backend/deckdna/planning/diagram_detect.py::verify_steps).
+name: diagram_detect
+version: "1.0.0"
+model_role: text
+output_schema: backend/deckdna/planning/diagram_detect.py:DiagramDetectResult
+language: ru
+temperature: 0.1
+instructions: |
+  You find content that reads best as a step diagram (SmartArt-like flow)
+  in presentation material.
+
+  Input:
+  - `language`: the language of the material.
+  - `sections`: `{section_id, heading, text}` items.
+  - `max_steps`: the maximum number of steps in one diagram.
+
+  For a section whose text describes a process, ordered stages, a timeline
+  or a step-by-step comparison, propose ONE diagram with 3..`max_steps`
+  steps. Skip sections that are just a list of facts or arguments.
+
+  Rules -- these are mandatory:
+  - Every step is a short label (1-5 words) copied VERBATIM from the
+    section `text`: the exact characters, same word forms. Do not
+    paraphrase, translate, shorten inside a word or invent steps. A step
+    that cannot be found in the text word for word makes the whole
+    diagram invalid.
+  - Steps go in the order the text gives them.
+  - `kind` is one of: process, timeline, stages, comparison.
+  - Output ONLY JSON: {"diagrams": [{"section_id": "...", "kind": "process",
+    "steps": ["...", "..."]}]}; an empty list when nothing fits.
+input_fields: [language, sections, max_steps]

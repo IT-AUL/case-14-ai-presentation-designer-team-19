@@ -1,0 +1,353 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:51:47.166Z",
+  "method": "GET",
+  "path": "/content-packs/pack_abb4e82ccad44a9588ce4b664bfee5a5/understanding?use_llm=false",
+  "status": 200,
+  "body": {
+    "content_pack_id": "pack_abb4e82ccad44a9588ce4b664bfee5a5",
+    "blocks": [
+      {
+        "id": "ds:ds-95b1eb6e",
+        "kind": "data",
+        "title": "Purchases",
+        "text": "Выручка: рост в 2,1 раза за 24 месяца",
+        "dataset_id": "ds-95b1eb6e",
+        "source_ref": {
+          "artifact_id": "art_8517b2eb86ca4de1a9b9777351763059"
+        },
+        "preview": {
+          "chart_type": "line",
+          "categories": [
+            "окт 2024",
+            "ноя 2024",
+            "дек 2024",
+            "янв 2025",
+            "фев 2025",
+            "мар 2025",
+            "апр 2025",
+            "май 2025",
+            "июн 2025",
+            "июл 2025",
+            "авг 2025",
+            "сен 2025",
+            "окт 2025",
+            "ноя 2025",
+            "дек 2025",
+            "янв 2026",
+            "фев 2026",
+            "мар 2026",
+            "апр 2026",
+            "май 2026",
+            "июн 2026",
+            "июл 2026",
+            "авг 2026",
+            "сен 2026"
+          ],
+          "series": [
+            {
+              "name": "Выручка",
+              "values": [
+                1.232,
+                1.199,
+                2.054,
+                1.271,
+                1.187,
+                1.483,
+                1.445,
+                1.457,
+                1.448,
+                1.506,
+                1.675,
+                1.624,
+                1.779,
+                1.684,
+                2.51,
+                2.086,
+                1.841,
+                2.13,
+                2.203,
+                2.247,
+                2.207,
+                2.366,
+                2.458,
+                2.534
+              ]
+            }
+          ],
+          "unit": "млн ₽"
+        }
+      }
+    ],
+    "summary": {
+      "capacity_slides": 7,
+      "main_points": [
+        "Выручка: рост в 2,1 раза за 24 месяца",
+        "Выручка: рост ускорился во второй половине периода"
+      ],
+      "assistant_note": "В данных вижу Выручка: рост в 2,1 раза за 24 месяца и выручка: рост ускорился во второй половине периода. Интерпретации и предложения можно уточнить на карточках выводов."
+    },
+    "datasets": [
+      {
+        "id": "ds-95b1eb6e",
+        "title": "Purchases",
+        "file": "purchases.csv",
+        "profile_summary": "8755 строк; 6 колонок; период 01.10.2024 – 30.09.2026; метрики: Сумма; разрезы: Регион, Категория, Канал; есть пропуски: Регион, Канал",
+        "task": "trend",
+        "task_ru": "динамика",
+        "recommendations": [
+          {
+            "chart_type": "line",
+            "score": 1.25,
+            "reasons": [
+              "24 точки по месяцам",
+              "одна метрика",
+              "в задаче сказано про динамика"
+            ]
+          },
+          {
+            "chart_type": "bar",
+            "score": 0.875,
+            "reasons": [
+              "24 периода, каждый столбцом"
+            ]
+          },
+          {
+            "chart_type": "table",
+            "score": 0.375,
+            "reasons": [
+              "точные значения важнее формы"
+            ]
+          }
+        ],
+        "why": "Линия: 24 точки по месяцам, одна метрика; задача: динамика.",
+        "insights": [
+          {
+            "id": "ds-95b1eb6e-trend-i0",
+            "dataset_id": "ds-95b1eb6e",
+            "view_id": "ds-95b1eb6e-trend",
+            "kind": "fact",
+            "fact_type": "growth",
+            "fact": "Выручка: с 1,2 млн ₽ (окт 2024) до 2,5 млн ₽ (сен 2026), рост в 2,1 раза",
+            "headline": "Выручка: рост в 2,1 раза за 24 месяца",
+            "strength": 0.864,
+            "confirmed": false,
+            "needs_confirmation": false,
+            "evidence": [
+              "purchases.csv · Дата, строки 2–8756",
+              "purchases.csv · Сумма, ₽, строки 2–8756"
+            ],
+            "numbers": [
+              "2,1",
+              "1,2 млн ₽",
+              "2,5 млн ₽"
+            ]
+          },
+          {
+            "id": "ds-95b1eb6e-trend-i2",
+            "dataset_id": "ds-95b1eb6e",
+            "view_id": "ds-95b1eb6e-trend",
+            "kind": "fact",
+            "fact_type": "acceleration",
+            "fact": "Рост ускорился во второй половине периода: +42% против +32%",
+            "headline": "Выручка: рост ускорился во второй половине периода",
+            "strength": 0.55,
+            "confirmed": false,
+            "needs_confirmation": false,
+            "evidence": [
+              "purchases.csv · Дата, строки 2–8756",
+              "purchases.csv · Сумма, ₽, строки 2–8756"
+            ],
+            "numbers": [
+              "42",
+              "32"
+            ]
+          },
+          {
+            "id": "ds-95b1eb6e-by1-i0",
+            "dataset_id": "ds-95b1eb6e",
+            "view_id": "ds-95b1eb6e-by1",
+            "kind": "fact",
+            "fact_type": "leader",
+            "fact": "Электроника: 61% выручки (26,7 млн ₽)",
+            "headline": "Электроника: 61% выручки",
+            "strength": 0.961,
+            "confirmed": false,
+            "needs_confirmation": false,
+            "evidence": [
+              "purchases.csv · Категория, строки 2–8756",
+              "purchases.csv · Сумма, ₽, строки 2–8756"
+            ],
+            "numbers": [
+              "61",
+              "26,7 млн ₽"
+            ]
+          },
+          {
+            "id": "ds-95b1eb6e-by1-i1",
+            "dataset_id": "ds-95b1eb6e",
+            "view_id": "ds-95b1eb6e-by1",
+            "kind": "fact",
+            "fact_type": "gap",
+            "fact": "Электроника: в 3,9 раза больше, чем Одежда",
+            "headline": "Электроника: в 3,9 раза больше, чем Одежда",
+            "strength": 0.9,
+            "confirmed": false,
+            "needs_confirmation": false,
+            "evidence": [
+              "purchases.csv · Категория, строки 2–8756",
+              "purchases.csv · Сумма, ₽, строки 2–8756"
+            ],
+            "numbers": [
+              "3,9"
+            ]
+          },
+          {
+            "id": "ds-95b1eb6e-by2-i0",
+            "dataset_id": "ds-95b1eb6e",
+            "view_id": "ds-95b1eb6e-by2",
+            "kind": "fact",
+            "fact_type": "leader",
+            "fact": "Сайт: 45% выручки (19,2 млн ₽)",
+            "headline": "Сайт: 45% выручки",
+            "strength": 0.804,
+            "confirmed": false,
+            "needs_confirmation": false,
+            "evidence": [
+              "purchases.csv · Канал, строки 2–8756",
+              "purchases.csv · Сумма, ₽, строки 2–8756"
+            ],
+            "numbers": [
+              "45",
+              "19,2 млн ₽"
+            ]
+          },
+          {
+            "id": "ds-95b1eb6e-by0-i0",
+            "dataset_id": "ds-95b1eb6e",
+            "view_id": "ds-95b1eb6e-by0",
+            "kind": "fact",
+            "fact_type": "leader",
+            "fact": "Москва: 41% выручки (16,9 млн ₽)",
+            "headline": "Москва: 41% выручки",
+            "strength": 0.757,
+            "confirmed": false,
+            "needs_confirmation": false,
+            "evidence": [
+              "purchases.csv · Регион, строки 2–8756",
+              "purchases.csv · Сумма, ₽, строки 2–8756"
+            ],
+            "numbers": [
+              "41",
+              "16,9 млн ₽"
+            ]
+          },
+          {
+            "id": "ds-95b1eb6e-by1-i2",
+            "dataset_id": "ds-95b1eb6e",
+            "view_id": "ds-95b1eb6e-by1",
+            "kind": "fact",
+            "fact_type": "concentration",
+            "fact": "Три крупнейших значения «Категория» дают 89% выручки",
+            "headline": "Топ-3 (категория): 89% выручки",
+            "strength": 0.683,
+            "confirmed": false,
+            "needs_confirmation": false,
+            "evidence": [
+              "purchases.csv · Категория, строки 2–8756",
+              "purchases.csv · Сумма, ₽, строки 2–8756"
+            ],
+            "numbers": [
+              "89"
+            ]
+          },
+          {
+            "id": "ds-95b1eb6e-by0-i1",
+            "dataset_id": "ds-95b1eb6e",
+            "view_id": "ds-95b1eb6e-by0",
+            "kind": "fact",
+            "fact_type": "gap",
+            "fact": "Москва: в 1,9 раза больше, чем Санкт-Петербург",
+            "headline": "Москва: в 1,9 раза больше, чем Санкт-Петербург",
+            "strength": 0.589,
+            "confirmed": false,
+            "needs_confirmation": false,
+            "evidence": [
+              "purchases.csv · Регион, строки 2–8756",
+              "purchases.csv · Сумма, ₽, строки 2–8756"
+            ],
+            "numbers": [
+              "1,9"
+            ]
+          },
+          {
+            "id": "ds-95b1eb6e-by0-i2",
+            "dataset_id": "ds-95b1eb6e",
+            "view_id": "ds-95b1eb6e-by0",
+            "kind": "fact",
+            "fact_type": "concentration",
+            "fact": "Три крупнейших значения «Регион» дают 76% выручки",
+            "headline": "Топ-3 (регион): 76% выручки",
+            "strength": 0.581,
+            "confirmed": false,
+            "needs_confirmation": false,
+            "evidence": [
+              "purchases.csv · Регион, строки 2–8756",
+              "purchases.csv · Сумма, ₽, строки 2–8756"
+            ],
+            "numbers": [
+              "76"
+            ]
+          },
+          {
+            "id": "ds-95b1eb6e-by2-i1",
+            "dataset_id": "ds-95b1eb6e",
+            "view_id": "ds-95b1eb6e-by2",
+            "kind": "fact",
+            "fact_type": "gap",
+            "fact": "Сайт: в 1,3 раза больше, чем Приложение",
+            "headline": "Сайт: в 1,3 раза больше, чем Приложение",
+            "strength": 0.398,
+            "confirmed": false,
+            "needs_confirmation": false,
+            "evidence": [
+              "purchases.csv · Канал, строки 2–8756",
+              "purchases.csv · Сумма, ₽, строки 2–8756"
+            ],
+            "numbers": [
+              "1,3"
+            ]
+          },
+          {
+            "id": "ds-95b1eb6e-missing",
+            "dataset_id": "ds-95b1eb6e",
+            "kind": "fact",
+            "fact_type": "missing",
+            "fact": "В колонке «Регион» нет значений в 4% строк",
+            "headline": "Пропуски: «Регион» не заполнено в 4% строк",
+            "strength": 0.2,
+            "confirmed": false,
+            "needs_confirmation": false,
+            "evidence": [
+              "purchases.csv"
+            ],
+            "numbers": [
+              "4"
+            ]
+          }
+        ]
+      }
+    ],
+    "context": {
+      "status": "not_requested",
+      "fields": []
+    },
+    "brief": {
+      "purpose": "Итоги продаж за год для совета директоров",
+      "language": "ru"
+    },
+    "interpretation": {
+      "status": "not_requested"
+    }
+  }
+}

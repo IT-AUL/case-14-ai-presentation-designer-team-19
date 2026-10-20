@@ -80,7 +80,7 @@ class Table(BaseModel):
 
 class ChartSeries(BaseModel):
     name: str | None = None
-    values: list[float]
+    values: list[float | None]
 
 
 class Chart(BaseModel):
@@ -88,11 +88,19 @@ class Chart(BaseModel):
     categories: list[str]
     series: list[ChartSeries]
     source_ref: SourceRef
+    # ADR-033 §6: тип и подписи графика из данных (выбор — analysis/recommend)
+    chart_type: str | None = None
+    title: str | None = None
+    value_axis_title: str | None = None
+    category_axis_title: str | None = None
+    unit: str | None = None
+    # «Источник: файл, лист» — строка под графиком
+    source_note: str | None = None
 
 
 class Diagram(BaseModel):
     """Simple flow/step diagram — steps rendered as SmartArt-like
-    grouped editable shapes (baseline, not real dgm)."""
+    grouped editable shapes (native grouped shapes, not SmartArt dgm)."""
 
     id: str
     steps: list[str]
@@ -103,6 +111,25 @@ class Warning(BaseModel):
     code: str
     message: str
     source_ref: SourceRef | None = None
+
+
+class Origin(Enum):
+    web = 'web'
+    model = 'model'
+
+
+class ExternalSource(BaseModel):
+    """ADR-030: a source of content added by research (``web``) or
+    written by the model (``model``). Added blocks point at ``id`` through
+    ``SourceRef.artifact_id``."""
+
+    id: str
+    origin: Origin
+    url: str | None = None
+    title: str | None = None
+    publisher: str | None = None
+    retrieved_at: str | None = None
+    query: str | None = None
 
 
 class ContentPack(BaseModel):
@@ -116,3 +143,17 @@ class ContentPack(BaseModel):
     diagrams: list[Diagram] = []
     assets: list[Asset]
     warnings: list[Warning]
+    external_sources: list[ExternalSource] = []
+    # ADR-033: табличные данные и выводы из них
+    datasets: list[Dataset] = []
+    insights: list[Insight] = []
+
+
+try:
+    from deckdna.contracts.dataset import Dataset, Insight  # noqa: E402,F401
+except ImportError:
+    # contracts.dataset импортирован первым и ещё не готов: он сам
+    # перестроит ContentPack в конце своего модуля
+    pass
+else:
+    ContentPack.model_rebuild()

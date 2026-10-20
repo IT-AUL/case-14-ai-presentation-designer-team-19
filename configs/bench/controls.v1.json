@@ -1,0 +1,54 @@
+{
+  "version": "1",
+  "strategies": ["faithful", "balanced", "visual"],
+  "templates": {
+    "unseen43": {"file": "synthetic_unseen_43.pptx", "fallback": "tests/fixtures/pptx/synthetic_unseen_43.pptx", "generator": "scripts/build_unseen_templates.py:build_43"},
+    "bare": {"file": "bare_no_layouts.pptx", "fallback": "configs/bench/templates/bare_no_layouts.pptx", "generator": "configs/bench/make_bare_template.py:build"}
+  },
+  "datasets": {
+    "negative_values": {"path": "configs/bench/data/negative_values.csv", "expected": ["line", "bar"]},
+    "zero_baseline": {"path": "configs/bench/data/zero_baseline.csv", "expected": ["line", "bar"]},
+    "missing_months": {"path": "configs/bench/data/missing_months.csv", "expected": ["line", "bar"]},
+    "long_labels": {"path": "configs/bench/data/long_labels_ru.csv", "expected": ["table", "bar_horizontal", "bar"]},
+    "single_point": {"path": "configs/bench/data/single_point.csv", "expected": ["bar", "line", "kpi"]},
+    "constant_series": {"path": "configs/bench/data/constant_series.csv", "expected": ["line", "bar"]},
+    "all_zero": {"path": "configs/bench/data/all_zero.csv", "expected": ["line", "bar", "kpi", "table"]},
+    "big_scale": {"path": "configs/bench/data/big_scale.csv", "expected": ["line", "bar"]},
+    "tiny_decimals": {"path": "configs/bench/data/tiny_decimals.csv", "expected": ["line", "bar"]},
+    "duplicate_categories": {"path": "configs/bench/data/duplicate_categories.csv", "expected": ["bar", "pie", "bar_horizontal"]},
+    "wide_reference": {"path": "configs/bench/data/wide_reference.csv", "expected": ["table", "bar"]},
+    "corr_pair": {"path": "configs/bench/data/corr_pair.csv", "expected": ["scatter", "line"]},
+    "empty_cells": {"path": "configs/bench/data/empty_cells.csv", "expected": ["line", "bar"]},
+    "percent_share": {"path": "configs/bench/data/percent_share.csv", "expected": ["pie", "doughnut", "bar_stacked_100", "bar_horizontal"]},
+    "quarters": {"path": "configs/bench/data/quarters.csv", "expected": ["line", "bar"]},
+    "bare_check": {"path": "configs/bench/data/bare_check.csv", "expected": ["line", "bar"]}
+  },
+  "brandbook": [],
+  "forbidden": ["Предположение:", "условн", "Направление A", "Thanks!", "CREDITS", "Slidesgo", "viz_reason"],
+  "scoring": {
+    "weights": {"audit": 30, "numeric_titles": 15, "label_titles": 5, "unsupported_numbers": 5, "diversity": 10, "lists": 5, "forbidden": 15, "chart_match": 10, "latency": 5},
+    "latency_budget_seconds": 300,
+    "diversity_target": 4,
+    "max_run_target": 3,
+    "list_share_target": 0.4,
+    "regression_tolerance": 2
+  },
+  "scenarios": [
+    {"id": "ctl_negative_values", "template": "unseen43", "datasets": ["negative_values"], "slides": 5, "idea": "Показать прибыль по месяцам: убытки в начале года сменились прибылью. Отрицательные значения — часть истории, их нельзя терять."},
+    {"id": "ctl_zero_baseline", "template": "unseen43", "datasets": ["zero_baseline"], "slides": 5, "idea": "Выручка с нулевой базы: первые два месяца — нули, затем рост. Не делить на ноль и не прятать нулевые точки."},
+    {"id": "ctl_missing_months", "template": "unseen43", "datasets": ["missing_months"], "slides": 5, "idea": "NPS с пропусками февраля и мая: показать ряд и честно отметить пропущенные месяцы, не дорисовывать."},
+    {"id": "ctl_long_labels", "template": "unseen43", "datasets": ["long_labels"], "slides": 5, "idea": "Выручка по направлениям с длинными русскими названиями. Подписи должны читаться без обрезки в полслове."},
+    {"id": "ctl_single_point", "template": "unseen43", "datasets": ["single_point"], "slides": 5, "idea": "Один замер показателя за месяц — не выдумывать тренд там, где одна точка."},
+    {"id": "ctl_constant_series", "template": "unseen43", "datasets": ["constant_series"], "slides": 5, "idea": "Показатель не меняется пять месяцев: стабильность — тоже факт, не рисовать рост."},
+    {"id": "ctl_all_zero", "template": "unseen43", "datasets": ["all_zero"], "slides": 5, "idea": "Продажи равны нулю все месяцы периода — показать честный ноль без выдуманной динамики."},
+    {"id": "ctl_big_scale", "template": "unseen43", "datasets": ["big_scale"], "slides": 5, "idea": "Квартальная выручка в миллиардах — единицы и масштаб не должны теряться при рендере."},
+    {"id": "ctl_tiny_decimals", "template": "unseen43", "datasets": ["tiny_decimals"], "slides": 5, "idea": "Доля ошибок в сотых процента — точность меньше десятой нельзя округлять в ноль."},
+    {"id": "ctl_duplicate_categories", "template": "unseen43", "datasets": ["duplicate_categories"], "slides": 5, "idea": "Один и тот же канал встречается в данных несколько раз — свернуть или честно показать дубли."},
+    {"id": "ctl_wide_reference", "template": "unseen43", "datasets": ["wide_reference"], "slides": 6, "idea": "Широкий справочник позиций: показать таблицей с укладкой в слайд, не картинкой."},
+    {"id": "ctl_corr_pair", "template": "unseen43", "datasets": ["corr_pair"], "slides": 5, "idea": "Связь расходов и продаж без оси времени — парные значения, не подменять категориями."},
+    {"id": "ctl_empty_cells", "template": "unseen43", "datasets": ["empty_cells"], "slides": 5, "idea": "NPS с пустыми ячейками: пропуски видимы, ряд не интерполируется молча."},
+    {"id": "ctl_percent_share", "template": "unseen43", "datasets": ["percent_share"], "slides": 5, "idea": "Доли каналов, сумма 100% — структура продаж кругом или стопкой."},
+    {"id": "ctl_quarters", "template": "unseen43", "datasets": ["quarters"], "slides": 5, "idea": "Значения по кварталам — короткий ряд с подписями кварталов, не выдумывать месяцы."},
+    {"id": "ctl_bare_template", "template": "bare", "datasets": ["bare_check"], "slides": 5, "idea": "Выручка по месяцам на шаблоне без макетов-плейсхолдеров — колода должна собраться и читаться."}
+  ]
+}

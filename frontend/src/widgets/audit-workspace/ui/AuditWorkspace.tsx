@@ -1,12 +1,11 @@
 import { useQueryClient } from '@tanstack/react-query'
-import { useEffect, useEffectEvent, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useEffectEvent, useMemo, useRef, useState, type ReactNode } from 'react'
 import { useNavigate } from 'react-router'
 import {
   auditIssuesQuery,
   buildIssueViews,
   checkKind,
   clusterIssueViews,
-  countByCategory,
   countOpenBySeverity,
   DEFAULT_VIEW_FILTER,
   dismissalEntry,
@@ -24,11 +23,11 @@ import {
   useVariantAudit,
   withSelection,
   type AuditIssue,
+  type AuditRun,
   type IssueGrouping,
   type IssueView,
   type IssueViewFilter,
   type JournalEntry,
-  type RuleCategory,
   type Severity,
 } from '@/entities/audit'
 import { markEvidence } from '@/entities/project'
@@ -38,13 +37,14 @@ import { orderVariants, slidePreviewUrl, useVariants, useVariantSlides } from '@
 import { RepairBar, selectionKey, useRepairPreview, useRepairSelected } from '@/features/repair-issues'
 import { useIssueSelection } from '@/features/select-issues'
 import { useVariantFiles } from '@/features/variant-files'
-import { routes } from '@/shared/config'
+import { humanError } from '@/shared/api'
 import { pluralize } from '@/shared/lib/format'
 import { Button, EmptyState, Skeleton, useToast } from '@/shared/ui'
 import { shouldIgnoreShortcut } from '../lib/keyboard'
 import { useStableCallback } from '../lib/useStableCallback'
 import { appendJournal, useVariantJournal } from '../model/journalStore'
-import { AuditSummary, PolicyStrip } from './AuditSummary'
+import { localizeRuleTitle } from '../model/labels'
+import { AuditSummary } from './AuditSummary'
 import { IssueFilters } from './IssueFilters'
 import { IssueList, type ClusteredGroup } from './IssueList'
 import { IssuePanel, type PanelTab } from './IssuePanel'
@@ -84,6 +84,16 @@ interface AuditWorkspaceProps {
   slide: number | null
   onSlideChange: (slideNumber: number) => void
   renderStage: (stage: AuditStageProps) => ReactNode
+  variantHref: (variantId: string, slideNumber?: number) => string
+  actions?: ReactNode
+  renderSlidePanel?: (slide: SlidePanelContext) => ReactNode
+}
+
+export interface SlidePanelContext {
+  slideNumber: number
+  slideId: string | null
+  title: string | undefined
+  revision: number
 }
 
 interface ReauditSnapshot {
@@ -92,7 +102,7 @@ interface ReauditSnapshot {
 
 const EMPTY_ISSUES: AuditIssue[] = []
 
-const errorText = (error: unknown) => (error instanceof Error ? error.message : 'неизвестная ошибка')
+const errorText = (error: unknown) => humanError(error)
 
 const onSlide = (view: IssueView, number: number) => view.issue.slide_index === number - 1
 
@@ -105,7 +115,95 @@ function worstSeverity(views: readonly IssueView[]): Severity | null {
 
 const expandedByDefault = (grouping: IssueGrouping) => grouping !== 'rule'
 
-export function AuditWorkspace({ projectId, runId, variantId, slide, onSlideChange, renderStage }: AuditWorkspaceProps) {
+function isSeverity(value: unknown): value is Severity {
+  return value === 'blocker' || value === 'error' || value === 'warning' || value === 'info'
+}
+
+function mergeDeckLevelIssues(audit: AuditRun | undefined, issues: readonly AuditIssue[]): AuditIssue[] {
+  if (!audit) return [...issues]
+  const result: AuditIssue[] = [...issues]
+  const rawFindings = (audit as Record<string, unknown>).deck_level_findings
+  if (Array.isArray(rawFindings)) {
+    rawFindings.forEach((entry, index) => {
+      const record = typeof entry === 'object' && entry !== null ? (entry as Record<string, unknown>) : null
+      const ruleCode = typeof record?.rule_code === 'string'
+        ? record.rule_code
+        : typeof record?.rule_id === 'string'
+          ? record.rule_id
+          : typeof record?.code === 'string'
+            ? record.code
+            : 'deck.finding'
+      const id = typeof record?.id === 'string' ? record.id : `${audit.id}:deck:${index}`
+      if (result.some((issue) => issue.id === id)) return
+      const messageText = typeof entry === 'string'
+        ? entry
+        : typeof record?.message === 'string'
+          ? record.message
+          : typeof record?.description === 'string'
+            ? record.description
+            : typeof record?.title === 'string'
+              ? record.title
+              : localizeRuleTitle(ruleCode)
+      result.push({
+        schema_version: '1.0',
+        id,
+        audit_run_id: audit.id,
+        deck_revision: audit.deck_revision,
+        rule_code: ruleCode,
+        deterministic: record?.deterministic !== false,
+        severity: isSeverity(record?.severity) ? record.severity : 'warning',
+        slide_id: null,
+        slide_index: null,
+        shape_ids: [],
+        bbox: null,
+        message: messageText,
+        measured_value: typeof record?.measured_value === 'number' ? record.measured_value : 1,
+        threshold: typeof record?.threshold === 'number' ? record.threshold : 0,
+        evidence: [],
+        confidence: typeof record?.confidence === 'number' ? record.confidence : 1,
+        status: 'open',
+        repairable: Boolean(record?.repairable),
+        proposed_actions: [],
+        provenance: {},
+      })
+    })
+  }
+  const summaryByType = audit.summary_by_type ?? {}
+  for (const [ruleCode, count] of Object.entries(summaryByType)) {
+    if (typeof count !== 'number' || count <= 0) continue
+    if (result.some((issue) => issue.rule_code === ruleCode)) continue
+    const fallbackSeverity: Severity = (audit.summary_by_severity?.blocker ?? 0) > 0
+      ? 'blocker'
+      : (audit.summary_by_severity?.error ?? 0) > 0
+        ? 'error'
+        : 'warning'
+    result.push({
+      schema_version: '1.0',
+      id: `${audit.id}:deck-type:${ruleCode}`,
+      audit_run_id: audit.id,
+      deck_revision: audit.deck_revision,
+      rule_code: ruleCode,
+      deterministic: true,
+      severity: fallbackSeverity,
+      slide_id: null,
+      slide_index: null,
+      shape_ids: [],
+      bbox: null,
+      message: `${localizeRuleTitle(ruleCode)}: ${count} ${pluralize(count, ['замечание', 'замечания', 'замечаний'])} по всей презентации`,
+      measured_value: count,
+      threshold: 0,
+      evidence: [],
+      confidence: 1,
+      status: 'open',
+      repairable: false,
+      proposed_actions: [],
+      provenance: {},
+    })
+  }
+  return result
+}
+
+export function AuditWorkspace({ projectId, runId, variantId, slide, onSlideChange, renderStage, variantHref, actions, renderSlidePanel }: AuditWorkspaceProps) {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const toast = useToast()
@@ -124,7 +222,7 @@ export function AuditWorkspace({ projectId, runId, variantId, slide, onSlideChan
   const [filter, setFilter] = useState<IssueViewFilter>(DEFAULT_VIEW_FILTER)
   const [grouping, setGrouping] = useState<IssueGrouping>('rule')
   const [groupOverrides, setGroupOverrides] = useState<ReadonlyMap<string, boolean>>(new Map())
-  const [tab, setTab] = useState<PanelTab>('issues')
+  const [tab, setTab] = useState<PanelTab>(() => (renderSlidePanel ? 'slide' : 'issues'))
   const [mode, setMode] = useState<StageMode>('slide')
   const [activeKey, setActiveKey] = useState<string | null>(null)
   const [hoverKey, setHoverKey] = useState<string | null>(null)
@@ -135,7 +233,8 @@ export function AuditWorkspace({ projectId, runId, variantId, slide, onSlideChan
   const revision = audit?.deck_revision ?? 1
   const journal = useMemo(() => stored.entries.filter((entry) => entry.revision <= revision), [stored.entries, revision])
   const batches = stored.batches.filter((batch) => batch.revision <= revision)
-  const issues = issuesQuery.data ?? EMPTY_ISSUES
+  const rawIssues = issuesQuery.data ?? EMPTY_ISSUES
+  const issues = useMemo(() => mergeDeckLevelIssues(audit, rawIssues), [audit, rawIssues])
   const baseViews = useMemo(() => buildIssueViews(issues, journal), [issues, journal])
   const selection = useIssueSelection(selectableIds(baseViews))
   const dryRunAvailable = useCapabilityFlag(FEATURE_PATHS.repairDryRun)
@@ -152,16 +251,33 @@ export function AuditWorkspace({ projectId, runId, variantId, slide, onSlideChan
 
   const slideInfos = slidesQuery.data ?? []
   const lastIssueSlide = issues.reduce((max, issue) => Math.max(max, slideNumber(issue) ?? 0), 0)
-  const slideCount = Math.max(slideInfos.length, lastIssueSlide, 1)
-  const slideAt = (number: number) => slideInfos.find((info) => info.index === number - 1)
+  const slideCount = Math.max(slidesQuery.data ? slideInfos.length : lastIssueSlide, 1)
+  const zeroBasedSlides = slideInfos.some((info) => info.index === 0)
+  const slideAt = (number: number) => slideInfos.find((info) => info.index === (zeroBasedSlides ? number - 1 : number))
   const titleOf = (number: number) => slideAt(number)?.title ?? undefined
 
   const pending = views.filter((view) => isPendingStatus(view.status))
   const firstTroubled = pending.map((view) => slideNumber(view.issue)).find((number): number is number => number !== null)
   const currentSlide = Math.min(Math.max(slide ?? firstTroubled ?? 1, 1), slideCount)
 
+  const previousSelection = useRef<{ variantId: string; slides: typeof slideInfos; id: string | null; number: number }>({ variantId, slides: slideInfos, id: null, number: currentSlide })
+  useEffect(() => {
+    if (!slidesQuery.isSuccess || slidesQuery.isFetching || slideInfos.length === 0) return
+    const previous = previousSelection.current
+    if (previous.variantId === variantId && previous.slides !== slideInfos && previous.id && previous.number === (slide ?? previous.number)) {
+      const moved = slideInfos.find((item) => item.id === previous.id)
+      const number = moved ? moved.index + (zeroBasedSlides ? 1 : 0) : Math.min(previous.number, slideCount)
+      if (number !== slide) onSlideChange(number)
+      previousSelection.current = { variantId, slides: slideInfos, id: moved?.id ?? slideAt(number)?.id ?? null, number }
+    } else previousSelection.current = { variantId, slides: slideInfos, id: slideAt(currentSlide)?.id ?? null, number: currentSlide }
+  })
+
   const filtered = filterIssueViews(views, filter)
-  const groups: ClusteredGroup[] = groupIssueViews(filtered, grouping, titleOf).map((group) => ({ ...group, clusters: clusterIssueViews(group.views) }))
+  const groups: ClusteredGroup[] = groupIssueViews(filtered, grouping, titleOf).map((group) => ({
+    ...group,
+    label: grouping === 'rule' ? localizeRuleTitle(group.label) : group.label,
+    clusters: clusterIssueViews(group.views),
+  }))
   const clusters = groups.flatMap((group) => group.clusters)
   const statusScoped = filterIssueViews(views, { ...DEFAULT_VIEW_FILTER, status: filter.status })
   const effectiveActive = views.some((view) => view.key === activeKey) ? activeKey : null
@@ -197,7 +313,6 @@ export function AuditWorkspace({ projectId, runId, variantId, slide, onSlideChan
 
   const stageViews = filterIssueViews(views, { ...filter, status: 'all' }).filter((view) => onSlide(view, currentSlide))
   const stageJournal = journal.filter((entry) => entry.issue.slide_index === currentSlide - 1)
-  const exportHref = routes.export(projectId, runId, variantId)
 
   const setGroupOpen = (groupKey: string, open: boolean) =>
     setGroupOverrides((current) => new Map(current).set(`${grouping}|${groupKey}`, open))
@@ -221,7 +336,7 @@ export function AuditWorkspace({ projectId, runId, variantId, slide, onSlideChan
   const pickSlide = (number: number) => {
     const next = Math.min(Math.max(number, 1), slideCount)
     onSlideChange(next)
-    setActiveKey(clusters.find((cluster) => onSlide(cluster.primary, next))?.key ?? null)
+    setActiveKey(tab === 'issues' ? clusters.find((cluster) => onSlide(cluster.primary, next))?.key ?? null : null)
   }
 
   const stepIssue = (delta: 1 | -1) => {
@@ -308,8 +423,8 @@ export function AuditWorkspace({ projectId, runId, variantId, slide, onSlideChan
     }
     contextual.mutate(session?.id, {
       onSuccess: (run) =>
-        toast.show(run.contextual_status === 'completed' ? 'Модель проверила смысл слайдов' : `Контекстные проверки: ${run.contextual_status}`),
-      onError: (error) => toast.show(`Модель не ответила: ${errorText(error)}`),
+        toast.show(run.contextual_status === 'completed' ? 'Смысловая проверка слайдов завершена' : `Контекстные проверки: ${run.contextual_status}`),
+      onError: (error) => toast.show(`Не удалось выполнить смысловую проверку: ${errorText(error)}`),
     })
   }
 
@@ -321,15 +436,10 @@ export function AuditWorkspace({ projectId, runId, variantId, slide, onSlideChan
       variantId,
       dismissed.map((issue) => dismissalEntry(issue, reason, revision)),
     )
-    const name = ruleMeta((dismissed[0] as AuditIssue).rule_code).name
+    const name = localizeRuleTitle(ruleMeta((dismissed[0] as AuditIssue).rule_code).name)
     toast.show(`Отклонено: ${name}${dismissed.length > 1 ? ` ×${dismissed.length}` : ''}`)
   })
   const onToggleGroup = useStableCallback((groupKey: string) => setGroupOpen(groupKey, !isExpanded(groupKey)))
-
-  const toggleCategory = (category: RuleCategory) => {
-    setFilter((current) => ({ ...current, category: current.category === category ? 'all' : category }))
-    setTab('issues')
-  }
 
   if (auditQuery.isError || issuesQuery.isError) {
     return (
@@ -354,7 +464,7 @@ export function AuditWorkspace({ projectId, runId, variantId, slide, onSlideChan
       <AuditSummary
         variants={orderVariants(variantsQuery.data ?? [])}
         variantId={variantId}
-        onVariantChange={(id) => navigate(routes.audit(projectId, runId, id))}
+        onVariantChange={(id) => navigate(variantHref(id, currentSlide))}
         audit={audit}
         severityCounts={severityCounts}
         kindCounts={kindCounts}
@@ -364,16 +474,14 @@ export function AuditWorkspace({ projectId, runId, variantId, slide, onSlideChan
         onRunContextual={runContextual}
         reauditPending={reauditPending}
         onReaudit={() => void runReaudit()}
-        exportHref={exportHref}
+        actions={actions}
       />
-      <PolicyStrip counts={countByCategory(views)} audit={audit} active={filter.category} onToggle={toggleCategory} />
       {reaudit && bannerOpen && (
         <ReauditBanner
           revision={revision}
           blockers={severityCounts.blocker}
           errors={{ before: reaudit.errorsBefore, after: severityCounts.error }}
           stats={stats}
-          exportHref={exportHref}
           onClose={() => setBannerOpen(false)}
         />
       )}
@@ -451,7 +559,7 @@ export function AuditWorkspace({ projectId, runId, variantId, slide, onSlideChan
                 onSelectAll={selection.selectAll}
                 onClear={selection.clear}
                 onRepair={() => void runRepair(selectedIssues)}
-                onPreview={dryRunAvailable ? () => repairPreview.mutate(selectedIssues, { onError: (error) => toast.show(error.message) }) : undefined}
+                onPreview={dryRunAvailable ? () => repairPreview.mutate(selectedIssues, { onError: (error) => toast.show(errorText(error)) }) : undefined}
                 previewPending={repairPreview.isPending}
                 preview={repairPreview.data && repairPreview.data.key === selectionKey(selectedIssues) ? repairPreview.data : null}
                 onClosePreview={repairPreview.reset}
@@ -459,6 +567,7 @@ export function AuditWorkspace({ projectId, runId, variantId, slide, onSlideChan
             </>
           }
           journal={<JournalList entries={journal} batches={batches} />}
+          slide={renderSlidePanel?.({ slideNumber: currentSlide, slideId: slideAt(currentSlide)?.id ?? null, title: titleOf(currentSlide), revision })}
         />
       </div>
     </div>
@@ -481,9 +590,8 @@ function WorkspaceSkeleton() {
           <Skeleton className={styles.skeletonSlide} />
         </div>
         <div className={styles.skeletonPanel}>
-          {Array.from({ length: 5 }, (_, index) => (
-            <Skeleton key={index} className={styles.skeletonCard} delay={index * 0.08} />
-          ))}
+          <Skeleton className={styles.skeletonCard} />
+          <Skeleton className={styles.skeletonCard} />
         </div>
       </div>
     </div>

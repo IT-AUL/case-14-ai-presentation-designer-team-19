@@ -19,7 +19,7 @@ import {
 } from '@/entities/audit'
 import { DismissIssueForm } from '@/features/dismiss-issue'
 import { Badge, CircleCheck, Icon, Mono, type Tone } from '@/shared/ui'
-import { STATUS_LABEL } from '../model/labels'
+import { localizeRuleTitle, STATUS_LABEL } from '../model/labels'
 import { IssueCheck } from './IssueCheck'
 import styles from './IssueCard.module.css'
 
@@ -55,8 +55,11 @@ export interface IssueCardProps extends IssueCardHandlers {
 
 const SHAPE_REFERENCE = /\s*(?:во фрейме|в фигуре)?\s*'[^']*'/g
 
-function readableMessage(message: string): string {
-  return message.replace(SHAPE_REFERENCE, '').replace(/\s{2,}/g, ' ').trim()
+function readableMessage(message: string, fallback: string): string {
+  const cleaned = message.replace(SHAPE_REFERENCE, '').replace(/\s{2,}/g, ' ').trim()
+  if (!cleaned || /^all clear\.?$/i.test(cleaned)) return fallback
+  if (/^[a-z0-9\s.,:;!?'"()[\]_-]+$/i.test(cleaned)) return fallback
+  return cleaned
 }
 
 function fixGuidance(view: IssueView): { title: string; text: string } {
@@ -64,14 +67,14 @@ function fixGuidance(view: IssueView): { title: string; text: string } {
   const planned = plannedFix(issue)
   if (selectable && planned) return { title: 'Что будет сделано', text: planned }
   if (!issue.deterministic && planned) {
-    return { title: 'Как исправить', text: `Модель предлагает: ${planned.charAt(0).toLowerCase()}${planned.slice(1)}.` }
+    return { title: 'Как исправить', text: `Рекомендуется: ${planned.charAt(0).toLowerCase()}${planned.slice(1)}.` }
   }
   return { title: 'Как исправить', text: 'Автоматической правки для этого правила нет — поправьте в PowerPoint или отклоните с причиной.' }
 }
 
 function slideLabel(issue: AuditIssue): string {
   const number = slideNumber(issue)
-  return number ? `сл. ${String(number).padStart(2, '0')}` : 'колода'
+  return number ? `сл. ${String(number).padStart(2, '0')}` : 'Вся колода'
 }
 
 function IssueCardView({ cluster, context, active, hovered, selection, auditId, repairPending, onActivate, onHover, onSelect, onRepair, onDismissed }: IssueCardProps) {
@@ -81,17 +84,16 @@ function IssueCardView({ cluster, context, active, hovered, selection, auditId, 
   const issues = cluster.views.map((view) => view.issue)
   const count = cluster.views.length
   const meta = ruleMeta(issue.rule_code)
+  const ruleTitle = localizeRuleTitle(issue.rule_code)
   const measurement = describeMeasurement(issue)
   const sentence = measurementSentence(issue)
   const pending = isPendingStatus(status)
   const guidance = fixGuidance(primary)
-  const headline = issue.deterministic ? (sentence ?? readableMessage(issue.message)) : issue.message
-  const provenance = issue.deterministic
-    ? issue.provenance?.rule_version
-    : [issue.provenance?.model_id, issue.provenance?.prompt_version].filter(Boolean).join(' · ')
+  const headline = issue.deterministic ? (sentence ?? readableMessage(issue.message, ruleTitle)) : readableMessage(issue.message, ruleTitle)
+  const provenance = issue.deterministic ? issue.provenance?.rule_version : undefined
   const earlierDismissal = pending && note?.outcome === 'dismissed' ? note : null
   const shapeIds = [...new Set(issues.flatMap((item) => item.shape_ids ?? []))]
-  const messages = [...new Set(issues.map((item) => item.message))]
+  const messages = [...new Set(issues.map((item) => readableMessage(item.message, ruleTitle)).filter(Boolean))]
   const evidence = issues.flatMap((item) => item.evidence ?? []).slice(0, 4)
   const multiple = count > 1
 
@@ -99,7 +101,7 @@ function IssueCardView({ cluster, context, active, hovered, selection, auditId, 
     <article
       className={clsx(styles.card, active && styles.active, hovered && styles.hovered)}
       data-issue-key={primary.key}
-      aria-label={`${meta.name}, ${slideLabel(issue)}${multiple ? `, ${count} одинаковых` : ''}`}
+      aria-label={`${ruleTitle}, ${slideLabel(issue)}${multiple ? `, ${count} одинаковых` : ''}`}
       onMouseEnter={() => onHover(primary.key)}
       onMouseLeave={() => onHover(null)}
     >
@@ -108,11 +110,11 @@ function IssueCardView({ cluster, context, active, hovered, selection, auditId, 
           {selectable ? (
             <IssueCheck
               state={selection}
-              label={`Выбрать для исправления: ${meta.name}${multiple ? ` ×${count}` : ''}`}
+              label={`Выбрать для исправления: ${ruleTitle}${multiple ? ` ×${count}` : ''}`}
               onChange={(selected) => onSelect(issues.map((item) => item.id), selected)}
             />
           ) : pending ? (
-            <IssueCheck state="none" label={`${MANUAL_ONLY}: ${meta.name}`} disabledReason={MANUAL_ONLY} />
+            <IssueCheck state="none" label={`${MANUAL_ONLY}: ${ruleTitle}`} disabledReason={MANUAL_ONLY} />
           ) : null}
         </span>
         <button type="button" className={styles.toggle} aria-expanded={active} onClick={() => onActivate(primary.key)}>
@@ -127,7 +129,7 @@ function IssueCardView({ cluster, context, active, hovered, selection, auditId, 
             <span className={styles.titleRow}>
               <SeverityBadge severity={issue.severity} short />
               <CheckKindBadge kind={checkKind(issue)} />
-              <span className={styles.name}>{meta.name}</span>
+              <span className={styles.name}>{ruleTitle}</span>
               {multiple && <Mono className={styles.times}>×{count}</Mono>}
               <Mono className={styles.slide}>{slideLabel(issue)}</Mono>
             </span>
@@ -146,7 +148,7 @@ function IssueCardView({ cluster, context, active, hovered, selection, auditId, 
 
       {active && (
         <div className={styles.details}>
-          {context === 'rule' && <p className={styles.lead}>{meta.name}</p>}
+          {context === 'rule' && <p className={styles.lead}>{ruleTitle}</p>}
           {measurement.hasValue && (
             <dl className={styles.measure}>
               <div className={styles.cell}>
@@ -164,7 +166,7 @@ function IssueCardView({ cluster, context, active, hovered, selection, auditId, 
           {multiple && <p className={styles.note}>Одинаковая проблема у {count} элементов на слайде — правка и отклонение применяются ко всем.</p>}
           {!issue.deterministic && typeof issue.confidence === 'number' && (
             <div className={styles.confidence}>
-              <span className={styles.confidenceLabel}>Уверенность модели</span>
+              <span className={styles.confidenceLabel}>Точность оценки</span>
               <span className={styles.track}>
                 <span className={styles.fill} style={{ width: `${Math.round(issue.confidence * 100)}%` }} />
               </span>
@@ -225,7 +227,7 @@ function IssueCardView({ cluster, context, active, hovered, selection, auditId, 
               <div className={styles.meta}>
                 <Mono>{issue.rule_code}</Mono>
                 <span>{CATEGORY_LABEL[meta.category]}</span>
-                <span>{issue.deterministic ? 'D · правило в коде' : 'N · проверяет модель'}</span>
+                <span>{issue.deterministic ? 'D · правило в коде' : 'N · смысловая проверка'}</span>
                 {provenance && <Mono>{provenance}</Mono>}
               </div>
               <ul className={styles.raw} aria-label="Сообщения сервиса">

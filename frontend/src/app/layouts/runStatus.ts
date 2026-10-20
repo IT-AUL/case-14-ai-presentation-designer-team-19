@@ -27,11 +27,11 @@ export function runStatus(
   if (!step) return undefined
   const { phase, generation, error } = tracker
   if (isTrackingLost(error)) return { label: 'Статус запуска неизвестен', tone: 'neutral' }
-  if (phase === 'failed') return { label: 'Ошибка генерации', tone: 'error' }
-  if (phase === 'canceled') return { label: 'Генерация отменена', tone: 'neutral' }
+  if (phase === 'failed') return { label: 'Сборка не удалась', tone: 'error' }
+  if (phase === 'canceled') return { label: 'Сборка остановлена', tone: 'neutral' }
   if (generation?.state === 'awaiting_user') return { label: 'Ждёт решения', tone: 'warn' }
   if (phase === 'submitting' || (phase === 'running' && (generation || !progress.generated))) {
-    return { label: 'Идёт генерация', tone: 'info' }
+    return { label: 'Идёт сборка', tone: 'info' }
   }
   const reviewing = REVIEW_STEPS.includes(step) && openCounts !== null
   const critical = openCounts ? openCounts.blocker + openCounts.error : 0

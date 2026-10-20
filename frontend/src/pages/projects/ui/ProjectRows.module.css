@@ -1,0 +1,271 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.list,
+.rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5);
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.groupLabel {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0 var(--space-4);
+  color: var(--ink-2);
+  font: var(--type-caption);
+}
+
+.groupCount {
+  color: var(--ink-3);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.rows {
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-xl);
+  background: var(--surface);
+}
+
+.row {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.row + .row {
+  border-top: 1px solid var(--line);
+}
+
+.link {
+  display: grid;
+  flex: 1;
+  grid-template-columns: minmax(0, 1fr) 132px auto 64px;
+  align-items: center;
+  gap: var(--space-4);
+  min-width: 0;
+  padding: 12px 52px 12px var(--space-4);
+  color: inherit;
+  text-decoration: none;
+  transition: background-color var(--motion-fast);
+}
+
+.link:hover {
+  background: var(--surface-2);
+}
+
+.link:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+.main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.name {
+  color: var(--ink);
+  font: 500 14px/1.35 var(--font-sans);
+  overflow-wrap: anywhere;
+}
+
+.hint {
+  color: var(--ink-3);
+  font: var(--type-caption);
+  font-weight: 400;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--ink-2);
+  font: var(--type-caption);
+}
+
+.dot {
+  flex: none;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-3);
+}
+
+.dot[data-tone='ok'] {
+  background: var(--ok);
+}
+
+.dot[data-tone='info'] {
+  background: var(--info);
+}
+
+.dot[data-tone='warn'] {
+  background: var(--warn);
+}
+
+.dot[data-tone='error'] {
+  background: var(--error);
+}
+
+.slides,
+.time {
+  color: var(--ink-3);
+  font: var(--type-caption);
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+}
+
+.time {
+  text-align: right;
+}
+
+.delete {
+  border: 0;
+  background: transparent;
+  position: absolute;
+  right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  color: var(--ink-3);
+  opacity: 0;
+  transition:
+    opacity var(--motion-fast),
+    background-color var(--motion-fast),
+    color var(--motion-fast);
+}
+
+.row:hover .delete,
+.delete:focus-visible {
+  opacity: 1;
+}
+
+.delete:hover {
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.delete:focus-visible,
+.confirmYes:focus-visible,
+.confirmNo:focus-visible,
+.more:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.row[data-confirming] .status,
+.row[data-confirming] .slides,
+.row[data-confirming] .time {
+  visibility: hidden;
+}
+
+.confirm {
+  position: absolute;
+  right: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 4px 4px 4px 12px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-md);
+  background: var(--surface);
+  box-shadow: var(--shadow-stage);
+  font: var(--type-caption);
+}
+
+.confirmText {
+  color: var(--ink);
+}
+
+.confirmYes,
+.confirmNo {
+  border: 0;
+  background: transparent;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: var(--radius-sm);
+  font: inherit;
+}
+
+.confirmYes {
+  background: var(--error);
+  color: var(--inv);
+}
+
+.confirmNo {
+  color: var(--ink-2);
+}
+
+.confirmNo:hover {
+  background: var(--sunken);
+}
+
+.row:has(> .confirm) .slides,
+.row:has(> .confirm) .time {
+  visibility: hidden;
+}
+
+.more {
+  align-self: center;
+  height: 36px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  color: var(--ink-2);
+  font: 500 13px/1 var(--font-sans);
+}
+
+.more:hover {
+  border-color: var(--line-2);
+  color: var(--ink);
+}
+
+@media (max-width: 760px) {
+  .link {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .slides {
+    display: none;
+  }
+
+  .time {
+    grid-column: 2;
+  }
+
+  .delete {
+    opacity: 1;
+  }
+}
+
+@media (hover: none) {
+  .delete {
+    opacity: 1;
+  }
+}

@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deckdna/schemas/brandbook.schema.json",
+  "title": "Brandbook",
+  "description": "ADR-033 §9: brand palette, fonts, logos, rules and template conflicts. Hand-maintained together with backend/deckdna/contracts/brandbook.py.",
+  "$ref": "#/$defs/brandbook",
+  "$defs": {
+    "color": {
+      "type": "object",
+      "required": ["name", "hex"],
+      "properties": {
+        "name": { "type": "string" },
+        "hex": { "type": "string", "pattern": "^#[0-9A-F]{6}$" },
+        "role": { "enum": ["primary", "secondary", "accent", "text", "background", "other"] },
+        "source": { "type": ["string", "null"] }
+      }
+    },
+    "font": {
+      "type": "object",
+      "required": ["role", "family"],
+      "properties": {
+        "role": { "enum": ["heading", "body", "other"] },
+        "family": { "type": "string" },
+        "source": { "type": ["string", "null"] }
+      }
+    },
+    "conflict": {
+      "type": "object",
+      "required": ["field", "kind", "resolved"],
+      "properties": {
+        "field": { "type": "string" },
+        "kind": { "enum": ["color", "font", "contrast"] },
+        "template": { "type": ["string", "null"] },
+        "brandbook": { "type": ["string", "null"] },
+        "resolved": { "enum": ["brandbook", "template"] },
+        "note": { "type": ["string", "null"] }
+      }
+    },
+    "brandbook": {
+      "type": "object",
+      "required": ["id"],
+      "properties": {
+        "id": { "type": "string" },
+        "project_id": { "type": ["string", "null"] },
+        "name": { "type": ["string", "null"] },
+        "colors": { "type": "array", "items": { "$ref": "#/$defs/color" } },
+        "fonts": { "type": "array", "items": { "$ref": "#/$defs/font" } },
+        "logos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["file_name"],
+            "properties": {
+              "file_name": { "type": "string" },
+              "artifact_id": { "type": ["string", "null"] },
+              "media_type": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "examples": { "type": "array", "items": { "type": "string" } },
+        "rules": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["text"],
+            "properties": { "text": { "type": "string" }, "source": { "type": ["string", "null"] } }
+          }
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["file_name", "kind", "parsed"],
+            "properties": {
+              "file_name": { "type": "string" },
+              "kind": { "enum": ["tokens", "figma", "pdf", "logo", "example", "unknown"] },
+              "parsed": { "type": "boolean" },
+              "note": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

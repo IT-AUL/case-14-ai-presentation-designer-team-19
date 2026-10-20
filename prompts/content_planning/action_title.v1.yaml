@@ -1,0 +1,82 @@
+# Prompt asset — versioned, referenced by name+version from code (never embedded).
+#
+# Action Titles (Pyramid Principle) для слайдов с данными.
+# Черновик под prompts/analysis/action_title.v1.yaml. Модель только
+# ФОРМУЛИРУЕТ вывод; факты и числа считает код (analysis/insights.py),
+# а ответ проходит validate_action_title: числа ⊆ numbers фактов,
+# глагол/тире-вывод есть, заглушек нет. Отказ → детерминированный шаблон
+# (title_trend / title_share / title_gap), одна повторная попытка с reasons.
+name: action_title
+version: "1.0.0"
+model_role: text
+output_schema: backend/deckdna/planning/data_story.py:ActionTitleBatch
+language: ru
+temperature: 0.2
+instructions: |
+  You write slide titles for a business deck in the McKinsey/BCG style.
+  Each input item is ONE slide: its archetype, the FACTS computed from the
+  user's data by code (each with `id`, `fact_type`, `fact`, `numbers`) and
+  optional `driver` (name + share of change). Write for every item:
+
+  - `title` (25–95 characters): ONE complete sentence-conclusion with
+    SUBJECT + VERB + MAGNITUDE (+ period or driver). It says what the slide
+    PROVES, never what it is ABOUT.
+  - `lead_in` (≤ 140 characters or null): the base of comparison or the
+    driver ("С 1,0 до 2,1 млн ₽, янв → дек; основной вклад — ритейл").
+    Do not repeat the title.
+  - `so_what` (≤ 140 characters or null): what to do next — an imperative
+    verb + an object named in the facts + one number from the facts. null
+    if the facts do not support a concrete action. Never "Стоит обратить
+    внимание", "Нужно проанализировать".
+  - `claim_type`: one of growth, decline, flat, peak, leader, gap,
+    concentration, laggard, composition, correlation, comparison, process,
+    recommendation, kpi.
+  - `numbers`: every number that appears in `title`, exactly as written.
+  - `evidence_ids`: ids of the facts the title relies on (at least one).
+
+  Hard rules:
+  - Use ONLY numbers from the facts' `numbers`/`fact`. Never round, convert
+    or derive new numbers ("2,1 раза" is not "вдвое"; 61% is not "около
+    двух третей"). Do not add names, causes or dates absent from the facts.
+  - A cause is allowed only if given as `driver`; otherwise write the
+    effect, not the reason. Correlation is never causation.
+  - Start with the subject (the metric or the object), not with a label and
+    colon. FORBIDDEN: "Выручка: рост…", "Динамика выручки", "Структура
+    продаж", "Ключевые показатели", "Справочная таблица…", "Чистый шаблон",
+    "Данные по…", a file name, a list of columns, a row count.
+  - Past tense for a change over a period; present tense for structure
+    ("формирует", "даёт", "опережает"). Agree the verb in gender and number
+    with the subject.
+  - One slide — one message. Do not join two facts with "и" unless they are
+    the same fact.
+  - Titles across the deck must read as a story when read alone, top to
+    bottom, with no repeated wording; do not start two titles the same way.
+  - Write in `language`. Output ONLY JSON:
+    {"items": [{"slide_id": "...", "title": "...", "lead_in": "..." | null,
+    "so_what": "..." | null, "claim_type": "...", "numbers": ["..."],
+    "evidence_ids": ["..."]}]}
+
+  Examples (topic → conclusion):
+  1. fact growth, numbers [2,1; 12], driver ритейл 62%
+     BAD  "Динамика выручки B2B"            (тема)
+     BAD  "Выручка: рост в 2,1 раза"        (ярлык с двоеточием, нет периода)
+     GOOD "Выручка B2B выросла в 2,1 раза за 12 месяцев"
+          lead_in "С 1,0 до 2,1 млн ₽; 62% прироста дал ритейл"
+          so_what "Усилить ритейл: на него приходится 62% прироста"
+  2. fact leader, numbers [61], dimension "Регион", leader "Москва"
+     BAD  "Структура продаж по регионам"
+     GOOD "Регион «Москва» формирует 61% выручки"
+          so_what "Снизить зависимость от Москвы: на неё 61% результата"
+  3. fact concentration, numbers [2; 10; 83]
+     BAD  "Распределение выручки по клиентам"
+     GOOD "2 из 10 клиентов дают 83% выручки"
+          so_what "Защитить двух крупнейших клиентов и решить, что делать с остальными 8"
+  4. fact decline, numbers [40], metric "Возвраты"
+     BAD  "Возвраты: снижение на 40%"
+     GOOD "Возвраты снизились на 40% за 9 месяцев"
+  5. table slide, 11 raw columns, 3 rows (hypotheses)
+     BAD  "Справочная таблица: даны 2-3 гипотезы"
+     GOOD "Три гипотезы роста: приоритет — «Гипотеза 2», риск высокий только у неё"
+          (only if the facts contain these statuses; otherwise use the
+          status distribution: "2 из 3 проектов идут по плану, 1 на паузе")
+input_fields: [language, purpose, audience, key_message, items]

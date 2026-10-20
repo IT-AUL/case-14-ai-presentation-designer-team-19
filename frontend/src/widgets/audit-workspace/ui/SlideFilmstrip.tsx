@@ -15,15 +15,17 @@ interface SlideFilmstripProps {
   slides: readonly FilmstripSlide[]
   current: number
   pdfUrl: string | null
+  regenerating?: number | null
   onPick: (slideNumber: number) => void
 }
 
-export function SlideFilmstrip({ slides, current, pdfUrl, onPick }: SlideFilmstripProps) {
+export function SlideFilmstrip({ slides, current, pdfUrl, regenerating, onPick }: SlideFilmstripProps) {
   return (
     <nav aria-label="Слайды" className={styles.strip}>
       {slides.map((slide) => {
         const clean = slide.openCount === 0
-        const label = `Слайд ${slide.number}${slide.title ? `: ${slide.title}` : ''} — ${clean ? 'проблем нет' : `открытых проблем: ${slide.openCount}`}`
+        const rebuilding = slide.number === regenerating
+        const label = `Слайд ${slide.number}${slide.title ? `: ${slide.title}` : ''} — ${rebuilding ? 'пересобирается' : clean ? 'проблем нет' : `открытых проблем: ${slide.openCount}`}`
         return (
           <button
             key={slide.number}
@@ -31,6 +33,7 @@ export function SlideFilmstrip({ slides, current, pdfUrl, onPick }: SlideFilmstr
             className={styles.item}
             aria-label={label}
             aria-current={slide.number === current ? 'true' : undefined}
+            aria-busy={rebuilding || undefined}
             onClick={() => onPick(slide.number)}
           >
             <Mono className={styles.number}>{slide.number}</Mono>
@@ -40,6 +43,7 @@ export function SlideFilmstrip({ slides, current, pdfUrl, onPick }: SlideFilmstr
               ) : (
                 <span className={styles.placeholder} />
               )}
+              {rebuilding && <span className={styles.rebuilding} aria-hidden />}
             </span>
             <span className={styles.badge} data-severity={clean ? 'clean' : (slide.worst ?? 'info')} aria-hidden>
               {clean ? <Icon as={Check} size={10} strokeWidth={3} /> : slide.openCount}

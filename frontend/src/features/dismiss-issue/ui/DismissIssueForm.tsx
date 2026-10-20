@@ -1,6 +1,7 @@
 import { clsx } from 'clsx'
 import { useId, useState, type FormEvent } from 'react'
 import { useDismissIssue, type AuditIssue } from '@/entities/audit'
+import { humanError } from '@/shared/api'
 import { DISMISS_REASONS } from '../model/reasons'
 import styles from './DismissIssueForm.module.css'
 
@@ -62,7 +63,7 @@ export function DismissIssueForm({ issues, auditId, initialReason = '', onDismis
       />
       {dismiss.isError && (
         <div role="alert" className={styles.error}>
-          Не удалось отклонить: {dismiss.error.message}
+          Не удалось отклонить: {humanError(dismiss.error)}
         </div>
       )}
       <div className={styles.actions}>

@@ -717,8 +717,8 @@ def test_create_chart_no_host_drops(tmp_path):
 
 def test_create_chart_package_valid_for_audit(tmp_path):
     """Созданный чарт не роняет OOXML-проверки аудита: dangling rels /
-    content-type покрытие чисты; единственный флаг — честный
-    chart.metadata (в Chart-контракте нет подписей осей — не выдумываем)."""
+    content-type покрытие чисты; оси получают источник или нейтральные
+    metadata-имена, без выдуманных бизнес-фактов/единиц."""
     tpl = _template_text_only(tmp_path / "tpl.pptx")
     generate_deck(
         tpl,
@@ -732,9 +732,8 @@ def test_create_chart_package_valid_for_audit(tmp_path):
     rules = {i.rule_code for i in issues}
     assert "package.dangling_rel" not in rules
     assert "package.invalid_xml" not in rules
-    # единственный честный флаг — подписи/единицы осей (легенда есть)
     chart_flags = [i for i in issues if i.rule_code == "chart.metadata"]
-    assert len(chart_flags) == 1 and "подписей и единиц осей" in chart_flags[0].message
+    assert not chart_flags
 
 
 def test_create_chart_empty_categories_valid_ooxml(tmp_path):

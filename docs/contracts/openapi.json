@@ -1144,13 +1144,580 @@
         }
       }
     },
+    "/api/v1/projects/{project_id}/understanding": {
+      "get": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Get Project Understanding",
+        "operationId": "get_project_understanding_api_v1_projects__project_id__understanding_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "use_llm",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Use Llm"
+            }
+          },
+          {
+            "name": "provider_session_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Project Understanding Api V1 Projects  Project Id  Understanding Get"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content-packs/{pack_id}/understanding": {
+      "get": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Get Understanding",
+        "description": "ADR-034 §2: смысловые блоки, сводка и датасеты с выводами.\n\nС моделью (``use_llm`` / ``provider_session_id``, как у /plans) выводы\nданных получают «что значит» и «что следует» (ADR-033 §5, числа\nсверены с фактом); результат сохраняется в паке.",
+        "operationId": "get_understanding_api_v1_content_packs__pack_id__understanding_get",
+        "parameters": [
+          {
+            "name": "pack_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pack Id"
+            }
+          },
+          {
+            "name": "use_llm",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Use Llm"
+            }
+          },
+          {
+            "name": "provider_session_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider Session Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Understanding Api V1 Content Packs  Pack Id  Understanding Get"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/research": {
+      "post": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Research Project",
+        "description": "Explicit web research; zero additions never claim successful enrichment.",
+        "operationId": "research_project_api_v1_projects__project_id__research_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/_UnderstandingOptions"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Research Project Api V1 Projects  Project Id  Research Post"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content-packs/{pack_id}/blocks": {
+      "patch": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Patch Blocks",
+        "description": "ADR-034 §2: правка блоков → новая версия пака (цепочка ``filled_from``).",
+        "operationId": "patch_blocks_api_v1_content_packs__pack_id__blocks_patch",
+        "parameters": [
+          {
+            "name": "pack_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pack Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BlockOps"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Patch Blocks Api V1 Content Packs  Pack Id  Blocks Patch"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content-packs/{pack_id}/insights/{insight_id}": {
+      "patch": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Patch Insight",
+        "description": "ADR-033 §5: подтверждение или правка вывода. Подтверждённый вывод\nподнимается выше в «Ключевых выводах», его следствие идёт в «Что\nпредлагаем».",
+        "operationId": "patch_insight_api_v1_content_packs__pack_id__insights__insight_id__patch",
+        "parameters": [
+          {
+            "name": "pack_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pack Id"
+            }
+          },
+          {
+            "name": "insight_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Insight Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InsightPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Insight"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/content-packs/{pack_id}/notes": {
+      "post": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Add Pack Notes",
+        "description": "ADR-034 §3: «Я добавлю пару тезисов» → новая версия пака.",
+        "operationId": "add_pack_notes_api_v1_content_packs__pack_id__notes_post",
+        "parameters": [
+          {
+            "name": "pack_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Pack Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotesBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Add Pack Notes Api V1 Content Packs  Pack Id  Notes Post"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/questions": {
+      "get": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Get Questions",
+        "description": "ADR-034 §3: вопросы только по причине; пустой список — шаг пропускается.",
+        "operationId": "get_questions_api_v1_projects__project_id__questions_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Questions Api V1 Projects  Project Id  Questions Get"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/answers": {
+      "post": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Post Answers",
+        "description": "ADR-034 §3: ответы → бриф проекта (``audience``, ``tone``,\n``target_slide_count``, ``content_fill``, ``key_message``,\n``call_to_action``). Бриф отдаётся целиком — фронт шлёт его в /plans.",
+        "operationId": "post_answers_api_v1_projects__project_id__answers_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnswersBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Post Answers Api V1 Projects  Project Id  Answers Post"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/projects/{project_id}/plans": {
       "post": {
         "tags": [
           "plans"
         ],
         "summary": "Create Plans",
-        "description": "План до вёрстки (D7): структура колоды по каждой стратегии за\nсекунды. Его можно показать, поправить и передать в POST /generations\n(deck_plan_id или deck_plan) — планирование тогда не повторяется.",
+        "description": "План до вёрстки (D7): структура колоды по каждой стратегии. Его можно\nпоказать, поправить и передать в POST /generations (deck_plan_id или\ndeck_plan) — планирование тогда не повторяется.\n\nADR-030: до планирования — добор контента по ``brief.content_fill``;\n``run_async=true`` строит план фоновым job'ом с живыми событиями.",
         "operationId": "create_plans_api_v1_projects__project_id__plans_post",
         "parameters": [
           {
@@ -1179,7 +1746,528 @@
             "content": {
               "application/json": {
                 "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PlanSet"
+                    },
+                    {
+                      "$ref": "#/components/schemas/PlanAccepted"
+                    }
+                  ],
+                  "title": "Response Create Plans Api V1 Projects  Project Id  Plans Post"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{plan_id}/slides/{slide_id}/research": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Research Plan Slide",
+        "description": "ADR-030: «найти факты / цифры» для одного слайда плана. Найденное\n(с цитатами и источниками) добавляется в слайд и в новый пак; набор\nпланов обновляется — передайте его ``content_pack_id`` в генерацию.",
+        "operationId": "research_plan_slide_api_v1_plans__plan_id__slides__slide_id__research_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "slide_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slide Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlideResearchRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SlideResearchResult"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{plan_id}/slides/{slide_id}": {
+      "patch": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Patch Plan Slide",
+        "description": "ADR-034 §4: другой график на карточке — только среди альтернатив;\nиное → 422 с причиной из ``rejected[]``.",
+        "operationId": "patch_plan_slide_api_v1_plans__plan_id__slides__slide_id__patch",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "slide_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slide Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlideChartPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
                   "$ref": "#/components/schemas/PlanSet"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{plan_id}/slides/{slide_id}/actions": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Plan Slide Action",
+        "description": "ADR-034 §4: быстрые действия на карточке слайда.",
+        "operationId": "plan_slide_action_api_v1_plans__plan_id__slides__slide_id__actions_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          },
+          {
+            "name": "slide_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slide Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SlideActionBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanSet"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{plan_id}/style-previews": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Create Style Previews",
+        "description": "ADR-034 §5: 2–3 ключевых слайда в трёх стратегиях, параллельно.\nПолная сборка с ``preview_id`` берёт те же образцы.",
+        "operationId": "create_style_previews_api_v1_plans__plan_id__style_previews_post",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StylePreviewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Create Style Previews Api V1 Plans  Plan Id  Style Previews Post"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/style-previews/{preview_id}": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Get Style Previews",
+        "description": "Итог пробных слайдов: ``{styles:[{strategy, title, difference,\nrecommended, previews:[{slide_id, image_artifact_id}]}], assistant_note}``.",
+        "operationId": "get_style_previews_api_v1_style_previews__preview_id__get",
+        "parameters": [
+          {
+            "name": "preview_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Preview Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Style Previews Api V1 Style Previews  Preview Id  Get"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/plans/{plan_id}": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Get Plan Set",
+        "description": "Готовый набор планов (в т. ч. построенный фоновым job'ом).",
+        "operationId": "get_plan_set_api_v1_plans__plan_id__get",
+        "parameters": [
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanSet"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/plans/{plan_id}": {
+      "get": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Get Project Plan Set",
+        "description": "ADR-034 §0: путь фронта к тому же PlanSet.",
+        "operationId": "get_project_plan_set_api_v1_projects__project_id__plans__plan_id__get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanSet"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/plans/{plan_id}/cancel": {
+      "post": {
+        "tags": [
+          "plans"
+        ],
+        "summary": "Cancel Plan",
+        "description": "ADR-034 §0: кооперативная отмена фонового построения плана.\nДобор контента дорабатывает текущий шаг, план не сохраняется.",
+        "operationId": "cancel_plan_api_v1_projects__project_id__plans__plan_id__cancel_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "plan_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Plan Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Job"
                 }
               }
             }
@@ -1457,6 +2545,22 @@
               "minimum": 0,
               "default": 0,
               "title": "After"
+            }
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
             }
           }
         ],
@@ -1752,6 +2856,555 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/intake": {
+      "post": {
+        "tags": [
+          "intake"
+        ],
+        "summary": "Intake",
+        "description": "ADR-034 §1: «Закинь, что есть» — все файлы разом и/или одна фраза.\nТип каждого файла определяется сам; ответ — что куда ушло.",
+        "operationId": "intake_api_v1_projects__project_id__intake_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_intake_api_v1_projects__project_id__intake_post"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Intake Api V1 Projects  Project Id  Intake Post"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/intake/files/{name}": {
+      "patch": {
+        "tags": [
+          "intake"
+        ],
+        "summary": "Patch Intake File",
+        "description": "Чип типа файла: пользователь поправил тип — файлы проекта\nраскладываются заново.",
+        "operationId": "patch_intake_file_api_v1_projects__project_id__intake_files__name__patch",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "name",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Name"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntakeFilePatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Patch Intake File Api V1 Projects  Project Id  Intake Files  Name  Patch"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/templates/{template_id}/summary": {
+      "get": {
+        "tags": [
+          "templates"
+        ],
+        "summary": "Template Summary",
+        "description": "Карточка шаблона: слайды, палитра, шрифты (ADR-034 §1).",
+        "operationId": "template_summary_api_v1_templates__template_id__summary_get",
+        "parameters": [
+          {
+            "name": "template_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Template Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Template Summary Api V1 Templates  Template Id  Summary Get"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/brandbooks/{brandbook_id}": {
+      "get": {
+        "tags": [
+          "brandbooks"
+        ],
+        "summary": "Get Brandbook",
+        "operationId": "get_brandbook_api_v1_brandbooks__brandbook_id__get",
+        "parameters": [
+          {
+            "name": "brandbook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Brandbook Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Brandbook Api V1 Brandbooks  Brandbook Id  Get"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "brandbooks"
+        ],
+        "summary": "Patch Brandbook",
+        "description": "Переключатель «чьё оформление главнее» для проекта брендбука.",
+        "operationId": "patch_brandbook_api_v1_brandbooks__brandbook_id__patch",
+        "parameters": [
+          {
+            "name": "brandbook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Brandbook Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BrandbookPatch"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Patch Brandbook Api V1 Brandbooks  Brandbook Id  Patch"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/brandbooks/{brandbook_id}/summary": {
+      "get": {
+        "tags": [
+          "brandbooks"
+        ],
+        "summary": "Brandbook Summary",
+        "description": "Карточка брендбука: палитра, шрифты, конфликты с шаблоном проекта,\nприоритет (ADR-034 §1, ADR-033 §9).",
+        "operationId": "brandbook_summary_api_v1_brandbooks__brandbook_id__summary_get",
+        "parameters": [
+          {
+            "name": "brandbook_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Brandbook Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Brandbook Summary Api V1 Brandbooks  Brandbook Id  Summary Get"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/variants/{variant_id}/slides/{slide_id}/regenerate": {
+      "post": {
+        "tags": [
+          "variants"
+        ],
+        "summary": "Regenerate Variant Slide",
+        "description": "ADR-034 §7: пересборка **одного** слайда — новая ревизия колоды, как\nrepair; остальные слайды байт-в-байт те же. Аудит и превью слайда.",
+        "operationId": "regenerate_variant_slide_api_v1_variants__variant_id__slides__slide_id__regenerate_post",
+        "parameters": [
+          {
+            "name": "variant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Variant Id"
+            }
+          },
+          {
+            "name": "slide_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slide Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegenerateRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Regenerate Variant Slide Api V1 Variants  Variant Id  Slides  Slide Id  Regenerate Post"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/variants/{variant_id}/slide-drafts": {
+      "get": {
+        "tags": [
+          "variants"
+        ],
+        "summary": "Get Slide Drafts",
+        "description": "ADR-036: read-only recovery of cards on refresh; never starts rendering.",
+        "operationId": "get_slide_drafts_api_v1_variants__variant_id__slide_drafts_get",
+        "parameters": [
+          {
+            "name": "variant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Variant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Slide Drafts Api V1 Variants  Variant Id  Slide Drafts Get"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/slides/{slide_id}/explain": {
+      "get": {
+        "tags": [
+          "variants"
+        ],
+        "summary": "Explain Slide",
+        "description": "ADR-034 §7 / ADR-033 §10: панель «Почему так» — данные → профиль →\nзадача → почему этот тип → альтернативы → выводы.",
+        "operationId": "explain_slide_api_v1_slides__slide_id__explain_get",
+        "parameters": [
+          {
+            "name": "slide_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Slide Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Explain Slide Api V1 Slides  Slide Id  Explain Get"
+                }
               }
             }
           },
@@ -2540,10 +4193,6 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": {
-                    "type": "string"
-                  },
-                  "type": "object",
                   "title": "Response Ready Api V1 Health Ready Get"
                 }
               }
@@ -2697,10 +4346,661 @@
           }
         }
       }
+    },
+    "/api/v1/projects/{project_id}/session": {
+      "get": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Get Session",
+        "operationId": "get_session_api_v1_projects__project_id__session_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssistantSession"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/session/autopilot": {
+      "post": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Autopilot",
+        "operationId": "autopilot_api_v1_projects__project_id__session_autopilot_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AutopilotRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AutopilotAccepted"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/variants/{variant_id}/changes": {
+      "post": {
+        "tags": [
+          "changes"
+        ],
+        "summary": "Create Change",
+        "operationId": "create_change_api_v1_variants__variant_id__changes_post",
+        "parameters": [
+          {
+            "name": "variant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Variant Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChangeRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Create Change Api V1 Variants  Variant Id  Changes Post"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "changes"
+        ],
+        "summary": "List Changes",
+        "operationId": "list_changes_api_v1_variants__variant_id__changes_get",
+        "parameters": [
+          {
+            "name": "variant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Variant Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response List Changes Api V1 Variants  Variant Id  Changes Get"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/variants/{variant_id}/changes/{change_id}/cancel": {
+      "post": {
+        "tags": [
+          "changes"
+        ],
+        "summary": "Cancel Change",
+        "operationId": "cancel_change_api_v1_variants__variant_id__changes__change_id__cancel_post",
+        "parameters": [
+          {
+            "name": "variant_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Variant Id"
+            }
+          },
+          {
+            "name": "change_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Change Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Cancel Change Api V1 Variants  Variant Id  Changes  Change Id  Cancel Post"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/commands": {
+      "post": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Submit Command",
+        "operationId": "submit_command_api_v1_projects__project_id__commands_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommandRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Submit Command Api V1 Projects  Project Id  Commands Post"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/agent/messages": {
+      "post": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Post Agent Message",
+        "operationId": "post_agent_message_api_v1_projects__project_id__agent_messages_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentMessageRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Post Agent Message Api V1 Projects  Project Id  Agent Messages Post"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/agent/thread": {
+      "get": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Get Agent Thread",
+        "operationId": "get_agent_thread_api_v1_projects__project_id__agent_thread_get",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Get Agent Thread Api V1 Projects  Project Id  Agent Thread Get"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Clear Agent Thread",
+        "operationId": "clear_agent_thread_api_v1_projects__project_id__agent_thread_delete",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/projects/{project_id}/agent/jobs/{job_id}/cancel": {
+      "post": {
+        "tags": [
+          "assistant"
+        ],
+        "summary": "Cancel Agent Message",
+        "operationId": "cancel_agent_message_api_v1_projects__project_id__agent_jobs__job_id__cancel_post",
+        "parameters": [
+          {
+            "name": "project_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Project Id"
+            }
+          },
+          {
+            "name": "job_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Job Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "title": "Response Cancel Agent Message Api V1 Projects  Project Id  Agent Jobs  Job Id  Cancel Post"
+                }
+              }
+            }
+          },
+          "4XX": {
+            "description": "Client error — typed DeckDNAError envelope (API.md §1)",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          },
+          "5XX": {
+            "description": "Server/dependency error — typed DeckDNAError envelope",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
     "schemas": {
+      "AgentMessageRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "variant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant Id"
+          },
+          "plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Id"
+          },
+          "slide_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slide Id"
+          },
+          "provider_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Session Id"
+          },
+          "use_llm": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Use Llm"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "AgentMessageRequest"
+      },
       "AnalysisAccepted": {
         "properties": {
           "job_id": {
@@ -2755,6 +5055,33 @@
           "slide_coverage"
         ],
         "title": "Anchor"
+      },
+      "AnswersBody": {
+        "properties": {
+          "answers": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Answers"
+          },
+          "expected_context_revision": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Context Revision"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "answers"
+        ],
+        "title": "AnswersBody"
       },
       "Asset": {
         "properties": {
@@ -2854,6 +5181,73 @@
           "artifact_id"
         ],
         "title": "Asset"
+      },
+      "AssistantSession": {
+        "properties": {
+          "context_revision": {
+            "type": "integer",
+            "title": "Context Revision",
+            "default": 1
+          },
+          "step": {
+            "type": "integer",
+            "maximum": 7.0,
+            "minimum": 1.0,
+            "title": "Step"
+          },
+          "completed_steps": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Completed Steps"
+          },
+          "skipped_steps": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Skipped Steps"
+          },
+          "artifacts": {
+            "$ref": "#/components/schemas/SessionArtifacts"
+          },
+          "brief": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Brief"
+          },
+          "brief_origins": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Brief Origins"
+          },
+          "assistant_note": {
+            "type": "string",
+            "title": "Assistant Note"
+          },
+          "job_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Job Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "step",
+          "completed_steps",
+          "skipped_steps",
+          "artifacts",
+          "brief",
+          "assistant_note"
+        ],
+        "title": "AssistantSession"
       },
       "AuditAccepted": {
         "properties": {
@@ -3409,6 +5803,69 @@
         ],
         "title": "AuditRun"
       },
+      "AutopilotAccepted": {
+        "properties": {
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "events_url": {
+            "type": "string",
+            "title": "Events Url"
+          },
+          "assistant_note": {
+            "type": "string",
+            "title": "Assistant Note"
+          }
+        },
+        "type": "object",
+        "required": [
+          "job_id",
+          "events_url",
+          "assistant_note"
+        ],
+        "title": "AutopilotAccepted"
+      },
+      "AutopilotRequest": {
+        "properties": {
+          "from_step": {
+            "type": "integer",
+            "maximum": 7.0,
+            "minimum": 1.0,
+            "title": "From Step",
+            "default": 1
+          },
+          "use_llm": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Use Llm"
+          },
+          "provider_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Session Id"
+          },
+          "progressive_previews": {
+            "type": "boolean",
+            "title": "Progressive Previews",
+            "default": false
+          }
+        },
+        "type": "object",
+        "title": "AutopilotRequest"
+      },
       "Background": {
         "properties": {
           "kind": {
@@ -3488,6 +5945,57 @@
         ],
         "title": "Block"
       },
+      "BlockOps": {
+        "properties": {
+          "ops": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "minItems": 1,
+            "title": "Ops"
+          }
+        },
+        "type": "object",
+        "required": [
+          "ops"
+        ],
+        "title": "BlockOps"
+      },
+      "Body_intake_api_v1_projects__project_id__intake_post": {
+        "properties": {
+          "files": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string",
+                  "contentMediaType": "application/octet-stream",
+                  "format": "binary"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Files"
+          },
+          "idea": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idea"
+          }
+        },
+        "type": "object",
+        "title": "Body_intake_api_v1_projects__project_id__intake_post"
+      },
       "Body_upload_content_pack_api_v1_projects__project_id__content_packs_post": {
         "properties": {
           "files": {
@@ -3533,6 +6041,59 @@
         ],
         "title": "Body_upload_template_api_v1_projects__project_id__templates_post"
       },
+      "BrandbookPatch": {
+        "properties": {
+          "priority": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "brandbook",
+                  "template"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Priority"
+          },
+          "analyze": {
+            "type": "boolean",
+            "title": "Analyze",
+            "default": false
+          },
+          "force": {
+            "type": "boolean",
+            "title": "Force",
+            "default": false
+          },
+          "provider_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Session Id"
+          },
+          "use_llm": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Use Llm"
+          }
+        },
+        "type": "object",
+        "title": "BrandbookPatch"
+      },
       "Brief": {
         "properties": {
           "purpose": {
@@ -3552,6 +6113,29 @@
             "maximum": 40.0,
             "minimum": 3.0,
             "title": "Target Slide Count"
+          },
+          "slide_count_policy": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SlideCountPolicy"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requested_slide_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 40.0,
+                "minimum": 3.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested Slide Count"
           },
           "tone": {
             "anyOf": [
@@ -3591,8 +6175,52 @@
               }
             ],
             "title": "Forbidden Claims"
+          },
+          "content_fill": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContentFill"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "key_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Message"
+          },
+          "call_to_action": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call To Action"
+          },
+          "explain_slide": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Explain Slide"
           }
         },
+        "additionalProperties": false,
         "type": "object",
         "required": [
           "purpose",
@@ -3768,6 +6396,65 @@
         "type": "object",
         "title": "Cardinality"
       },
+      "ChangeRequest": {
+        "properties": {
+          "slide_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Slide Id"
+          },
+          "expected_revision": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Expected Revision"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "shorter",
+              "other_layout",
+              "other_chart",
+              "style:faithful",
+              "style:balanced",
+              "style:visual",
+              "replace_title",
+              "replace_text",
+              "larger_chart"
+            ],
+            "title": "Action"
+          },
+          "chart_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Type"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 6000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "slide_id",
+          "expected_revision",
+          "action"
+        ],
+        "title": "ChangeRequest"
+      },
       "CharSpan": {
         "properties": {
           "start": {
@@ -3818,6 +6505,72 @@
           },
           "source_ref": {
             "$ref": "#/components/schemas/deckdna__contracts__content_pack__SourceRef"
+          },
+          "chart_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Type"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "value_axis_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Axis Title"
+          },
+          "category_axis_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Axis Title"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note"
           }
         },
         "type": "object",
@@ -3844,7 +6597,14 @@
           },
           "values": {
             "items": {
-              "type": "number"
+              "anyOf": [
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "type": "array",
             "title": "Values"
@@ -3924,13 +6684,114 @@
           "line",
           "pie",
           "area",
-          "scatter"
+          "scatter",
+          "bar_horizontal",
+          "bar_stacked",
+          "bar_stacked_100",
+          "histogram",
+          "doughnut",
+          "kpi",
+          "waterfall"
         ],
         "title": "ChartType"
       },
       "ColorsAdditionalProperty": {
         "type": "string",
         "pattern": "^[0-9A-Fa-f]{6}$"
+      },
+      "CommandRequest": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 6000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "variant_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Variant Id"
+          },
+          "slide_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slide Id"
+          },
+          "plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Id"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Revision"
+          },
+          "expected_context_revision": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Context Revision"
+          },
+          "provider_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Session Id"
+          },
+          "use_llm": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Use Llm"
+          }
+        },
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "CommandRequest"
       },
       "Component": {
         "properties": {
@@ -3986,6 +6847,16 @@
           "shape_ids"
         ],
         "title": "Component"
+      },
+      "ContentFill": {
+        "type": "string",
+        "enum": [
+          "expand",
+          "shrink",
+          "ask"
+        ],
+        "title": "ContentFill",
+        "description": "ADR-030: what to do when the content does not fill\n``target_slide_count``."
       },
       "ContentPack": {
         "properties": {
@@ -4055,6 +6926,30 @@
             },
             "type": "array",
             "title": "Warnings"
+          },
+          "external_sources": {
+            "items": {
+              "$ref": "#/components/schemas/ExternalSource"
+            },
+            "type": "array",
+            "title": "External Sources",
+            "default": []
+          },
+          "datasets": {
+            "items": {
+              "$ref": "#/components/schemas/Dataset"
+            },
+            "type": "array",
+            "title": "Datasets",
+            "default": []
+          },
+          "insights": {
+            "items": {
+              "$ref": "#/components/schemas/Insight"
+            },
+            "type": "array",
+            "title": "Insights",
+            "default": []
           }
         },
         "type": "object",
@@ -4174,6 +7069,38 @@
             ],
             "title": "Diagram Ref"
           },
+          "locked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Origin-Input"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
           "chart_spec": {
             "anyOf": [
               {
@@ -4281,6 +7208,38 @@
             ],
             "title": "Diagram Ref"
           },
+          "locked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/deckdna__contracts__deck_plan__Origin"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "source_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Id"
+          },
           "chart_spec": {
             "anyOf": [
               {
@@ -4298,6 +7257,96 @@
           "kind"
         ],
         "title": "ContentUnit"
+      },
+      "Dataset": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/DatasetColumn"
+            },
+            "type": "array",
+            "title": "Columns"
+          },
+          "row_count": {
+            "type": "integer",
+            "title": "Row Count"
+          },
+          "source_ref": {
+            "$ref": "#/components/schemas/deckdna__contracts__content_pack__SourceRef"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          },
+          "context_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "title",
+          "columns",
+          "row_count",
+          "source_ref"
+        ],
+        "title": "Dataset",
+        "description": "Табличные данные пользователя (CSV, XLSX, табличный JSON, таблица в\nтексте). Профиль, задача, выбор графика и выводы считаются по нему\nкодом (``deckdna.analysis``) и не зависят от формата файла."
+      },
+      "DatasetColumn": {
+        "properties": {
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "values": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Values"
+          }
+        },
+        "type": "object",
+        "required": [
+          "name",
+          "values"
+        ],
+        "title": "DatasetColumn",
+        "description": "Колонка датасета с сырыми значениями (как в файле, после чтения)."
       },
       "DeckPlan-Input": {
         "properties": {
@@ -4643,7 +7692,7 @@
           "source_ref"
         ],
         "title": "Diagram",
-        "description": "Simple flow/step diagram — steps rendered as SmartArt-like\ngrouped editable shapes (baseline, not real dgm)."
+        "description": "Simple flow/step diagram — steps rendered as SmartArt-like\ngrouped editable shapes (native grouped shapes, not SmartArt dgm)."
       },
       "DnaConflict": {
         "properties": {
@@ -5061,6 +8110,79 @@
         ],
         "title": "ExportRequest"
       },
+      "ExternalSource": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "origin": {
+            "$ref": "#/components/schemas/deckdna__contracts__content_pack__Origin"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "publisher": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher"
+          },
+          "retrieved_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieved At"
+          },
+          "query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Query"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "origin"
+        ],
+        "title": "ExternalSource",
+        "description": "ADR-030: a source of content added by research (``web``) or\nwritten by the model (``model``). Added blocks point at ``id`` through\n``SourceRef.artifact_id``."
+      },
       "FixPreview": {
         "properties": {
           "title_ru": {
@@ -5267,6 +8389,48 @@
                 "type": "null"
               }
             ]
+          },
+          "preview_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Id"
+          },
+          "progressive_previews": {
+            "type": "boolean",
+            "title": "Progressive Previews",
+            "default": false
+          },
+          "brandbook_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brandbook Id"
+          },
+          "brand_priority": {
+            "anyOf": [
+              {
+                "type": "string",
+                "enum": [
+                  "brandbook",
+                  "template"
+                ]
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand Priority"
           }
         },
         "type": "object",
@@ -5362,6 +8526,18 @@
               }
             ],
             "title": "Finished At"
+          },
+          "content_fill": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Fill"
           }
         },
         "type": "object",
@@ -5464,6 +8640,200 @@
         "title": "GenerationSummary",
         "description": "Строка списка прогонов проекта (D10) — без тяжёлого DeckPlan."
       },
+      "Insight": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "dataset_id": {
+            "type": "string",
+            "title": "Dataset Id"
+          },
+          "view_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "View Id"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/InsightKind",
+            "default": "fact"
+          },
+          "fact_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fact Type"
+          },
+          "fact": {
+            "type": "string",
+            "title": "Fact"
+          },
+          "headline": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Headline"
+          },
+          "meaning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meaning"
+          },
+          "implication": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Implication"
+          },
+          "strength": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Strength"
+          },
+          "confirmed": {
+            "type": "boolean",
+            "title": "Confirmed",
+            "default": false
+          },
+          "needs_confirmation": {
+            "type": "boolean",
+            "title": "Needs Confirmation",
+            "default": false
+          },
+          "evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence",
+            "default": []
+          },
+          "numbers": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Numbers",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "dataset_id",
+          "fact",
+          "strength"
+        ],
+        "title": "Insight",
+        "description": "Вывод «факт → что значит → что следует» (ADR-033 §5).\n\n``fact`` и ``headline`` считает код; ``meaning`` и ``implication``\nформулирует модель, числа в них сверяются с фактом. Следствие —\nпредложение: ``needs_confirmation`` до подтверждения пользователем."
+      },
+      "InsightKind": {
+        "type": "string",
+        "enum": [
+          "fact",
+          "recommendation"
+        ],
+        "title": "InsightKind"
+      },
+      "InsightPatch": {
+        "properties": {
+          "confirmed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          },
+          "meaning": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meaning"
+          },
+          "implication": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Implication"
+          }
+        },
+        "type": "object",
+        "title": "InsightPatch"
+      },
+      "IntakeFilePatch": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "template",
+              "content",
+              "data",
+              "brandbook",
+              "unknown"
+            ],
+            "title": "Kind"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "IntakeFilePatch"
+      },
       "IssueDismissRequest": {
         "properties": {
           "reason": {
@@ -5545,7 +8915,7 @@
           "status"
         ],
         "title": "IssueOutcome",
-        "description": "Исход repair по одной выбранной проблеме (contract D2)."
+        "description": "Исход repair по одной выбранной проблеме (handoff D2)."
       },
       "IssueSummary": {
         "properties": {
@@ -5716,9 +9086,13 @@
           "template_analysis",
           "content_ingestion",
           "generation",
+          "planning",
+          "style_preview",
+          "autopilot",
           "audit",
           "repair",
-          "export"
+          "export",
+          "assistant"
         ],
         "title": "JobKind"
       },
@@ -5940,6 +9314,16 @@
               }
             ],
             "title": "Confidence"
+          },
+          "origin": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/deckdna__contracts__evidence_graph__Origin"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "type": "object",
@@ -5949,6 +9333,24 @@
           "source_ref"
         ],
         "title": "Node"
+      },
+      "NotesBody": {
+        "properties": {
+          "items": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "NotesBody"
       },
       "Observed": {
         "properties": {
@@ -6027,6 +9429,16 @@
         },
         "type": "object",
         "title": "OccupancyRange"
+      },
+      "Origin-Input": {
+        "type": "string",
+        "enum": [
+          "user",
+          "web",
+          "model"
+        ],
+        "title": "Origin",
+        "description": "ADR-030: where a fact comes from."
       },
       "Page_AuditIssueOut_": {
         "properties": {
@@ -6224,6 +9636,29 @@
         ],
         "title": "Placeholder"
       },
+      "PlanAccepted": {
+        "properties": {
+          "plan_id": {
+            "type": "string",
+            "title": "Plan Id"
+          },
+          "job_id": {
+            "type": "string",
+            "title": "Job Id"
+          },
+          "events_url": {
+            "type": "string",
+            "title": "Events Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan_id",
+          "job_id",
+          "events_url"
+        ],
+        "title": "PlanAccepted"
+      },
       "PlanEntry": {
         "properties": {
           "strategy": {
@@ -6298,6 +9733,32 @@
             ],
             "title": "Use Llm",
             "description": "Model mode. null (default) = auto: the model is used whenever a provider is available (provider_session_id, or a real server provider configured via DECKDNA_PROVIDER_* with mock off). true = force the model (server gateway, mock if configured so). false = deterministic path, no model calls."
+          },
+          "run_async": {
+            "type": "boolean",
+            "title": "Run Async",
+            "description": "ADR-030: true = build the plan as a background job (202 {plan_id, job_id}); progress (research queries, sources, slides) streams from GET /jobs/{job_id}/events, the result is GET /plans/{plan_id}. false = synchronous 200 PlanSet.",
+            "default": false
+          },
+          "respond_async": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Respond Async",
+            "description": "ADR-034 §0: the frontend's name for run_async; either one enables 202."
+          },
+          "exclude_source_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Exclude Source Ids",
+            "description": "ADR-034 §0: research sources (PlanSet.research.sources[].id or URL) to drop: their facts leave the pack and research skips them."
           }
         },
         "type": "object",
@@ -6333,6 +9794,76 @@
             "type": "string",
             "format": "date-time",
             "title": "Created At"
+          },
+          "updated_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updated At"
+          },
+          "content_fill": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Fill"
+          },
+          "sufficiency": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sufficiency"
+          },
+          "research": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Research"
+          },
+          "key_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Message"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
           }
         },
         "type": "object",
@@ -6643,7 +10174,7 @@
           "expires_at"
         ],
         "title": "ProviderSession",
-        "description": "Session view — токен и рабочие лимиты хранятся в lease-сторе\n(in-memory lease store) и никогда не возвращаются API."
+        "description": "Session view — токен и рабочие лимиты хранятся в lease-сторе\n(in-memory до Redis, Wave 2) и никогда не возвращаются API."
       },
       "ProviderSessionCreate": {
         "properties": {
@@ -6697,6 +10228,18 @@
               }
             ],
             "title": "Project Id"
+          },
+          "provider_project_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 200
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Project Id"
           }
         },
         "additionalProperties": false,
@@ -6758,6 +10301,56 @@
           "custom"
         ],
         "title": "Purpose"
+      },
+      "RegenerateRequest": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "title": "Action",
+            "description": "other_layout | shorter | other_chart | style:<strategy>"
+          },
+          "chart_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart Type"
+          },
+          "expected_revision": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Revision"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 6000
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "RegenerateRequest",
+        "description": "ADR-034 §7: «Переделать слайд»."
       },
       "RepairAccepted": {
         "properties": {
@@ -7028,6 +10621,78 @@
         ],
         "title": "Section"
       },
+      "SessionArtifacts": {
+        "properties": {
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          },
+          "content_pack_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Pack Id"
+          },
+          "brandbook_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brandbook Id"
+          },
+          "plan_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Plan Id"
+          },
+          "preview_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Preview Id"
+          },
+          "generation_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generation Id"
+          }
+        },
+        "type": "object",
+        "title": "SessionArtifacts"
+      },
       "Severity": {
         "type": "string",
         "enum": [
@@ -7037,6 +10702,71 @@
           "blocker"
         ],
         "title": "Severity"
+      },
+      "SlideActionBody": {
+        "properties": {
+          "action": {
+            "type": "string",
+            "enum": [
+              "shorten",
+              "split",
+              "merge_next",
+              "to_chart",
+              "to_diagram",
+              "remove"
+            ],
+            "title": "Action"
+          },
+          "strategy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "action"
+        ],
+        "title": "SlideActionBody"
+      },
+      "SlideChartPatch": {
+        "properties": {
+          "chart_type": {
+            "type": "string",
+            "title": "Chart Type"
+          },
+          "strategy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy"
+          }
+        },
+        "type": "object",
+        "required": [
+          "chart_type"
+        ],
+        "title": "SlideChartPatch"
+      },
+      "SlideCountPolicy": {
+        "type": "string",
+        "enum": [
+          "preferred",
+          "exact",
+          "maximum"
+        ],
+        "title": "SlideCountPolicy"
       },
       "SlideInfo": {
         "properties": {
@@ -7181,6 +10911,43 @@
               }
             ],
             "title": "Mandatory"
+          },
+          "chart": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart"
+          },
+          "insight_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insight Ids"
+          },
+          "supports_key_message": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supports Key Message"
           }
         },
         "type": "object",
@@ -7267,6 +11034,43 @@
               }
             ],
             "title": "Mandatory"
+          },
+          "chart": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chart"
+          },
+          "insight_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Insight Ids"
+          },
+          "supports_key_message": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supports Key Message"
           }
         },
         "type": "object",
@@ -7365,6 +11169,82 @@
           "slide_index"
         ],
         "title": "SlidePreviewMeta"
+      },
+      "SlideResearchRequest": {
+        "properties": {
+          "strategy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy"
+          },
+          "focus": {
+            "type": "string",
+            "enum": [
+              "facts",
+              "numbers"
+            ],
+            "title": "Focus",
+            "default": "facts"
+          },
+          "provider_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Session Id"
+          },
+          "use_llm": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Use Llm"
+          }
+        },
+        "type": "object",
+        "title": "SlideResearchRequest",
+        "description": "ADR-030: точечный ресёрч одного слайда плана."
+      },
+      "SlideResearchResult": {
+        "properties": {
+          "plan_set": {
+            "$ref": "#/components/schemas/PlanSet"
+          },
+          "slide": {
+            "$ref": "#/components/schemas/SlidePlan-Output"
+          },
+          "added_units": {
+            "type": "integer",
+            "title": "Added Units"
+          },
+          "research": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Research"
+          }
+        },
+        "type": "object",
+        "required": [
+          "plan_set",
+          "slide",
+          "added_units",
+          "research"
+        ],
+        "title": "SlideResearchResult"
       },
       "SlideRole": {
         "properties": {
@@ -7538,6 +11418,55 @@
           "skip"
         ],
         "title": "Strategy"
+      },
+      "StylePreviewRequest": {
+        "properties": {
+          "slide_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array",
+                "maxItems": 4
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Slide Ids"
+          },
+          "strategy": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strategy"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          },
+          "respond_async": {
+            "type": "boolean",
+            "title": "Respond Async",
+            "default": true
+          }
+        },
+        "type": "object",
+        "title": "StylePreviewRequest",
+        "description": "ADR-034 §5: пробные слайды трёх стилей."
       },
       "Table": {
         "properties": {
@@ -8190,6 +12119,7 @@
                 "type": "string",
                 "enum": [
                   "content",
+                  "research",
                   "plan",
                   "compose",
                   "audit",
@@ -8359,6 +12289,34 @@
         ],
         "title": "Warning"
       },
+      "_UnderstandingOptions": {
+        "properties": {
+          "use_llm": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Use Llm"
+          },
+          "provider_session_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Session Id"
+          }
+        },
+        "type": "object",
+        "title": "_UnderstandingOptions"
+      },
       "deckdna__contracts__audit_issue__Bbox": {
         "properties": {
           "x": {
@@ -8486,6 +12444,14 @@
         ],
         "title": "Kind1"
       },
+      "deckdna__contracts__content_pack__Origin": {
+        "type": "string",
+        "enum": [
+          "web",
+          "model"
+        ],
+        "title": "Origin"
+      },
       "deckdna__contracts__content_pack__Section": {
         "properties": {
           "id": {
@@ -8612,6 +12578,16 @@
         ],
         "title": "Kind"
       },
+      "deckdna__contracts__deck_plan__Origin": {
+        "type": "string",
+        "enum": [
+          "user",
+          "web",
+          "model"
+        ],
+        "title": "Origin",
+        "description": "ADR-030: where a fact comes from."
+      },
       "deckdna__contracts__deck_plan__Provenance": {
         "properties": {
           "planner": {
@@ -8735,6 +12711,15 @@
           "watermark"
         ],
         "title": "Kind1"
+      },
+      "deckdna__contracts__evidence_graph__Origin": {
+        "type": "string",
+        "enum": [
+          "user",
+          "web",
+          "model"
+        ],
+        "title": "Origin"
       },
       "deckdna__contracts__evidence_graph__SourceRef": {
         "properties": {

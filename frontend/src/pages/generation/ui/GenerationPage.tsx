@@ -1,33 +1,47 @@
-import { useEffect } from 'react'
-import { Link, useNavigate, useParams } from 'react-router'
-import { CancelGenerationButton } from '@/features/cancel-generation'
-import { useRerunGeneration } from '@/features/rerun-generation'
-import { describeFailure, failureMeta, GenerationProgress, isTrackingLost, RunNotice } from '@/widgets/generation-tracker'
-import { isTrackingId, useGenerationTracker, type GenerationPhase, type GenerationTracker } from '@/entities/generation'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useLocation, useNavigate, useParams } from 'react-router'
+import { useAssistantSession, useJobEvents } from '@/entities/assistant'
+import { isTrackingId, parseContentFill, useGenerationTracker, useJob, type DeckPlan, type GenerationPhase, type GenerationTracker } from '@/entities/generation'
 import { markEvidence, projectRunId, rememberRun, useProject } from '@/entities/project'
 import { useTemplate } from '@/entities/template'
+import { hasPendingVariantChanges, useVariantChanges } from '@/entities/variant'
+import { CancelGenerationButton } from '@/features/cancel-generation'
+import { fetchAndStorePlan, readPlanRequest, type StoredPlanRequest } from '@/features/edit-deck-plan'
+import { useRerunGeneration } from '@/features/rerun-generation'
+import {
+  BuildSlideInspector,
+  BuildTable,
+  BuildVariants,
+  describeFailure,
+  extractEventGenerationId,
+  failureMeta,
+  isTrackingLost,
+  latestAssistantNote,
+  RunNotice,
+  useBuildCards,
+  useBuildSlots,
+  useSelectedBuildKey,
+} from '@/widgets/generation-tracker'
+import { StepShell } from '@/widgets/step-shell'
 import { routes } from '@/shared/config'
-import { ArrowRight, Button, Icon, PageHeader } from '@/shared/ui'
+import { formatIndex } from '@/shared/lib/format'
+import { Button } from '@/shared/ui'
 import styles from './GenerationPage.module.css'
 
-const VARIANT_WORD: Record<number, string> = { 1: 'один вариант', 2: 'два варианта', 3: 'три варианта' }
+const AUTO_POLISH_SECONDS = 3
+const AUTO_POLISH_TICK_MS = 900
 
-function variantWord(count: number): string {
-  return VARIANT_WORD[count] ?? `${count} вариантов`
+interface RunLocationState {
+  fromStyle?: boolean
+  fromAutopilot?: boolean
+  fromStepBar?: boolean
+  strategies?: string[]
+  deckPlan?: DeckPlan | null
+  previewId?: string | null
 }
 
-function headline(phase: GenerationPhase, count: number): string {
-  switch (phase) {
-    case 'submitting':
-    case 'running':
-      return `Собираем ${variantWord(count)}`
-    case 'completed':
-      return count === 1 ? 'Вариант готов' : `${variantWord(count).replace(/^./, (letter) => letter.toUpperCase())} готовы`
-    case 'failed':
-      return 'Генерация не завершилась'
-    case 'canceled':
-      return 'Генерация отменена'
-  }
+function isRunLocationState(value: unknown): value is RunLocationState {
+  return typeof value === 'object' && value !== null
 }
 
 function lead(phase: GenerationPhase, templateName: string | null): string {
@@ -36,17 +50,12 @@ function lead(phase: GenerationPhase, templateName: string | null): string {
     case 'running':
       return templateName ? `Шаблон «${templateName}». Можно уйти с экрана — сборка продолжится.` : 'Можно уйти с экрана — сборка продолжится.'
     case 'completed':
-      return 'Выберите колоду, чтобы открыть её в аудите.'
+      return 'Проверьте слайды и доработайте то, что нужно.'
     case 'failed':
       return 'Бриф и файлы сохранены.'
     case 'canceled':
       return 'Бриф и загруженные файлы сохранены.'
   }
-}
-
-function auditLink(projectId: string, runId: string, variantId: string, slideNumber?: number): string {
-  const path = routes.audit(projectId, runId, variantId)
-  return slideNumber ? `${path}?${new URLSearchParams({ slide: String(slideNumber) }).toString()}` : path
 }
 
 function RecoveryNotice({ projectId, runId, tracker }: { projectId: string; runId: string; tracker: GenerationTracker }) {
@@ -74,8 +83,8 @@ function RecoveryNotice({ projectId, runId, tracker }: { projectId: string; runI
                 Открыть последний прогон
               </Link>
             )}
-            <Link className={canOpenLatest ? styles.secondaryLink : styles.primaryLink} to={routes.brief(projectId)}>
-              Назад к брифу
+            <Link className={canOpenLatest ? styles.secondaryLink : styles.primaryLink} to={routes.planDraft(projectId)}>
+              К плану
             </Link>
           </>
         }
@@ -119,14 +128,15 @@ function RecoveryNotice({ projectId, runId, tracker }: { projectId: string; runI
   return (
     <RunNotice
       tone={phase === 'failed' ? 'error' : 'neutral'}
-      title={phase === 'failed' ? 'Вёрстка не завершилась' : 'Генерация отменена'}
+      title={phase === 'failed' ? 'Вёрстка не завершилась' : 'Сборка отменена'}
       message={failure ? failure.message : 'Сборку можно запустить заново с теми же данными.'}
       meta={failure ? failureMeta(failure) : null}
+      details={failure?.technical ? [failureMeta(failure), failure.technical].filter(Boolean).join('\n') : null}
       actions={
         <>
           {retry}
-          <Link className={retry ? styles.secondaryLink : styles.primaryLink} to={routes.brief(projectId)}>
-            Назад к брифу
+          <Link className={retry ? styles.secondaryLink : styles.primaryLink} to={routes.planDraft(projectId)}>
+            К плану
           </Link>
         </>
       }
@@ -136,46 +146,248 @@ function RecoveryNotice({ projectId, runId, tracker }: { projectId: string; runI
 
 export function GenerationPage() {
   const { projectId = '', runId = '' } = useParams()
+  const location = useLocation()
   const navigate = useNavigate()
-  const tracker = useGenerationTracker(runId)
-  const { phase, generationId, canCancel } = tracker
+  const routeState = isRunLocationState(location.state) ? location.state : null
+
+  const isJobRun = runId.startsWith('job_')
+  const autopilotJobQuery = useJob(isJobRun ? runId : null)
+  const autopilotJob = autopilotJobQuery.data
+  const jobIdForEvents = isJobRun ? runId : null
+  const preEvents = useJobEvents(jobIdForEvents)
+
+  const resolvedRunIdFromJob =
+    (typeof autopilotJob?.result_ids?.generation_id === 'string' ? autopilotJob.result_ids.generation_id : null) ??
+    extractEventGenerationId(preEvents.events)
+
+  const trackerTargetId = isJobRun ? resolvedRunIdFromJob : runId
+  const tracker = useGenerationTracker(trackerTargetId)
+
+  const activeJobId = isJobRun ? runId : tracker.jobId
+  const jobEvents = useJobEvents(activeJobId)
+
+  const phase: GenerationPhase =
+    isJobRun && !resolvedRunIdFromJob
+      ? autopilotJob?.state === 'failed'
+        ? 'failed'
+        : autopilotJob?.state === 'canceled'
+          ? 'canceled'
+          : 'running'
+      : tracker.phase
+
+  const generationId = tracker.generationId ?? resolvedRunIdFromJob
+  const canCancel = tracker.canCancel
   const tracking = isTrackingId(runId)
-  const variantCount = tracker.generation?.variants.length || tracker.variantIds.length || 3
-  const lost = isTrackingLost(tracker.error)
+
+  const requestedStrategies = routeState?.strategies
+
+  const lost = !isJobRun && isTrackingLost(tracker.error)
+  const { data: project } = useProject(projectId)
+  const { data: session } = useAssistantSession(projectId)
+  const serverLatestRunId = project?.latest_run_id ?? null
   const { data: template } = useTemplate(tracker.generation?.template_id)
 
+  const initialStoredPlan = useMemo(() => readPlanRequest(projectId), [projectId])
+  const [fetchedStoredPlan, setFetchedStoredPlan] = useState<StoredPlanRequest | null>(null)
+  const storedPlan = initialStoredPlan ?? fetchedStoredPlan
+  const deckPlan: DeckPlan | null =
+    tracker.generation?.deck_plan ??
+    routeState?.deckPlan ??
+    storedPlan?.result.proposals[0]?.deckPlan ??
+    null
+  const sessionPlanId = session?.artifacts.plan_id ?? tracker.generation?.deck_plan_id ?? null
+
   useEffect(() => {
-    if (!tracking || !generationId) return
+    if (deckPlan || !projectId || !sessionPlanId) return
+    const controller = new AbortController()
+    const templateId = tracker.generation?.template_id ?? session?.artifacts.template_id ?? ''
+    const contentPackId = tracker.generation?.content_pack_id ?? session?.artifacts.content_pack_id ?? ''
+    void fetchAndStorePlan(
+      projectId,
+      sessionPlanId,
+      {
+        template_id: templateId,
+        content_pack_id: contentPackId,
+        brief: { purpose: 'Презентация', audience: '', language: 'ru', target_slide_count: 12 },
+      },
+      {},
+      { signal: controller.signal },
+    )
+      .then((loaded) => {
+        if (loaded) setFetchedStoredPlan(loaded)
+      })
+      .catch(() => undefined)
+    return () => controller.abort()
+  }, [deckPlan, projectId, sessionPlanId, tracker.generation?.template_id, tracker.generation?.content_pack_id, session?.artifacts.template_id, session?.artifacts.content_pack_id])
+
+  useEffect(() => {
+    if ((!tracking && !isJobRun) || !generationId) return
     rememberRun(projectId, generationId)
-    navigate(routes.run(projectId, generationId), { replace: true })
-  }, [tracking, generationId, projectId, navigate])
+    navigate(routes.run(projectId, generationId), { replace: true, state: location.state })
+  }, [tracking, isJobRun, generationId, projectId, navigate, location.state])
+
+  useEffect(() => {
+    if (!lost || !serverLatestRunId || serverLatestRunId === runId) return
+    rememberRun(projectId, serverLatestRunId)
+    navigate(routes.run(projectId, serverLatestRunId), { replace: true, state: location.state })
+  }, [lost, serverLatestRunId, runId, projectId, navigate, location.state])
 
   useEffect(() => {
     if (phase === 'completed') markEvidence(projectId, 'generated')
   }, [phase, projectId])
 
-  const actions =
-    phase === 'submitting' && !generationId ? (
-      <CancelGenerationButton generationId={null} />
-    ) : phase === 'running' && canCancel && generationId ? (
-      <CancelGenerationButton generationId={generationId} onCanceled={() => navigate(routes.brief(projectId))} />
-    ) : phase === 'completed' && generationId ? (
-      <Link className={styles.secondaryLink} to={routes.variants(projectId, generationId)}>
-        Сравнить по слайдам
-        <Icon as={ArrowRight} />
-      </Link>
-    ) : undefined
+  const effectiveTracker: GenerationTracker = useMemo(
+    () => (isJobRun && !resolvedRunIdFromJob ? { ...tracker, phase, jobId: runId } : tracker),
+    [isJobRun, resolvedRunIdFromJob, tracker, phase, runId],
+  )
+
+  const cards = useBuildCards(effectiveTracker, requestedStrategies)
+  const [selectedKey, setSelectedKey] = useSelectedBuildKey(cards)
+  const { slots, stageSummary, variantId: activeVariantId } = useBuildSlots({
+    tracker: effectiveTracker,
+    events: jobEvents.events,
+    deckPlan,
+    cards,
+    selectedKey,
+  })
+  const totalDeckSlides = deckPlan?.slides.length || slots.length || undefined
+  const contentFill = useMemo(
+    () =>
+      parseContentFill((tracker.generation as unknown as Record<string, unknown> | undefined)?.content_fill, tracker.generation) ??
+      storedPlan?.result.contentFill ??
+      null,
+    [tracker.generation, storedPlan],
+  )
+  const assistantNote = useMemo(
+    () =>
+      latestAssistantNote(jobEvents.events, activeVariantId, totalDeckSlides) ??
+      latestAssistantNote(jobEvents.events, null, totalDeckSlides),
+    [jobEvents.events, activeVariantId, totalDeckSlides],
+  )
+  const changesQuery = useVariantChanges(activeVariantId)
+  const hasPendingChanges = hasPendingVariantChanges(changesQuery.data)
+
+  const [inspectedSlideIndex, setInspectedSlideIndex] = useState<number | null>(null)
+  const [autoPolishCanceled, setAutoPolishCanceled] = useState(false)
+  const [autoPolishTicks, setAutoPolishTicks] = useState(0)
+
+  const inspectedSlot = inspectedSlideIndex !== null ? (slots[inspectedSlideIndex] ?? null) : null
+  const buildingSlot = slots.find((slot) => slot.state === 'building' && !slot.imageUrl) ?? null
+  const done = phase === 'completed' && Boolean(generationId)
+  const deckShownOnTable = done && slots.length > 0 && slots.some((slot) => slot.state === 'ready')
+
+  const shouldAutoPolish = Boolean(
+    !routeState?.fromStepBar &&
+      (routeState?.fromStyle ||
+        routeState?.fromAutopilot ||
+        isJobRun ||
+        jobEvents.done ||
+        jobEvents.events.some((event) => event.type === 'slide.ready' || event.type === 'stage.started') ||
+        tracker.generation?.variants.length === 1),
+  )
+
+  const autoPolishActive = Boolean(
+    deckShownOnTable &&
+      generationId &&
+      shouldAutoPolish &&
+      !autoPolishCanceled &&
+      !hasPendingChanges &&
+      inspectedSlot === null,
+  )
+
+  const autoPolishSecondsLeft = autoPolishActive ? Math.max(0, AUTO_POLISH_SECONDS - autoPolishTicks) : null
+
+  useEffect(() => {
+    if (!autoPolishActive || !generationId) return
+    let ticks = 0
+    const interval = setInterval(() => {
+      ticks += 1
+      setAutoPolishTicks(ticks)
+      if (ticks >= AUTO_POLISH_SECONDS) {
+        clearInterval(interval)
+        navigate(routes.polish(projectId, generationId))
+      }
+    }, AUTO_POLISH_TICK_MS)
+    return () => clearInterval(interval)
+  }, [autoPolishActive, generationId, navigate, projectId])
+
+  const handleSelectStyle = (key: string) => {
+    setSelectedKey(key)
+    setInspectedSlideIndex(null)
+  }
+
+  const handleSelectSlide = (index: number) => {
+    setAutoPolishCanceled(true)
+    setInspectedSlideIndex((prev) => (prev === index ? null : index))
+  }
+
+  const title = lost ? 'Сборка потерялась' : phase === 'completed' ? 'Презентация готова' : phase === 'failed' ? 'Не получилось собрать' : 'Собираю презентацию'
+  const note = lost
+    ? 'Материалы и план сохранены.'
+    : phase === 'completed' || phase === 'failed' || phase === 'canceled'
+      ? lead(phase, null)
+      : (assistantNote ?? lead(phase, template?.filename ?? null))
 
   return (
-    <div className={styles.page}>
-      <PageHeader
-        eyebrow="Шаг 4 · Генерация"
-        title={lost ? 'Статус запуска неизвестен' : headline(phase, variantCount)}
-        description={lost ? 'Бриф и загруженные файлы сохранены.' : lead(phase, template?.filename ?? null)}
-        actions={actions}
+    <StepShell
+      title={title}
+      note={note}
+      canvasLabel="Слайды презентации"
+      canvas={
+        lost ? null : (
+          <BuildTable
+            tracker={effectiveTracker}
+            events={jobEvents.events}
+            deckPlan={deckPlan}
+            cards={cards}
+            selectedKey={selectedKey}
+            slots={slots}
+            selectedSlideIndex={inspectedSlideIndex}
+            onSelectSlide={handleSelectSlide}
+            onSlideChangeRequested={() => setAutoPolishCanceled(true)}
+          />
+        )
+      }
+      inspector={
+        inspectedSlot
+          ? {
+              title: `${formatIndex(inspectedSlot.slideNumber)} · ${inspectedSlot.title}`,
+              wide: true,
+              onClose: () => setInspectedSlideIndex(null),
+              content: (
+                <BuildSlideInspector
+                  slot={inspectedSlot}
+                  totalSlides={slots.length}
+                  onSelectSlide={(nextIdx) => setInspectedSlideIndex(nextIdx)}
+                />
+              ),
+            }
+          : null
+      }
+      actions={
+        done && generationId ? (
+          <Button variant="primary" size="lg" onClick={() => navigate(routes.polish(projectId, generationId))}>
+            Открыть и доработать
+          </Button>
+        ) : phase === 'running' && canCancel && generationId ? (
+          <CancelGenerationButton generationId={generationId} onCanceled={() => navigate(routes.planDraft(projectId))} />
+        ) : phase === 'submitting' && !generationId ? (
+          <CancelGenerationButton generationId={null} />
+        ) : undefined
+      }
+    >
+      <BuildVariants
+        cards={cards}
+        selectedKey={selectedKey}
+        onSelect={handleSelectStyle}
+        stageSummary={stageSummary}
+        autoPolishSecondsLeft={autoPolishSecondsLeft}
+        onCancelAutoPolish={() => setAutoPolishCanceled(true)}
+        currentSlide={buildingSlot ? { number: buildingSlot.slideNumber, title: buildingSlot.title } : null}
+        contentFill={contentFill}
+        actualSlides={totalDeckSlides ?? null}
       />
-      <RecoveryNotice projectId={projectId} runId={runId} tracker={tracker} />
-      {!lost && <GenerationProgress tracker={tracker} auditHref={generationId ? (variantId, slideNumber) => auditLink(projectId, generationId, variantId, slideNumber) : undefined} />}
-    </div>
+      <RecoveryNotice projectId={projectId} runId={runId} tracker={effectiveTracker} />
+    </StepShell>
   )
 }

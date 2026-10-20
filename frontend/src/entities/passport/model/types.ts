@@ -41,6 +41,19 @@ export interface PassportReadability {
   avgOccupancy: number | null
 }
 
+export interface PassportFactOrigin {
+  user: number
+  web: number
+  model: number
+}
+
+export interface PassportResearch {
+  origin: PassportFactOrigin | null
+  sources: number | null
+  contentFill: string | null
+  seconds: number | null
+}
+
 export interface PassportStageTiming {
   stage: string
   seconds: number
@@ -106,6 +119,7 @@ export interface QualityPassport {
   styleFidelity: PassportScore[] | null
   contentSupport: PassportContentSupport
   readability: PassportReadability
+  research: PassportResearch | null
   timings: PassportTimings
   usage: PassportScore[] | null
   issues: PassportIssues

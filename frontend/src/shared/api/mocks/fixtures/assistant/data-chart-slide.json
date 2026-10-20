@@ -1,0 +1,17 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:56:48.048Z",
+  "method": "GET",
+  "path": "/slides/sld_1d1ea974740c469cbe2cd05e5ed200de",
+  "status": 200,
+  "body": {
+    "id": "sld_1d1ea974740c469cbe2cd05e5ed200de",
+    "variant_id": "var_a9cc34fdabbb4e14af5520ac2384b0ce",
+    "index": 3,
+    "slide_plan_id": "slide-2",
+    "purpose": "data",
+    "title": "Выручка: рост в 2,1 раза за 24 месяца",
+    "revision": 2,
+    "preview_artifact_id": "art_1f7b0cdfb1534ec1ac8e84d55361d36b"
+  }
+}

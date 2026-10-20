@@ -307,7 +307,10 @@
     "charts": [],
     "diagrams": [],
     "assets": [],
-    "warnings": []
+    "warnings": [],
+    "external_sources": [],
+    "datasets": [],
+    "insights": []
   },
   "job": {
     "id": "job_9a07009294724f6f930bcf2cff86ba4b",

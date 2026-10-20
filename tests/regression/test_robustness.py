@@ -15,7 +15,6 @@ integrity-issue), либо падает typed-ошибкой с контекст
 
 from __future__ import annotations
 
-import json
 import re
 import zipfile
 from pathlib import Path
@@ -65,16 +64,35 @@ def _gen(template: Path, content: Path, out_dir: Path):
 # ------------------------------------------------------------------ case 1
 
 
-def test_dangling_media_rel_generate_fails_typed(tmp_path):
-    """Media-парт удалён, slide rel на него остался — честный package_corrupt."""
+def test_dangling_media_rel_generate_fails_typed_or_avoids_it(tmp_path):
+    """Media-парт удалён, slide rel на него остался.
+
+    Инвариант (ADR-031, пересмотр): битый файл на выходе недопустим. Если
+    слайд с висячей связью попал в колоду — честный ``package_corrupt`` с
+    именем парта; если образцом стал другой слайд (выбор образцов с тех пор
+    поменялся и этот слайд не берёт), колода собирается и в ней нет ни одной
+    висячей связи. Раньше тест требовал только первый исход."""
+    from deckdna.pptx.opc.package import OpcPackage
+
     media = _media_part(TEMPLATE)
     corrupt = _rewrite_zip(
         TEMPLATE, tmp_path / "dang.pptx", lambda n, b: None if n == media else b
     )
-    with pytest.raises(DeckDNAError) as ei:
-        _gen(corrupt, CONTENT, tmp_path / "g")
-    assert ei.value.code == "package_corrupt"
-    assert media in ei.value.message
+    try:
+        report = _gen(corrupt, CONTENT, tmp_path / "g")
+    except DeckDNAError as exc:
+        assert exc.code == "package_corrupt"
+        assert media in exc.message
+        return
+    out = OpcPackage.open(report["artifacts"]["pptx"])
+    dangling = [
+        (part, target)
+        for part in out.parts
+        if part.startswith("ppt/slides/slide") and part.endswith(".xml")
+        for _rel, target in out.internal_dependencies(part)
+        if target not in out.parts
+    ]
+    assert not dangling, dangling
 
 
 def test_dangling_media_rel_audit_flags_integrity(tmp_path):
@@ -93,14 +111,16 @@ def test_dangling_media_rel_audit_flags_integrity(tmp_path):
 # ------------------------------------------------------------------ case 2
 
 
-def test_empty_blocks_content_generates_with_honest_flags(tmp_path):
-    """Пустой markdown → колода собирается, аудит честно ловит пустые слайды."""
+def test_empty_content_without_a_model_fails_typed(tmp_path):
+    """ADR-030: пустой markdown без модели — собирать не из чего. Раньше
+    колода собиралась из пустых слайдов-заглушек; теперь typed
+    invalid_input на стадии планирования с понятной причиной."""
     empty = tmp_path / "empty.md"
     empty.write_text("", encoding="utf-8")
-    report = _gen(TEMPLATE, empty, tmp_path / "g")
-    assert report["slides_out"] == BRIEF["target_slide_count"]
-    rules = {i["rule_code"] for i in report["audit_issues"]}
-    assert "integrity.empty_slide" in rules
+    with pytest.raises(DeckDNAError) as ei:
+        _gen(TEMPLATE, empty, tmp_path / "g")
+    assert ei.value.code == "invalid_input"
+    assert "no content" in ei.value.message
 
 
 # ------------------------------------------------------------------ case 3
@@ -152,67 +172,47 @@ def test_master_missing_theme(tmp_path):
 # ------------------------------------------------------------------ case 5
 
 
-def test_huge_paragraph_reports_unplaced_text(tmp_path):
+def test_huge_paragraph_never_loses_text_silently(tmp_path):
     """План с units > eligible slots: потеря честно видна в отчёте.
 
     Один 50k paragraph больше не переполняет: bounded sentence-split
     (story_director) складывает хвост в единичные юниты — 18 units на
     10 слайдов вмещаются, весь текст доходит (см.
-    test_huge_paragraph_bounded_units_no_loss). На полном pipeline
-    compose-level drop больше недостижим: dense_prose/adaptive_cards
-    поглощают сколь угодно много юнитов (проверено до 800), а при
-    ~2000 честно падает sources-slide (composition_failed) — то есть
-    потери либо нет, либо есть typed-ошибка, но не молчаливая потеря.
-    Реальная ветка text_unplaced жива на уровне композера: слайд плана
-    с 6 текстовыми юнитами на эталоне-картосетке vk_tech (card-grid
-    donor блокирует adaptive_cards-rescue; eligible bodies = 0)
-    честно дропает все юниты и пишет warning.
+    test_huge_paragraph_bounded_units_no_loss). Честное переполнение
+    достижимо только когда план несёт больше текстовых юнитов, чем на
+    слайдах eligible body-слотов — например 200 отдельных абзацев.
     """
-    from deckdna.contracts.variant_spec import Strategy
-    from deckdna.pptx.cloning.exemplar import (
-        ExemplarChoice,
-        slide_layout_map,
+    huge = tmp_path / "huge.md"
+    huge.write_text(
+        "# Заголовок\n\n"
+        + "\n\n".join(
+            f"Пункт {i}: достаточно длинный текст пункта номер {i}, "
+            "чтобы стать отдельным юнитом."
+            for i in range(200)
+        ),
+        encoding="utf-8",
     )
-    from deckdna.pptx.composing.minimal import generate_deck
-    from deckdna.pptx.opc.package import OpcPackage
+    report = _gen(TEMPLATE, huge, tmp_path / "g")
+    # ADR-031: плотная проза и клонирование карточек теперь размещают все
+    # 200 пунктов. Инвариант прежний — потеря не бывает молчаливой: каждый
+    # пункт либо на слайде, либо учтён в text_unplaced с предупреждением
+    import re
 
-    tpl = FIXTURES / "pptx" / "vk_tech_template.pptx"
-    if not tpl.exists():
-        pytest.skip("organizer fixture not present")
-    pkg = OpcPackage.open(tpl)
-    grid_part = "ppt/slides/slide8.xml"  # card-grid donor: 5 card slots, 1 body
-    choice = ExemplarChoice(
-        slide_part=grid_part,
-        layout_part=slide_layout_map(pkg)[grid_part] or "",
-        shape_count=5,
-        layout_slide_count=1,
-        long_runs=1,
-        content_slots=1,
+    from pptx import Presentation
+
+    text = " ".join(
+        shape.text_frame.text
+        for slide in Presentation(report["artifacts"]["pptx"]).slides
+        for shape in slide.shapes
+        if shape.has_text_frame
     )
-    plan = json.loads(
-        (FIXTURES / "content" / "poc_deck_plan.json").read_text(encoding="utf-8")
-    )
-    plan["slides"] = plan["slides"][:1]
-    plan["slides"][0]["content_units"] = [
-        {"role": "title", "kind": "title", "text": "Слайд с избытком юнитов"},
-    ] + [
-        {
-            "role": "body",
-            "kind": "bullet",
-            "text": f"Юнит {i} — текст, которому нет слота на слайде",
-        }
-        for i in range(6)
-    ]
-    report = generate_deck(
-        tpl,
-        plan,
-        tmp_path / "over.pptx",
-        exemplar_choices=[choice],
-        strategy=Strategy.faithful,
-    )
-    dropped = report["dropped_units"]
-    assert dropped.get("text_unplaced", 0) > 0
-    assert report["warnings"], "mass text loss must produce a warning"
+    placed = {int(n) for n in re.findall(r"Пункт (\d+):", text)}
+    dropped = report["compose_report"]["dropped_units"]
+    if len(placed) < 200:
+        assert dropped.get("text_unplaced", 0) > 0
+        assert report["compose_report"]["warnings"], "mass text loss must produce a warning"
+    else:
+        assert not dropped.get("text_unplaced")
 
 
 # ------------------------------------------------------------------ case 6

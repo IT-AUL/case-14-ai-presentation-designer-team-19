@@ -141,9 +141,7 @@ def test_fill_native_table_grows_extra_rows():
         pytest.skip("vk_workspace fixture not present")
     pkg = OpcPackage.open(VK_WORKSPACE)
     xml = pkg.parts["ppt/slides/slide14.xml"]
-    xml, rep = fill_native_tables(
-        xml, [_mk_table(rows=[(f"r{i}", i) for i in range(20)])]
-    )
+    xml, rep = fill_native_tables(xml, [_mk_table(rows=[(f"r{i}", i) for i in range(20)])])
     grid = _cell_grid(xml)
     assert rep.rows_grown == 10  # 21 строка данных при 11 a:tr
     assert len(grid) == 21
@@ -159,9 +157,7 @@ def test_grown_table_visible_to_audit():
     pkg = OpcPackage.open(VK_WORKSPACE)
     xml = pkg.parts["ppt/slides/slide14.xml"]
     before_h = _frame_cy(xml)
-    xml, rep = fill_native_tables(
-        xml, [_mk_table(rows=[(f"r{i}", i) for i in range(30)])]
-    )
+    xml, rep = fill_native_tables(xml, [_mk_table(rows=[(f"r{i}", i) for i in range(30)])])
     after_h = _frame_cy(xml)
     assert rep.rows_grown == 20 and after_h > before_h
 
@@ -205,13 +201,9 @@ def _template_with_native_table(path: Path) -> Path:
             "Третий абзац содержательного текста слайда",
         ]
     ):
-        box = slide.shapes.add_textbox(
-            Inches(0.5), Inches(0.3 + i * 0.5), Inches(8), Inches(0.4)
-        )
+        box = slide.shapes.add_textbox(Inches(0.5), Inches(0.3 + i * 0.5), Inches(8), Inches(0.4))
         box.text_frame.text = text
-    frame = slide.shapes.add_table(
-        3, 2, Inches(0.5), Inches(3.0), Inches(8), Inches(2)
-    )
+    frame = slide.shapes.add_table(3, 2, Inches(0.5), Inches(3.0), Inches(8), Inches(2))
     frame.table.cell(0, 0).text = "Сток"
     prs.save(path)
     return path
@@ -240,14 +232,12 @@ def test_compose_fills_exemplar_table(tmp_path):
 
     pkg = OpcPackage.open(out)
     slide_xml = next(
-        v
-        for p, v in pkg.parts.items()
-        if p.startswith("ppt/slides/slide") and p.endswith(".xml")
+        v for p, v in pkg.parts.items() if p.startswith("ppt/slides/slide") and p.endswith(".xml")
     )
     grid = _cell_grid(slide_xml)
     assert grid[0] == ["Метрика", "Значение"]
     assert grid[1] == ["Рост", "12"]
-    assert grid[2] == ["Доля", "0.5"]
+    assert grid[2] == ["Доля", "0,5"]  # русская десятичная запятая
 
 
 def test_compose_table_ref_without_grid_dropped(tmp_path):
@@ -294,9 +284,7 @@ def test_markdown_table_reaches_plan():
     иначе Table никогда не доходит до DeckPlan."""
     from deckdna.ingestion.content_parsers import parse_markdown
 
-    pack = parse_markdown(
-        "# Показатели\n\n| Метрика | Значение |\n|---|---|\n| Рост | 12 |\n"
-    )
+    pack = parse_markdown("# Показатели\n\n| Метрика | Значение |\n|---|---|\n| Рост | 12 |\n")
     assert len(pack.tables) == 1
     refs = [b.text for s in pack.sections for b in s.blocks if b.kind.value == "table_ref"]
     assert refs == ["tbl-0"]
@@ -313,9 +301,7 @@ def test_compose_grown_table_audited(tmp_path):
 
     pkg = OpcPackage.open(out)
     slide_xml = next(
-        v
-        for p, v in pkg.parts.items()
-        if p.startswith("ppt/slides/slide") and p.endswith(".xml")
+        v for p, v in pkg.parts.items() if p.startswith("ppt/slides/slide") and p.endswith(".xml")
     )
     grid = _cell_grid(slide_xml)
     assert len(grid) == 13 and grid[-1] == ["Строка 11", "11"]
@@ -323,10 +309,7 @@ def test_compose_grown_table_audited(tmp_path):
     from deckdna.audit.basic import audit_deck
 
     issues = audit_deck(out)
-    assert any(
-        i.rule_code == "layout.out_of_bounds" and i.slide_index == 0
-        for i in issues
-    )
+    assert any(i.rule_code == "layout.out_of_bounds" and i.slide_index == 0 for i in issues)
 
 
 def _grid_col_count(xml: bytes) -> int:
@@ -335,28 +318,28 @@ def _grid_col_count(xml: bytes) -> int:
     return len(tbl.findall(f"{{{A}}}tblGrid/{{{A}}}gridCol"))
 
 
-def test_fill_native_table_grows_extra_cols():
-    """5-колоночная Table в сетку 2 колонки — gridCol и a:tc клонируются,
-    все 5 значений строки реально в выводе, cx фрейма синканут."""
+def test_fill_native_table_caps_extra_cols():
+    """Широкие данные в доноре: максимум 4 колонки, ширина не растёт."""
     if not VK_WORKSPACE.exists():
         pytest.skip("vk_workspace fixture not present")
     pkg = OpcPackage.open(VK_WORKSPACE)
     xml = pkg.parts["ppt/slides/slide14.xml"]
-    before = _frame_cy(xml)
+    donor = etree.fromstring(xml)
+    before = sum(int(c.get("w")) for c in donor.iter(f"{{{A}}}gridCol"))
     wide = _mk_table(
         headers=("A", "B", "C", "D", "E"),
         rows=[("1", "2", "3", "4", "5"), ("6", "7", "8", "9", "10")],
     )
     xml, rep = fill_native_tables(xml, [wide])
-    assert rep.cols_grown == 3 and rep.cols_dropped == 0
-    assert _grid_col_count(xml) == 5
+    assert rep.cols_grown == 2 and rep.cols_dropped == 3
+    assert _grid_col_count(xml) == 4
     grid = _cell_grid(xml)
-    assert grid[0] == ["A", "B", "C", "D", "E"]
-    assert grid[1] == ["1", "2", "3", "4", "5"]
-    assert grid[2] == ["6", "7", "8", "9", "10"]
-    # оставшиеся строки тоже дополнены a:tc до 5
-    assert all(len(r) == 5 for r in grid)
-    assert before == _frame_cy(xml)  # высоту рост колонок не трогает
+    assert grid[0] == ["A", "B", "C", "D"]
+    assert grid[1] == ["1", "2", "3", "4"]
+    assert grid[2] == ["6", "7", "8", "9"]
+    # Все строки соответствуют компактной сетке.
+    assert all(len(r) == 4 for r in grid)
+    assert _frame_cx(xml) == before
     # cx синканут под сумму gridCol@w — аудит видит реальную ширину
     root = etree.fromstring(xml)
     tbl = next(root.iter(f"{{{A}}}tbl"))
@@ -392,13 +375,53 @@ def test_add_table_on_tableless_slide(tmp_path):
 
     pkg = OpcPackage.open(tmp_path / "out.pptx")
     slide_xml = next(
-        v
-        for p, v in pkg.parts.items()
-        if p.startswith("ppt/slides/slide") and p.endswith(".xml")
+        v for p, v in pkg.parts.items() if p.startswith("ppt/slides/slide") and p.endswith(".xml")
     )
     grid = _cell_grid(slide_xml)
     assert grid[0] == ["Метрика", "Значение"]
     assert grid[1] == ["Рост", "12"]
+
+
+_SLIDE_WITH_EMPTY_BODY = (
+    b'<p:sld xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" '
+    b'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">'
+    b"<p:cSld><p:spTree><p:nvGrpSpPr/><p:grpSpPr/>"
+    b'<p:sp><p:nvSpPr><p:cNvPr id="2" name="Body"/><p:cNvSpPr txBox="1"/>'
+    b"<p:nvPr/></p:nvSpPr><p:spPr>"
+    b'<a:xfrm><a:off x="508000" y="1524000"/><a:ext cx="11176000" cy="4000000"/>'
+    b"</a:xfrm></p:spPr><p:txBody><a:bodyPr/><a:p/></p:txBody></p:sp>"
+    b"</p:spTree></p:cSld></p:sld>"
+)
+
+
+def test_created_table_font_keeps_rows_on_slide():
+    """add_table-таблица без донорского стиля ячеек: длинные значения при
+    дефолтном кегле раздувают строки за низ слайда (layout.out_of_bounds),
+    поэтому сетке проставляется кегль, у которого всё влезает."""
+    from deckdna.pptx.composing.table_fill import _estimated_grid_height
+
+    slide_w, slide_h = 12_192_000, 6_858_000
+    long_name = "Устройство обработки данных с очень длинным наименованием модели"
+    table = _mk_table(
+        headers=("Артикул", "Наименование", "Категория", "Цена, ₽", "Поставщик"),
+        rows=[
+            (f"A-{i}", long_name, "Категория товаров", "1 200", "Поставщик N") for i in range(10)
+        ],
+    )
+    xml, rep = fill_native_tables(_SLIDE_WITH_EMPTY_BODY, [table], slide_size=(slide_w, slide_h))
+    assert rep.tables_created == 1 and rep.units_dropped == 0
+    root = etree.fromstring(xml)
+    grid = next(root.iter(f"{{{A}}}tbl"))
+    sizes = {int(d.get("sz")) for d in grid.iter(f"{{{A}}}defRPr") if d.get("sz")}
+    assert sizes, "у созданной таблицы нет явного кегля — строки уедут за слайд"
+    size_pt = max(sizes) / 100
+    frame = next(a for a in grid.iterancestors() if etree.QName(a).localname == "graphicFrame")
+    off = frame.find(
+        "{http://schemas.openxmlformats.org/presentationml/2006/main}xfrm/"
+        "{http://schemas.openxmlformats.org/drawingml/2006/main}off"
+    )
+    projected_bottom = int(off.get("y")) + _estimated_grid_height(grid, size_pt)
+    assert projected_bottom <= slide_h
 
 
 def test_add_table_no_host_drops():

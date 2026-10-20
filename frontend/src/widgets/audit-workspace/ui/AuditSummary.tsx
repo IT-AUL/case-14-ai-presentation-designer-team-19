@@ -1,18 +1,16 @@
 import { clsx } from 'clsx'
-import { useId } from 'react'
-import { Link } from 'react-router'
+import { useId, type ReactNode } from 'react'
 import {
   CATEGORY_LABEL,
   CATEGORY_ORDER,
   CheckKindBadge,
-  SEVERITY,
-  SEVERITY_ORDER,
   type AuditRun,
   type RuleCategory,
   type Severity,
 } from '@/entities/audit'
-import { strategyInfo, type VariantSummary } from '@/entities/variant'
-import { ArrowRight, Check, Icon, Mono, RefreshCw } from '@/shared/ui'
+import { strategyInfo, variantMetrics, type VariantSummary } from '@/entities/variant'
+import { formatPercent } from '@/shared/lib/format'
+import { Check, Icon, Mono, RefreshCw } from '@/shared/ui'
 import { CHECK_STATUS_LABEL } from '../model/labels'
 import styles from './AuditSummary.module.css'
 
@@ -29,16 +27,19 @@ interface AuditSummaryProps {
   onRunContextual: () => void
   reauditPending: boolean
   onReaudit: () => void
-  exportHref: string
+  actions?: ReactNode
 }
 
 export function AuditSummary(props: AuditSummaryProps) {
-  const { variants, variantId, audit, severityCounts, kindCounts, fixableCount, hasProvider, contextualPending, reauditPending } = props
+  const { variants, variantId, audit, severityCounts, kindCounts, fixableCount, hasProvider, contextualPending, reauditPending, actions } = props
   const selectId = useId()
   const reasonId = useId()
   const current = variants.find((variant) => variant.id === variantId)
   const contextualDone = audit.contextual_status === 'completed'
   const contextualNote = contextualDone ? CHECK_STATUS_LABEL.completed : hasProvider ? CHECK_STATUS_LABEL[audit.contextual_status] : 'не запускалась'
+  const metrics = current ? variantMetrics(current) : null
+  const styleRatio = metrics?.styleFidelity ?? metrics?.validity ?? 1
+  const stylePercent = formatPercent(styleRatio)
 
   return (
     <section aria-label="Сводка аудита" className={styles.summary}>
@@ -69,55 +70,55 @@ export function AuditSummary(props: AuditSummaryProps) {
         </div>
       </div>
 
-      <div className={clsx(styles.block, styles.bordered, styles.severities)} aria-label="Открытые проблемы по серьёзности" role="group">
-        {SEVERITY_ORDER.map((severity) => (
-          <div key={severity} className={styles.tile} data-severity={severity}>
-            <Mono className={styles.tileValue}>{severityCounts[severity]}</Mono>
-            <span className={styles.tileLabel}>{SEVERITY[severity].shortLabel}</span>
-          </div>
-        ))}
+      <div className={clsx(styles.block, styles.bordered, styles.calmSummary)} role="status" aria-label="Итог проверки">
+        <span className={styles.calmHeadline}>
+          в стиле шаблона <Mono className={styles.calmNumber}>{stylePercent}</Mono> · блокеров{' '}
+          <Mono className={styles.calmNumber} data-alert={severityCounts.blocker > 0 ? 'true' : undefined}>
+            {severityCounts.blocker}
+          </Mono>
+        </span>
+        <span className={styles.calmSub}>
+          ошибок {severityCounts.error} · автоисправимо {fixableCount}
+        </span>
       </div>
 
       <div className={clsx(styles.block, styles.bordered, styles.checks)} role="group" aria-label="Типы проверок">
-        <div className={styles.checkRow} title="Детерминированные проверки: правило в коде, результат всегда один">
+        <div className={styles.checkRow} title="Проверка правил шаблона и геометрии">
           <CheckKindBadge kind="D" />
           <span>правила</span>
           <Mono className={styles.checkCount}>{kindCounts.D}</Mono>
           <span className={styles.checkStatus}>{CHECK_STATUS_LABEL[audit.deterministic_status]}</span>
         </div>
-        <div className={styles.checkRow} title="Контекстные проверки: модель отвечает на вопросы по картинке слайда">
+        <div className={styles.checkRow} title="Смысловая и визуальная проверка слайдов">
           <CheckKindBadge kind="N" />
-          <span>модель</span>
+          <span>смысл</span>
           <Mono className={styles.checkCount}>{contextualDone ? kindCounts.N : '—'}</Mono>
           <span className={styles.checkStatus}>{contextualNote}</span>
         </div>
       </div>
 
-      <div className={clsx(styles.block, styles.bordered)}>
-        <span className={styles.caption}>Автоисправимо</span>
-        <Mono className={styles.value}>{fixableCount}</Mono>
-      </div>
-
       <div className={styles.actions}>
-        <button
-          type="button"
-          className={styles.action}
-          onClick={props.onRunContextual}
-          disabled={contextualPending || !hasProvider}
-          aria-busy={contextualPending}
-          aria-describedby={hasProvider ? undefined : reasonId}
-          title={hasProvider ? 'Проверить смысл слайдов моделью' : 'Подключите модель в разделе «Модели» в шапке'}
-        >
-          <span className={styles.nMark} aria-hidden>
-            N
-          </span>
-          <span className={styles.actionLabel}>{contextualPending ? 'Модель проверяет…' : 'Смысл моделью'}</span>
-        </button>
-        {!hasProvider && (
-          <span id={reasonId} className={styles.reason}>
-            нужна модель
-          </span>
-        )}
+        <div className={styles.actionGroup}>
+          <button
+            type="button"
+            className={styles.action}
+            onClick={props.onRunContextual}
+            disabled={contextualPending || !hasProvider}
+            aria-busy={contextualPending}
+            aria-describedby={hasProvider ? undefined : reasonId}
+            title={hasProvider ? 'Проверить смысл слайдов' : 'Подключите сервис проверки в шапке'}
+          >
+            <span className={styles.nMark} aria-hidden>
+              N
+            </span>
+            <span className={styles.actionLabel}>{contextualPending ? 'Проверяю смысл…' : 'Проверить смысл'}</span>
+          </button>
+          {!hasProvider && (
+            <span id={reasonId} className={styles.reason}>
+              нужен сервис проверки
+            </span>
+          )}
+        </div>
         <button
           type="button"
           className={styles.action}
@@ -129,10 +130,7 @@ export function AuditSummary(props: AuditSummaryProps) {
           <Icon as={RefreshCw} size={14} className={reauditPending ? styles.spin : undefined} />
           <span className={styles.actionLabel}>{reauditPending ? 'Идёт повторный аудит…' : 'Повторный аудит'}</span>
         </button>
-        <Link to={props.exportHref} className={styles.primary}>
-          Экспорт
-          <Icon as={ArrowRight} size={14} />
-        </Link>
+        {actions && <div className={styles.downloadsWrap}>{actions}</div>}
       </div>
     </section>
   )
@@ -143,9 +141,10 @@ interface PolicyStripProps {
   audit: AuditRun
   active: 'all' | RuleCategory
   onToggle: (category: RuleCategory) => void
+  trailing?: ReactNode
 }
 
-export function PolicyStrip({ counts, audit, active, onToggle }: PolicyStripProps) {
+export function PolicyStrip({ counts, audit, active, onToggle, trailing }: PolicyStripProps) {
   return (
     <div className={styles.policies} role="group" aria-label="Категории проверок">
       <span className={styles.policiesLabel}>Категории</span>
@@ -168,6 +167,7 @@ export function PolicyStrip({ counts, audit, active, onToggle }: PolicyStripProp
           </button>
         )
       })}
+      {trailing && <div className={styles.trailing}>{trailing}</div>}
     </div>
   )
 }

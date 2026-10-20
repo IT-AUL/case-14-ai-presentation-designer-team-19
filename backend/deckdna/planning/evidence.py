@@ -18,8 +18,15 @@ id узлов детерминированные (позиционные) — о
 - таблица → ``table``, рёбра ``belongs_to`` от ячеек;
 - asset → ``visual``.
 
-confidence=1.0 у всех узлов: извлечение verbatim, без оценки
-достоверности — оценка правдивости не входит в этот этап.
+confidence=1.0 у узлов пользовательского контента: извлечение verbatim,
+без оценки достоверности — оценка правдивости не входит в этот этап.
+
+ADR-030: блоки, добранные ресёрчем, ссылаются на ``pack.external_sources``
+через ``SourceRef.artifact_id``. Их узлы получают ``origin`` (``web`` /
+``model``) и пониженный confidence: факт со страницы подтверждён
+дословной цитатой, но не проверен человеком; факт из знаний модели не
+подтверждён ничем. У пользовательских узлов ``origin`` не выставляется
+(по схеме отсутствие = ``user``), поэтому граф обычного пака не меняется.
 """
 
 from __future__ import annotations
@@ -27,9 +34,14 @@ from __future__ import annotations
 from deckdna.contracts import evidence_graph as eg
 from deckdna.contracts.content_pack import Block, ContentPack, SourceRef
 from deckdna.contracts.evidence_graph import EvidenceGraph
+from deckdna.planning.data_evidence import dataset_evidence
 
 # Версия схемы — общая замороженная для freeze-контрактов (как в api/app.py).
 SCHEMA_VERSION = "freeze-1"
+
+# ADR-030: факт со страницы подтверждён дословной цитатой, но не проверен
+# человеком; факт из знаний модели не подтверждён ничем.
+_ORIGIN_CONFIDENCE = {"web": 0.8, "model": 0.5}
 
 
 def _eref(src: SourceRef) -> eg.SourceRef:
@@ -171,6 +183,24 @@ def build_evidence_graph(pack: ContentPack) -> EvidenceGraph:
                 confidence=1.0,
             )
         )
+
+    data_nodes, data_edges = dataset_evidence(pack) if pack.datasets else ([], [])
+    nodes.extend(data_nodes)
+    edges.extend(data_edges)
+
+    origins = {src.id: src.origin.value for src in pack.external_sources}
+    if origins:
+        nodes = [
+            node.model_copy(
+                update={
+                    "origin": eg.Origin(origins[node.source_ref.artifact_id]),
+                    "confidence": _ORIGIN_CONFIDENCE[origins[node.source_ref.artifact_id]],
+                }
+            )
+            if node.source_ref.artifact_id in origins
+            else node
+            for node in nodes
+        ]
 
     return eg.EvidenceGraph(
         schema_version=SCHEMA_VERSION,

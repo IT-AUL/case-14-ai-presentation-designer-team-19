@@ -19,17 +19,30 @@ def _agenda(plan):
 
 def test_agenda_lists_only_covered_sections_without_repeats():
     pack = parse_file(CONTENT)
-    plan = plan_deck(pack, Brief(purpose="t", audience="q", language="ru", target_slide_count=6))
+    plan = plan_deck(pack, Brief(purpose="t", audience="q", language="ru", target_slide_count=8))
     items = _agenda(sync_agenda(plan, pack))
     assert 2 <= len(items) <= MAX_AGENDA_ITEMS
     assert len(items) == len(set(items))
     content_titles = {
-        s.title_intent for s in plan.slides
-        if s.purpose not in (Purpose.title, Purpose.agenda, Purpose.thank_you)
+        s.title_intent
+        for s in plan.slides
+        if s.purpose not in (Purpose.title, Purpose.agenda, Purpose.thank_you, Purpose.cta)
     }
     assert set(items) <= content_titles  # маршрут доклада, а не оглавление источника
     title = next(s.title_intent for s in plan.slides if s.purpose == Purpose.title)
     assert title not in items
+
+
+def test_agenda_only_for_decks_with_8_or_more_slides():
+    pack = parse_file(CONTENT)
+    short_plan = plan_deck(
+        pack, Brief(purpose="t", audience="q", language="ru", target_slide_count=7)
+    )
+    assert all(s.purpose != Purpose.agenda for s in short_plan.slides)
+    long_plan = plan_deck(
+        pack, Brief(purpose="t", audience="q", language="ru", target_slide_count=8)
+    )
+    assert any(s.purpose == Purpose.agenda for s in long_plan.slides)
 
 
 def test_sync_agenda_is_idempotent():

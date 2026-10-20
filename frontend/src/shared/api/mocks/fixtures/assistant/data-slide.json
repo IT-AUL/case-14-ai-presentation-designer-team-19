@@ -1,0 +1,17 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:52:41.306Z",
+  "method": "GET",
+  "path": "/slides/sld_0cd5d62557334d4eac42ac037c6fcdf9",
+  "status": 200,
+  "body": {
+    "id": "sld_0cd5d62557334d4eac42ac037c6fcdf9",
+    "variant_id": "var_a9cc34fdabbb4e14af5520ac2384b0ce",
+    "index": 2,
+    "slide_plan_id": "slide-1",
+    "purpose": "overview",
+    "title": "Ключевые выводы",
+    "revision": 1,
+    "preview_artifact_id": "art_b709d98c33b9471b8ecd472da5a1389f"
+  }
+}

@@ -10,8 +10,7 @@ reference so both views agree.
 Narrow practical scope, honestly bounded:
 - one `c:ser` per ChartSeries; data series beyond the chart's own
   `c:ser` count are truncated (`series_dropped`), surplus `c:ser`
-  elements keep their stock data (dropping them is safe but left out
-  of scope);
+  elements are removed so no donor values survive;
 - two output slides cloned from the same chart-bearing exemplar
   share one physical chart part (the dependency closure is a set);
   ``unshare_chart_parts`` duplicates the part (+ its workbook) for
@@ -55,9 +54,22 @@ from deckdna.contracts.content_pack import Chart, ChartSeries
 # Markdown-конвенция описана в ingestion/chart_block.py; парсер живёт
 # там же (слой ingestion), re-export для обратной совместимости.
 from deckdna.ingestion.chart_block import parse_chart_block  # noqa: F401
-from deckdna.pptx.composing.table_fill import _empty_body_hosts, _next_shape_id
+from deckdna.pptx.composing.chart_build import TYPED, build_typed_chart_xml, typed_workbook
+from deckdna.pptx.composing.chart_colors import (
+    MIN_SERIES_CONTRAST,
+    ChartColors,
+    _resolve,
+    categorical_palette,
+    chart_colors,
+    contrast,
+    slide_background,
+)
+from deckdna.pptx.composing.chart_metadata import complete_chart_metadata
+from deckdna.pptx.composing.chart_style import DonorStyle, resolve_series
+from deckdna.pptx.composing.table_fill import _el_box, _empty_body_hosts, _next_shape_id, _visible
 from deckdna.pptx.opc.package import (
     CONTENT_TYPES,
+    OpcPackage,
     Relationship,
     parse_rels,
     rels_name_for,
@@ -81,8 +93,7 @@ _XLSX_PART_RE = re.compile(r"^ppt/embeddings/[^/]*?(\d+)\.xlsx$")
 _MIN_CHART_W_EMU = 2_000_000
 _MIN_CHART_H_EMU = 1_500_000
 _EMPTY_RELS = (
-    b"<Relationships xmlns='http://schemas.openxmlformats.org/"
-    b"package/2006/relationships'/>"
+    b"<Relationships xmlns='http://schemas.openxmlformats.org/package/2006/relationships'/>"
 )
 
 
@@ -140,6 +151,8 @@ def _set_pts(cache: etree._Element, values: list, numeric: bool) -> int:
         cache.insert(0, count)
     count.set("val", str(len(values)))
     for i, value in enumerate(values):
+        if numeric and value is None:
+            continue  # an indexed gap, never the invalid number text "None"
         pt = etree.SubElement(cache, f"{{{C}}}pt")
         pt.set("idx", str(i))
         v = etree.SubElement(pt, f"{{{C}}}v")
@@ -197,46 +210,55 @@ def _fill_ser(ser: etree._Element, categories: list[str], series: ChartSeries) -
             if cache is not None:
                 written += _set_pts(cache, series.values, numeric=True)
                 _sync_formula(ref, len(series.values))
-    if series.name:
+    if not series.name:
         tx = ser.find(f"{{{C}}}tx")
         if tx is not None:
+            ser.remove(tx)  # an anonymous input cannot retain a donor's name
+    else:
+        tx = ser.find(f"{{{C}}}tx")
+        if tx is None:
+            tx = etree.Element(f"{{{C}}}tx")
+            ser.insert(2, tx)  # after idx/order, before styling/data
+            etree.SubElement(tx, f"{{{C}}}v").text = series.name
+        else:
             ref = tx.find(f"{{{C}}}strRef")
             cache = ref.find(f"{{{C}}}strCache") if ref is not None else None
             if cache is None:
                 cache = tx.find(f"{{{C}}}strLit")
             if cache is not None:
                 _set_pts(cache, [series.name], numeric=False)
+            else:
+                for child in list(tx):
+                    tx.remove(child)
+                etree.SubElement(tx, f"{{{C}}}v").text = series.name
     return written
 
 
-def _sync_workbook(
-    pkg_parts: dict[str, bytes], chart_part: str, chart: Chart, rels
-) -> bool:
-    """Rewrite the embedded workbook cells the chart formulas point at.
+def _sync_workbook(pkg_parts: dict[str, bytes], chart_part: str, chart: Chart, rels) -> bool:
+    """Rebuild editable data and bind legacy references to those exact cells.
 
-    Narrow: categories → column A from row 2, series → columns B.. with
-    the series name in row 1 — the layout PowerPoint/python-pptx emit.
-    Returns True when a workbook part was found and rewritten."""
+    A donor may have different sheets/ranges and cells beyond its visible
+    chart. Reusing that workbook retained donor values and made Edit Data
+    disagree with the freshly written caches. Workbook styling is data-only;
+    the native chart's visual styling stays in its chart part.
+    """
     chart_rels = [
-        rel for rel in rels
-        if rel.type_name == "package" or rel.target.lower().endswith(".xlsx")
+        rel
+        for rel in rels
+        if not rel.is_external
+        and (rel.type_name == "package" or rel.target.lower().endswith(".xlsx"))
     ]
     if not chart_rels:
         return False
     xlsx_part = resolve_target(chart_part, chart_rels[0].target)
-    raw = pkg_parts.get(xlsx_part)
-    if raw is None:
+    if xlsx_part not in pkg_parts:
         return False
     import openpyxl
+    from openpyxl.utils import get_column_letter
 
-    wb = openpyxl.load_workbook(BytesIO(raw))
-    ws = wb.worksheets[0]
-    # Clear the previous data block (categories + up to 8 series, 512 rows).
-    for row in ws.iter_rows(min_row=1, max_row=512, min_col=1, max_col=9):
-        for cell in row:
-            cell.value = None
-    # Категории — строки по контракту `list[str]`: числовая ячейка
-    # заставляет Excel отрисовать «2021» как serial-date.
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Sheet1"
     for i, cat in enumerate(chart.categories, start=2):
         ws.cell(row=i, column=1, value=cat)
     for j, series in enumerate(chart.series):
@@ -245,15 +267,38 @@ def _sync_workbook(
             ws.cell(row=1, column=col, value=series.name)
         for i, value in enumerate(series.values, start=2):
             ws.cell(row=i, column=col, value=value)
+    root = etree.fromstring(pkg_parts[chart_part])
+    for j, ser in enumerate(root.iter(f"{{{C}}}ser")):
+        col = get_column_letter(j + 2)
+        refs = {
+            "tx": f"Sheet1!${col}$1",
+            "cat": f"Sheet1!$A$2:$A${max(2, len(chart.categories) + 1)}",
+            "val": f"Sheet1!${col}$2:${col}${max(2, len(chart.series[j].values) + 1)}",
+        }
+        for data_field, formula in refs.items():
+            owner = ser.find(f"{{{C}}}{data_field}")
+            if owner is None:
+                continue
+            for ref in owner:
+                if ref.tag not in (f"{{{C}}}strRef", f"{{{C}}}numRef"):
+                    continue
+                node = ref.find(f"{{{C}}}f")
+                if node is None:
+                    node = etree.Element(f"{{{C}}}f")
+                    ref.insert(0, node)
+                node.text = formula
     buf = BytesIO()
     wb.save(buf)
     pkg_parts[xlsx_part] = buf.getvalue()
+    pkg_parts[chart_part] = etree.tostring(root, xml_declaration=True, encoding="UTF-8")
     return True
 
 
 def _fill_chart_xml(xml: bytes, chart: Chart, report: ChartFillReport) -> bytes:
     root = etree.fromstring(xml)
     sers = [s for s in root.iter(f"{{{C}}}ser")]
+    for surplus in sers[len(chart.series) :]:
+        surplus.getparent().remove(surplus)
     for ser, series in zip(sers, chart.series, strict=False):
         report.points_written += _fill_ser(ser, chart.categories, series)
     report.series_dropped += max(0, len(chart.series) - len(sers))
@@ -269,6 +314,7 @@ def fill_slide_charts(
     slide_rels,
     used_parts: set[str],
     used_hosts: set[tuple[int, int, int, int]] | None = None,
+    donor: DonorStyle | None = None,
 ) -> ChartFillReport:
     """Pour *charts* into the chart parts reachable from *slide_part*'s
     rels, mutating entries of *pkg_parts*. *slide_rels* is the parsed
@@ -284,12 +330,25 @@ def fill_slide_charts(
     report = ChartFillReport()
     if not charts:
         return report
+    # Рамку графика донора могла снять своя раскладка (data split,
+    # карточки): связь в rels осталась, а на слайде графика нет. Такой
+    # парт — не носитель: заливка в него невидима, а отчёт врал бы
+    # «заполнено». Носитель — только парт, на который ссылается c:chart.
+    framed = {
+        node.get(f"{{{R_NS}}}id")
+        for node in etree.fromstring(pkg_parts[slide_part]).iter(f"{{{C}}}chart")
+    }
     chart_parts = [
         resolve_target(slide_part, rel.target)
         for rel in slide_rels
-        if rel.type == _CHART_REL and not rel.is_external
+        if rel.type == _CHART_REL and not rel.is_external and rel.id in framed
     ]
     report.charts_found = len(chart_parts)
+    rid_of = {
+        resolve_target(slide_part, rel.target): rel.id
+        for rel in slide_rels
+        if rel.type == _CHART_REL and not rel.is_external
+    }
     part_iter = iter(chart_parts)
     for chart in charts:
         part = next(
@@ -298,13 +357,21 @@ def fill_slide_charts(
         )
         if part is None:
             if used_hosts is not None and _add_slide_chart(
-                pkg_parts, slide_part, chart, slide_rels, used_hosts, report
+                pkg_parts, slide_part, chart, slide_rels, used_hosts, report, donor
             ):
                 continue
             report.units_dropped += 1
             continue
+        if chart.chart_type in TYPED:
+            # ADR-033 §6: тип выбран по данным — график образца
+            # перестраивается целиком, иначе вышел бы его тип (круговая
+            # шаблона для ряда по месяцам)
+            _replace_typed(pkg_parts, slide_part, part, rid_of.get(part), chart, report, donor)
+            used_parts.add(part)
+            continue
         xml = pkg_parts[part]
         pkg_parts[part] = _fill_chart_xml(xml, chart, report)
+        _complete_legacy_metadata(pkg_parts, slide_part, part, chart, donor)
         used_parts.add(part)
         rels_name = rels_name_for(part)
         chart_rels = parse_rels(pkg_parts.get(rels_name, _EMPTY_RELS))
@@ -314,6 +381,298 @@ def fill_slide_charts(
             report.workbook_errors += 1
     return report
 
+
+def _colors(
+    parts: dict[str, bytes],
+    slide_part: str,
+    donor: DonorStyle | None,
+    region: tuple[int, int, int, int] | None = None,
+    category_count: int = 0,
+) -> ChartColors:
+    """Цвета по фону слайда; палитра донора (если есть) — первой, без
+    цветов, сливающихся с фоном."""
+    colors = chart_colors(parts, slide_part, region)
+    bg, theme, cmap = slide_background(parts, slide_part, region)
+    donor_hex = (
+        [
+            c
+            for c in resolve_series(donor, theme, cmap)
+            if bg is None or contrast(c, bg) >= MIN_SERIES_CONTRAST
+        ]
+        if donor is not None
+        else []
+    )
+    rest = [c for c in colors.series if c not in donor_hex]
+    palette = categorical_palette(tuple(donor_hex + rest), bg, category_count)
+    return ChartColors(ink=colors.ink, grid=colors.grid, series=palette)
+
+
+def _category_count(chart: Chart) -> int:
+    return len(chart.categories) if chart.chart_type in ("pie", "doughnut") else 0
+
+
+def _complete_legacy_metadata(parts, slide_part, chart_part, chart, donor=None):
+    rid = next(
+        (
+            rel.id
+            for rel in parse_rels(parts[rels_name_for(slide_part)])
+            if rel.type == _CHART_REL
+            and not rel.is_external
+            and resolve_target(slide_part, rel.target) == chart_part
+        ),
+        None,
+    )
+    root = etree.fromstring(parts[slide_part])
+    region = None
+    for frame in root.iter(f"{{{P}}}graphicFrame"):
+        if not any(node.get(f"{{{R_NS}}}id") == rid for node in frame.iter(f"{{{C}}}chart")):
+            continue
+        region = _el_box(frame)
+        break
+    colors = _colors(parts, slide_part, donor, region)
+    # Legacy donors can paint their own chart background over a slide panel.
+    # Added text must follow that surface rather than the obscured slide fill.
+    chart_root = etree.fromstring(parts[chart_part])
+    _, theme, cmap = slide_background(parts, slide_part, region)
+    own_bg = _resolve(chart_root.find(f"{{{C}}}spPr/{{{A}}}solidFill"), theme, cmap)
+    ink = colors.ink
+    if own_bg:
+        candidates = [c for c in (ink, *(theme.get(k) for k in ("dk1", "lt1", "dk2", "lt2"))) if c]
+        if candidates:
+            ink = max(candidates, key=lambda c: contrast(c, own_bg))
+    size = donor.label_sz if donor and donor.label_sz else 1200
+    parts[chart_part] = complete_chart_metadata(parts[chart_part], chart, ink, size)
+
+
+def _chart_score(w: int, h: int) -> float:
+    """Полезная площадь под график: узкая полоса или высокая колонка
+    читаются хуже, чем почти квадратная область той же площади."""
+    return min(w, 2.4 * h) * min(h, 1.0 * w)
+
+
+def _replace_typed(
+    pkg_parts: dict[str, bytes],
+    slide_part: str,
+    part: str,
+    rid: str | None,
+    chart: Chart,
+    report: ChartFillReport,
+    donor: DonorStyle | None = None,
+) -> None:
+    """График образца → график выбранного типа на том же месте; книга
+    данных образца переписывается теми же данными."""
+    chart_rels = parse_rels(pkg_parts.get(rels_name_for(part), _EMPTY_RELS))
+    wb_rel = next((r for r in chart_rels if r.type == _PACKAGE_REL and not r.is_external), None)
+    wb_rid = None
+    if wb_rel is not None:
+        wb_part = resolve_target(part, wb_rel.target)
+        try:
+            pkg_parts[wb_part] = typed_workbook(chart)
+            wb_rid = wb_rel.id
+        except Exception:  # noqa: BLE001 — книга факультативна, кэши рисуют
+            report.workbook_errors += 1
+    root = etree.fromstring(pkg_parts[slide_part])
+    frame = (
+        next(
+            (
+                f
+                for f in root.iter(f"{{{P}}}graphicFrame")
+                if any(c.get(f"{{{R_NS}}}id") == rid for c in f.iter(f"{{{C}}}chart"))
+            ),
+            None,
+        )
+        if rid is not None
+        else None
+    )
+    region = None
+    if frame is not None:
+        xfrm = frame.find(f"{{{P}}}xfrm")
+        if xfrm is not None:
+            off, ext = xfrm.find(f"{{{A}}}off"), xfrm.find(f"{{{A}}}ext")
+            if off is not None and ext is not None:
+                region = (
+                    int(off.get("x")),
+                    int(off.get("y")),
+                    int(ext.get("cx")),
+                    int(ext.get("cy")),
+                )
+    colors = _colors(pkg_parts, slide_part, donor, region, _category_count(chart))
+    pkg_parts[part] = build_typed_chart_xml(chart, wb_rid, colors, donor)
+    if chart.source_note and frame is not None:
+        add_source_note(
+            root,
+            frame,
+            chart.source_note,
+            font_scale=_slide_font_scale_for_parts(pkg_parts, slide_part),
+            ink=colors.ink,
+        )
+        pkg_parts[slide_part] = etree.tostring(root, xml_declaration=True, standalone=True)
+    report.charts_filled += 1
+    report.created_types.append(chart.chart_type)
+    report.points_written += len(chart.categories) + sum(len(s.values) for s in chart.series)
+    report.chart_ids.append(chart.id)
+
+
+_NOTE_BAND_EMU = 320_000
+_NOTE_SZ = 1000  # 10 pt: читаемо (порог аудита 8 pt) и не спорит с подписями
+
+
+def chart_height(height: int, source_note: bool) -> int:
+    """Physical chart height after reserving its source strip."""
+    return height - _NOTE_BAND_EMU if source_note and height >= 3 * _NOTE_BAND_EMU else height
+
+
+def inherited_chart_obstacles(parts: dict[str, bytes], slide_part: str):
+    """Visible layout/master artwork is occupied space too, especially logos.
+
+    Full-slide backgrounds and ordinary placeholder prompts are not obstacles.
+    Never mutate inherited parts to make room for a newly created chart.
+    """
+    size = _slide_size(parts)
+    if size is None:
+        return ()
+    pkg = OpcPackage(parts)
+
+    def dependency(owner, kind):
+        return next(
+            (
+                t
+                for rel, t in pkg.internal_dependencies(owner)
+                if rel.type_name == kind and t in parts
+            ),
+            None,
+        )
+
+    layout = dependency(slide_part, "slideLayout")
+    if layout is None:
+        return ()
+    owners = [layout]
+    master = dependency(layout, "slideMaster")
+    if (
+        master
+        and etree.fromstring(parts[slide_part]).get("showMasterSp") != "0"
+        and etree.fromstring(parts[layout]).get("showMasterSp") != "0"
+    ):
+        owners.append(master)
+    boxes = []
+    for owner in owners:
+        tree = etree.fromstring(parts[owner]).find(f"{{{P}}}cSld/{{{P}}}spTree")
+        if tree is None:
+            continue
+        for shape in tree:
+            box = _el_box(shape)
+            if box is None or box[2] * box[3] <= 0 or box[2] * box[3] >= 0.6 * size[0] * size[1]:
+                continue
+            ph = shape.find(f".//{{{P}}}nvPr/{{{P}}}ph")
+            # Ordinary master placeholders (including stock date/footer text)
+            # are not drawn unless instantiated on the slide. Those local
+            # instances are already handled by the normal host search.
+            if ph is not None and ph.get("hasCustomPrompt") != "1":
+                continue
+            if _visible(shape):
+                boxes.append(box)
+    return tuple(boxes)
+
+
+def chart_hosts(root: etree._Element, size: tuple[int, int], extra_busy=()):
+    """The same candidate set for preflight and final chart placement."""
+    from deckdna.pptx.composing.diagram_fill import _title_bottom
+    from deckdna.pptx.composing.table_fill import _free_space_host
+
+    hosts = list(_empty_body_hosts(root))
+    tree = root.find(f"{{{P}}}cSld/{{{P}}}spTree")
+    free = _free_space_host(
+        root, *size, title_band=_title_bottom(tree, size[1]), extra_busy=extra_busy
+    )
+    if free is not None:
+        hosts.append(free)
+    sw, sh = size
+    return [
+        h
+        for h in hosts
+        if h[1] >= 0
+        and h[2] >= 0
+        and h[1] + h[3] <= sw
+        and h[2] + h[4] <= sh
+        and not any(
+            min(h[1] + h[3], x + w) > max(h[1], x) and min(h[2] + h[4], y + height) > max(h[2], y)
+            for x, y, w, height in extra_busy
+        )
+    ]
+
+
+def readable_chart_host(host, size: tuple[int, int], source_note: bool) -> bool:
+    """ADR-033: at least 40% of each slide dimension, excluding the note."""
+    return host[3] >= 0.4 * size[0] and chart_height(host[4], source_note) >= 0.4 * size[1]
+
+
+def _slide_font_scale_for_parts(
+    pkg_parts: dict[str, bytes], slide_part: str
+) -> list[float]:
+    from deckdna.pptx.composing.font_scale import (
+        effective_font_scale,
+        package_observed_font_scale_from_parts,
+        slide_declared_font_scale_from_parts,
+    )
+
+    declared = slide_declared_font_scale_from_parts(pkg_parts, slide_part)
+    observed = package_observed_font_scale_from_parts(pkg_parts, min_uses=2)
+    return effective_font_scale(declared=declared, observed=observed)
+
+
+def add_source_note(
+    root: etree._Element,
+    frame: etree._Element,
+    text: str,
+    *,
+    font_scale: list[float] | tuple[float, ...] | None = None,
+    ink: str | None = None,
+) -> None:
+    """Строка «Источник: …» под графиком: рамка графика ужимается на
+    полосу подписи, подпись — текстовым блоком того же места и ширины."""
+    xfrm = frame.find(f"{{{P}}}xfrm")
+    if xfrm is None:
+        return
+    off, ext = xfrm.find(f"{{{A}}}off"), xfrm.find(f"{{{A}}}ext")
+    if off is None or ext is None:
+        return
+    x, y = int(off.get("x", "0")), int(off.get("y", "0"))
+    cx, cy = int(ext.get("cx", "0")), int(ext.get("cy", "0"))
+    note_sz = _NOTE_SZ
+    band_h = _NOTE_BAND_EMU
+    if font_scale:
+        from deckdna.pptx.composing.font_scale import snap_font_pt
+
+        # The layout reserved a fixed source strip (chart_height); keep the
+        # strip and only snap the caption size to the template scale.
+        note_pt = snap_font_pt(10.0, font_scale, mode="nearest", min_pt=8.0, max_pt=12.0)
+        note_sz = int(round(note_pt * 100))
+    if cy < 3 * band_h:
+        return
+    ext.set("cy", str(chart_height(cy, True)))
+    # tx1 — догадка о тёмном тексте на светлом; на тёмной теме она
+    # невидима — несём разрешённые по локальному фону чернила.
+    ink_fill = (
+        f'<a:srgbClr val="{ink}"><a:lumMod val="65000"/><a:lumOff val="35000"/></a:srgbClr>'
+        if ink
+        else '<a:schemeClr val="tx1"><a:lumMod val="65000"/><a:lumOff val="35000"/></a:schemeClr>'
+    )
+    sp_id = _next_shape_id(root)
+    sp = etree.fromstring(
+        f'<p:sp xmlns:p="{P}" xmlns:a="{A}">'
+        f'<p:nvSpPr><p:cNvPr id="{sp_id}" name="Source {sp_id}"/>'
+        '<p:cNvSpPr txBox="1"/><p:nvPr/></p:nvSpPr>'
+        f'<p:spPr><a:xfrm><a:off x="{x}" y="{y + cy - band_h}"/>'
+        f'<a:ext cx="{cx}" cy="{band_h}"/></a:xfrm>'
+        '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/></p:spPr>'
+        '<p:txBody><a:bodyPr wrap="square" lIns="0" tIns="45720" rIns="0" bIns="0" anchor="t">'
+        '<a:normAutofit/></a:bodyPr><a:lstStyle/><a:p><a:pPr algn="l"/>'
+        f'<a:r><a:rPr lang="ru-RU" sz="{note_sz}" dirty="0"><a:solidFill>'
+        f'{ink_fill}'
+        '</a:solidFill><a:latin typeface="+mn-lt"/><a:cs typeface="+mn-cs"/></a:rPr>'
+        f"<a:t>{_esc(text)}</a:t></a:r></a:p></p:txBody></p:sp>"
+    )
+    frame.addnext(sp)
 
 
 def _relativize(owner_part: str, target_part: str) -> str:
@@ -325,10 +684,7 @@ def _relativize(owner_part: str, target_part: str) -> str:
 def _content_type_of(parts: dict[str, bytes], part_name: str) -> str | None:
     """Per-part Override content type, when the package declares one."""
     for el in etree.fromstring(parts[CONTENT_TYPES]):
-        if (
-            etree.QName(el).localname == "Override"
-            and el.get("PartName") == f"/{part_name}"
-        ):
+        if etree.QName(el).localname == "Override" and el.get("PartName") == f"/{part_name}":
             return el.get("ContentType")
     return None
 
@@ -336,10 +692,7 @@ def _content_type_of(parts: dict[str, bytes], part_name: str) -> str | None:
 def _add_override(parts: dict[str, bytes], part_name: str, content_type: str) -> None:
     root = etree.fromstring(parts[CONTENT_TYPES])
     for el in root:
-        if (
-            etree.QName(el).localname == "Override"
-            and el.get("PartName") == f"/{part_name}"
-        ):
+        if etree.QName(el).localname == "Override" and el.get("PartName") == f"/{part_name}":
             return  # already declared
     el = etree.SubElement(root, "Override")
     el.set("PartName", f"/{part_name}")
@@ -389,8 +742,7 @@ def _duplicate_chart_part(
             # Same detection as _sync_workbook: the package/xlsx rel is
             # the one data sink the fill rewrites per chart.
             if rel.is_external or not (
-                rel.type_name == "package"
-                or rel.target.lower().endswith(".xlsx")
+                rel.type_name == "package" or rel.target.lower().endswith(".xlsx")
             ):
                 new_rels.append(rel)
                 continue
@@ -404,9 +756,7 @@ def _duplicate_chart_part(
             wct = _content_type_of(out_parts, wtgt)
             if wct:
                 _add_override(out_parts, wdup, wct)
-            new_rels.append(
-                replace(rel, target=_relativize(new_part, wdup))
-            )
+            new_rels.append(replace(rel, target=_relativize(new_part, wdup)))
         out_parts[rels_name_for(new_part)] = serialize_rels(new_rels)
 
     ct = _content_type_of(out_parts, chart_part) or (
@@ -447,15 +797,11 @@ def unshare_chart_parts(
             new_rels.append(rel)
             continue
         dup_i += 1
-        dup = _duplicate_chart_part(
-            out_parts, src_parts, target, f"{tag}_{dup_i}"
-        )
+        dup = _duplicate_chart_part(out_parts, src_parts, target, f"{tag}_{dup_i}")
         if dup is None:
             new_rels.append(rel)
             continue
-        new_rels.append(
-            replace(rel, target=_relativize(slide_part, dup))
-        )
+        new_rels.append(replace(rel, target=_relativize(slide_part, dup)))
         changed = True
     if changed:
         out_parts[rels_name] = serialize_rels(new_rels)
@@ -474,6 +820,7 @@ def unshare_chart_parts(
 # хардкодится. Не создаём (честный drop): нет пустого host-тела, нет
 # серий, нет rels-файла слайда.
 
+
 def _col_letter(i: int) -> str:
     """1-based Excel column letter: 1→A, 27→AA."""
     s = ""
@@ -483,10 +830,7 @@ def _col_letter(i: int) -> str:
     return s
 
 
-
-def _next_indexed_part(
-    parts: dict[str, bytes], pattern: re.Pattern, prefix: str, ext: str
-) -> str:
+def _next_indexed_part(parts: dict[str, bytes], pattern: re.Pattern, prefix: str, ext: str) -> str:
     """First free `prefix<N><ext>` part name — scan-based, не
     конфликтует с уже занятыми chartN/workbook-партами пакета."""
     idx = max(
@@ -500,39 +844,34 @@ def _next_indexed_part(
 
 def _next_rid(rels) -> str:
     idx = max(
-        (
-            int(rel.id[3:])
-            for rel in rels
-            if rel.id.startswith("rId") and rel.id[3:].isdigit()
-        ),
+        (int(rel.id[3:]) for rel in rels if rel.id.startswith("rId") and rel.id[3:].isdigit()),
         default=0,
     )
     return f"rId{idx + 1}"
 
 
-def _ser_xml(
-    j: int, col: str, name: str | None, cat_ref: str, n_val: int, values: list
-) -> str:
+def _ser_xml(j: int, col: str, name: str | None, cat_ref: str, n_val: int, values: list) -> str:
     """One `c:ser` — tx strRef→header cell, cat shared ref, val
     numRef→series column. Цвет — schemeClr темы (accent1..6 по кругу)."""
     tx = ""
     if name:
         tx = (
-            f'<c:tx><c:strRef><c:f>Sheet1!${col}$1</c:f><c:strCache>'
+            f"<c:tx><c:strRef><c:f>Sheet1!${col}$1</c:f><c:strCache>"
             f'<c:ptCount val="1"/><c:pt idx="0"><c:v>{_esc(name)}</c:v></c:pt>'
             f"</c:strCache></c:strRef></c:tx>"
         )
     pts = "".join(
         f'<c:pt idx="{i}"><c:v>{_fmt_value(v)}</c:v></c:pt>'
         for i, v in enumerate(values)
+        if v is not None
     )
     return (
-        f"<c:ser><c:idx val=\"{j}\"/><c:order val=\"{j}\"/>{tx}"
+        f'<c:ser><c:idx val="{j}"/><c:order val="{j}"/>{tx}'
         f'<c:spPr><a:solidFill><a:schemeClr val="accent{(j % 6) + 1}"/>'
         f"</a:solidFill><a:ln><a:noFill/></a:ln><a:effectLst/></c:spPr>"
-        f"<c:invertIfNegative val=\"0\"/>{cat_ref}"
-        f'<c:val><c:numRef><c:f>Sheet1!${col}$2:${col}${n_val + 1}</c:f>'
-        f'<c:numCache><c:formatCode>General</c:formatCode>'
+        f'<c:invertIfNegative val="0"/>{cat_ref}'
+        f"<c:val><c:numRef><c:f>Sheet1!${col}$2:${col}${n_val + 1}</c:f>"
+        f"<c:numCache><c:formatCode>General</c:formatCode>"
         f'<c:ptCount val="{n_val}"/>{pts}</c:numCache></c:numRef></c:val>'
         f"</c:ser>"
     )
@@ -548,10 +887,14 @@ def _build_chart_xml(chart: Chart, wb_rid: str | None) -> bytes:
         f'<c:pt idx="{i}"><c:v>{_esc(_fmt_value(c))}</c:v></c:pt>'
         for i, c in enumerate(chart.categories)
     )
-    cat_ref = "" if n_cat == 0 else (
-        f"<c:cat><c:strRef><c:f>Sheet1!$A$2:$A${n_cat + 1}</c:f>"
-        f"<c:strCache><c:ptCount val=\"{n_cat}\"/>{cat_pts}"
-        f"</c:strCache></c:strRef></c:cat>"
+    cat_ref = (
+        ""
+        if n_cat == 0
+        else (
+            f"<c:cat><c:strRef><c:f>Sheet1!$A$2:$A${n_cat + 1}</c:f>"
+            f'<c:strCache><c:ptCount val="{n_cat}"/>{cat_pts}'
+            f"</c:strCache></c:strRef></c:cat>"
+        )
     )
     # Пустые категории — валидный OOXML: c:cat просто опускается
     # (серии рисуются по индексам 1..n), выдумывать метки нельзя.
@@ -583,8 +926,7 @@ def _build_chart_xml(chart: Chart, wb_rid: str | None) -> bytes:
         f'<c:plotVisOnly val="1"/><c:dispBlanksAs val="gap"/>'
         f"</c:chart>"
         + (
-            f'<c:externalData r:id="{wb_rid}"><c:autoUpdate val="0"/>'
-            f"</c:externalData>"
+            f'<c:externalData r:id="{wb_rid}"><c:autoUpdate val="0"/></c:externalData>'
             if wb_rid
             else ""
         )
@@ -614,9 +956,7 @@ def _build_chart_workbook(chart: Chart) -> bytes:
     return buf.getvalue()
 
 
-def _build_chart_frame(
-    shape_id: int, rid: str, x: int, y: int, cx: int, cy: int
-) -> etree._Element:
+def _build_chart_frame(shape_id: int, rid: str, x: int, y: int, cx: int, cy: int) -> etree._Element:
     """Standalone `p:graphicFrame` с `c:chart` — тот же каркас что
     PowerPoint/python-pptx add_chart эмитит."""
     xml = (
@@ -632,6 +972,16 @@ def _build_chart_frame(
     return etree.fromstring(xml)
 
 
+def _slide_size(pkg_parts: dict[str, bytes]) -> tuple[int, int] | None:
+    raw = pkg_parts.get("ppt/presentation.xml")
+    if raw is None:
+        return None
+    size = etree.fromstring(raw).find(f"{{{P}}}sldSz")
+    if size is None:
+        return None
+    return int(size.get("cx", "0")), int(size.get("cy", "0"))
+
+
 def _add_slide_chart(
     pkg_parts: dict[str, bytes],
     slide_part: str,
@@ -639,6 +989,7 @@ def _add_slide_chart(
     slide_rels,
     used_hosts: set[tuple[int, int, int, int]],
     report: ChartFillReport,
+    donor: DonorStyle | None = None,
 ) -> bool:
     """Create a native `c:chart` from scratch — the add_table analogue.
 
@@ -668,35 +1019,48 @@ def _add_slide_chart(
     sp_tree = root.find(f"{{{P}}}cSld/{{{P}}}spTree")
     if sp_tree is None:
         return False
-    host = next(
-        (
+    typed = chart.chart_type in TYPED
+    hosts = [
+        h
+        for h in _empty_body_hosts(root, _slide_size(pkg_parts))
+        if h[1:5] not in used_hosts and h[3] >= _MIN_CHART_W_EMU and h[4] >= _MIN_CHART_H_EMU
+    ]
+    # Creation must use the same hosts as preflight for both legacy
+    # and typed charts; clearing donor artwork can expose a larger host.
+    size = _slide_size(pkg_parts)
+    if size is not None:
+        hosts = [
             h
-            for h in _empty_body_hosts(root)
-            if h[1:5] not in used_hosts
-            and h[3] >= _MIN_CHART_W_EMU
-            and h[4] >= _MIN_CHART_H_EMU
-        ),
-        None,
+            for h in chart_hosts(root, size, inherited_chart_obstacles(pkg_parts, slide_part))
+            if h[1:5] not in used_hosts and h[3] >= _MIN_CHART_W_EMU and h[4] >= _MIN_CHART_H_EMU
+        ]
+    hosts.sort(
+        key=lambda h: (
+            -int(size is not None and readable_chart_host(h, size, bool(chart.source_note))),
+            -_chart_score(h[3], chart_height(h[4], bool(chart.source_note))),
+        )
     )
+    host = hosts[0] if hosts else None
     if host is None:
         return False
     _, x, y, cx, cy, _sp = host
+    colors = _colors(pkg_parts, slide_part, donor, (x, y, cx, cy), _category_count(chart))
 
     wb_bytes: bytes | None
     try:
-        wb_bytes = _build_chart_workbook(chart)
+        wb_bytes = typed_workbook(chart) if typed else _build_chart_workbook(chart)
     except Exception:
         wb_bytes = None
         report.workbook_errors += 1
 
-    chart_part = _next_indexed_part(
-        pkg_parts, _CHART_PART_RE, "ppt/charts/chart", ".xml"
-    )
+    chart_part = _next_indexed_part(pkg_parts, _CHART_PART_RE, "ppt/charts/chart", ".xml")
     rid = _next_rid(slide_rels)
     if wb_bytes is not None:
         wb_part = _next_indexed_part(
-            pkg_parts, _XLSX_PART_RE,
-            "ppt/embeddings/Microsoft_Excel_Worksheet", ".xlsx",
+            pkg_parts,
+            _XLSX_PART_RE,
+            "ppt/embeddings/Microsoft_Excel_Worksheet",
+            ".xlsx",
         )
         pkg_parts[wb_part] = wb_bytes
         pkg_parts[rels_name_for(chart_part)] = serialize_rels(
@@ -709,31 +1073,38 @@ def _add_slide_chart(
             ]
         )
         _add_override(pkg_parts, wb_part, _XLSX_CT)
-        chart_xml = _build_chart_xml(chart, "rId1")
+        chart_xml = (
+            build_typed_chart_xml(chart, "rId1", colors, donor)
+            if typed
+            else _build_chart_xml(chart, "rId1")
+        )
     else:
         # Workbook недоступен — чарт без externalData: кэши всё равно
         # рендерят, но «Edit Data» честно отсутствует (workbook_errors).
-        chart_xml = _build_chart_xml(chart, None)
+        chart_xml = (
+            build_typed_chart_xml(chart, None, colors, donor)
+            if typed
+            else _build_chart_xml(chart, None)
+        )
     pkg_parts[chart_part] = chart_xml
     _add_override(pkg_parts, chart_part, _CHART_CT)
 
     slide_rels.append(
-        Relationship(
-            id=rid, type=_CHART_REL, target=_relativize(slide_part, chart_part)
-        )
+        Relationship(id=rid, type=_CHART_REL, target=_relativize(slide_part, chart_part))
     )
     pkg_parts[rels_part] = serialize_rels(slide_rels)
     used_hosts.add(host[1:5])
-    sp_tree.append(_build_chart_frame(_next_shape_id(root), rid, x, y, cx, cy))
-    pkg_parts[slide_part] = etree.tostring(
-        root, xml_declaration=True, standalone=True
-    )
+    frame = _build_chart_frame(_next_shape_id(root), rid, x, y, cx, cy)
+    sp_tree.append(frame)
+    if typed and chart.source_note:
+        add_source_note(root, frame, chart.source_note, ink=colors.ink)
+    pkg_parts[slide_part] = etree.tostring(root, xml_declaration=True, standalone=True)
+    if not typed:
+        _complete_legacy_metadata(pkg_parts, slide_part, chart_part, chart, donor)
     report.charts_filled += 1
     report.charts_created += 1
-    report.created_types.append("barChart")
-    report.points_written += len(chart.categories) + sum(
-        len(s.values) for s in chart.series
-    )
+    report.created_types.append(chart.chart_type if typed else "barChart")
+    report.points_written += len(chart.categories) + sum(len(s.values) for s in chart.series)
     report.chart_ids.append(chart.id)
     return True
 

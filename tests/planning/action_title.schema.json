@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deckdna.local/schemas/action-title.schema.json",
+  "title": "ActionTitle",
+  "description": "Заголовок-вывод слайда (Pyramid Principle). Схема ловит структуру и очевидные заглушки; наличие глагола и сверка чисел с фактами — в коде (validate_action_title), JSON Schema морфологию не умеет.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "claim_type", "numbers", "evidence_ids"],
+  "properties": {
+    "title": {
+      "type": "string",
+      "minLength": 25,
+      "maxLength": 95,
+      "not": {
+        "anyOf": [
+          {"pattern": "^\\s*([Чч]истый шаблон|[Шш]аблон|[Сс]правочн\\w+|[Тт]аблица|[Дд]анные|[Сс]лайд\\s*\\d*|[Бб]ез названия|[Uu]ntitled|[Тт]itle)\\s*[.:!]?\\s*$"},
+          {"pattern": "[Сс]правочная таблица|[Rr]eference table"},
+          {"pattern": "^\\s*([Дд]инамика|[Сс]труктура|[Сс]равнение|[Оо]бзор|[Рр]езультаты|[Ии]тоги|[Аа]нализ|[Кк]лючевые (показатели|цифры))(\\s+\\S+)?\\s*[.:!]?\\s*$"},
+          {"pattern": "^[\\w\\-]+\\.(csv|xlsx?|json|txt|md|pptx?)$"},
+          {"pattern": ":\\s*$"}
+        ]
+      }
+    },
+    "lead_in": {
+      "type": ["string", "null"],
+      "maxLength": 140,
+      "description": "Подзаголовок: расшифровка драйвера/контекста, база сравнения («С 1,0 до 2,1 млн ₽, дек к янв»). Не повторяет заголовок."
+    },
+    "claim_type": {
+      "type": "string",
+      "enum": ["growth", "decline", "flat", "peak", "leader", "gap", "concentration", "laggard", "composition", "correlation", "comparison", "process", "recommendation", "kpi"],
+      "description": "Тип утверждения; значения «topic» нет — тема не вывод."
+    },
+    "numbers": {
+      "type": "array",
+      "items": {"type": "string", "pattern": "^[−-]?\\d[\\d\\u00a0 ]*([.,]\\d+)?$"},
+      "uniqueItems": true,
+      "description": "Все числа заголовка в том виде, как в тексте; каждое обязано входить в numbers фактов из evidence_ids."
+    },
+    "evidence_ids": {
+      "type": "array",
+      "minItems": 1,
+      "items": {"type": "string", "minLength": 1}
+    },
+    "so_what": {
+      "type": ["string", "null"],
+      "maxLength": 140,
+      "description": "Что делать дальше: императив + объект из данных + число из факта. null допустим, пустая отписка — нет."
+    }
+  }
+}

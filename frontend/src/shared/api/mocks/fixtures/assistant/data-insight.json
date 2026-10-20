@@ -1,0 +1,33 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:51:58.571Z",
+  "method": "PATCH",
+  "path": "/content-packs/pack_52549aa7639543a8b68b55c5f60d42a8/insights/ds-95b1eb6e-trend-i0",
+  "status": 200,
+  "request": {
+    "confirmed": true
+  },
+  "body": {
+    "id": "ds-95b1eb6e-trend-i0",
+    "dataset_id": "ds-95b1eb6e",
+    "view_id": "ds-95b1eb6e-trend",
+    "kind": "fact",
+    "fact_type": "growth",
+    "fact": "Выручка: с 1,2 млн ₽ (окт 2024) до 2,5 млн ₽ (сен 2026), рост в 2,1 раза",
+    "headline": "Выручка: рост в 2,1 раза за 24 месяца",
+    "meaning": null,
+    "implication": null,
+    "strength": 0.864,
+    "confirmed": true,
+    "needs_confirmation": false,
+    "evidence": [
+      "purchases.csv · Дата, строки 2–8756",
+      "purchases.csv · Сумма, ₽, строки 2–8756"
+    ],
+    "numbers": [
+      "2,1",
+      "1,2 млн ₽",
+      "2,5 млн ₽"
+    ]
+  }
+}

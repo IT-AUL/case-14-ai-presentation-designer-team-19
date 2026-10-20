@@ -3,13 +3,14 @@ import { ApiError, isApiError } from '@/shared/api'
 import { pollWithBackoff, type PollableQuery } from '@/shared/lib/polling'
 import { isTerminalState, POLL_INTERVAL_MS } from '../model/state'
 import { retryGeneration } from '../model/tracker'
-import type { GenerationDetail, Job } from '../model/types'
-import { fetchGeneration, fetchJob, requestCancel } from './requests'
+import type { GenerationDetail, Job, SlideDraftsResponse } from '../model/types'
+import { fetchGeneration, fetchJob, fetchSlideDrafts, requestCancel } from './requests'
 
 export const generationKeys = {
   all: ['generation'] as const,
   detail: (generationId: string) => ['generation', generationId] as const,
   job: (jobId: string) => ['job', jobId] as const,
+  slideDrafts: (variantId: string) => ['generation', 'slide-drafts', variantId] as const,
 }
 
 function pollUntilTerminal(query: PollableQuery<{ state: GenerationDetail['state'] }>): number | false {
@@ -31,6 +32,22 @@ export function useJob(jobId: string | null | undefined) {
     queryFn: () => fetchJob(jobId as string),
     enabled: Boolean(jobId),
     refetchInterval: pollUntilTerminal,
+  })
+}
+
+export function useSlideDrafts(variantId: string | null | undefined, active = true) {
+  const enabled = Boolean(variantId && variantId.startsWith('var_'))
+  return useQuery({
+    queryKey: generationKeys.slideDrafts(variantId ?? ''),
+    queryFn: ({ signal }): Promise<SlideDraftsResponse | null> => fetchSlideDrafts(variantId as string, signal),
+    enabled,
+    refetchInterval: (query) => {
+      if (!active) return false
+      if (query.state.data === null) return false
+      const state = query.state.data?.state
+      if (typeof state === 'string' && isTerminalState(state as GenerationDetail['state'])) return false
+      return pollWithBackoff(query, () => true, POLL_INTERVAL_MS)
+    },
   })
 }
 

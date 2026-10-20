@@ -1,5 +1,7 @@
-"""deckdna CLI — thin client over the DeckDNA pipeline."""
+"""deckdna CLI — thin client over the API (Wave 0 stub).
 
+Commands per docs/DEPLOYMENT.md; implemented in Wave 2 by Agent 4.
+"""
 
 import json
 import sys
@@ -54,7 +56,32 @@ def serve() -> None:
     """Run the API server locally."""
     import uvicorn
 
+    # The CLI server accepts container/LAN ingress by design.
     uvicorn.run("deckdna.api.app:app", host="0.0.0.0", port=8000)  # noqa: S104
+
+
+@app.command(name="mcp")
+def mcp_cmd(
+    transport: Annotated[
+        str, typer.Option(help="stdio (для агентов) или http (streamable HTTP, сервис)")
+    ] = "stdio",
+    host: Annotated[str, typer.Option(help="адрес для http")] = "127.0.0.1",
+    port: Annotated[int, typer.Option(help="порт для http")] = 8765,
+    api_url: Annotated[
+        str | None,
+        typer.Option(help="внешний API DeckDNA; по умолчанию API в этом же процессе"),
+    ] = None,
+) -> None:
+    """ADR-032: навык DeckDNA как MCP-сервер (docs/MCP_RU.md)."""
+    from deckdna.mcp.server import build_server
+
+    if transport not in ("stdio", "http"):
+        raise _fail(DeckDNAError("invalid_input", "transport must be stdio or http"))
+    server = build_server(api_url=api_url)
+    if transport == "stdio":
+        server.run("stdio")
+    else:
+        server.run("streamable-http", host=host, port=port)
 
 
 @app.command(name="poc-compose")
@@ -239,14 +266,17 @@ def generate_cmd(
     out_dir: Annotated[Path, typer.Argument(help="output directory")] = Path("out"),
     purpose: Annotated[
         str, typer.Option("--purpose", help="deck objective (one sentence)")
-    ] = "Представить решение",
+    ] = "",
     audience: Annotated[
         str, typer.Option("--audience", help="target audience")
-    ] = "эксперты и жюри",
+    ] = "",
     language: Annotated[str, typer.Option("--language", help="deck language")] = "ru",
     slides: Annotated[
         int, typer.Option("--slides", help="target slide count (10–15 default profile)")
     ] = 12,
+    slide_count_policy: Annotated[
+        str, typer.Option("--slide-count-policy", help="preferred | exact | maximum")
+    ] = "preferred",
     llm: Annotated[
         bool,
         typer.Option(
@@ -255,8 +285,8 @@ def generate_cmd(
             "plus a per-slide VLM contextual audit, via the configured provider "
             "gateway. Requires a real endpoint — DECKDNA_MOCK_PROVIDER=false plus "
             "DECKDNA_PROVIDER_BASE_URL / DECKDNA_PROVIDER_API_KEY / "
-            "DECKDNA_MODEL_*. Off by default; with the default mock provider the "
-            "flag exercises the same code path offline (MockProvider).",
+            "DECKDNA_MODEL_*. The LLM flag is off by default. MockProvider is "
+            "available only when explicitly enabled for offline tests.",
         ),
     ] = False,
     strategy: Annotated[
@@ -269,6 +299,16 @@ def generate_cmd(
             "currently maps to balanced.",
         ),
     ] = "balanced",
+    content_fill: Annotated[
+        str | None,
+        typer.Option(
+            "--content-fill",
+            help="ADR-030: when the content does not fill --slides — 'expand' "
+            "(default: web research via DECKDNA_RESEARCH_SEARCH_URL, then model "
+            "knowledge; needs --llm), 'shrink' (a shorter deck). 'ask' behaves "
+            "as 'expand' here: there is no one to ask.",
+        ),
+    ] = None,
 ) -> None:
     """Full pipeline: content + template -> deck.pptx, deck.pdf, QualityPassport."""
     from deckdna.contracts.deck_plan import Brief
@@ -293,6 +333,8 @@ def generate_cmd(
             audience=audience,
             language=language,
             target_slide_count=slides,
+            content_fill=content_fill,
+            slide_count_policy=slide_count_policy,
         )
     except ValidationError as exc:
         raise _fail(
@@ -678,10 +720,10 @@ def check_models_cmd() -> None:
         raise typer.Exit(code=1)
 
 
-# Reserved command-surface stubs — kept so `--help` shows the frozen surface.
+# Stubs for the frozen command surface — implemented against the API in Wave 2.
 for _cmd in ["init"]:
 
     @app.command(name=_cmd)
     def _stub() -> None:  # noqa: B023
-        typer.echo("not implemented yet")
+        typer.echo("not implemented yet — see docs/agents/workstreams/04_frontend_cli.md")
         raise typer.Exit(code=2)

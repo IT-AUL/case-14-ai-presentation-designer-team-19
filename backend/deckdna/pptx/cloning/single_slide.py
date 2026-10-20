@@ -1,6 +1,6 @@
 """Clone slides + dependency graphs into a fresh multi-slide deck.
 
-The riskiest slice of the Constraint Compiler (see docs/ARCHITECTURE.md) made
+The riskiest slice of the Constraint Compiler (PPTX_COMPILER.md §3) made
 minimal: instead of mutating the template in place we emit a *new* package
 containing only the transitive closure of the cloned slides — layouts,
 masters, themes, media, charts, embedded fonts, presentation-level
@@ -37,7 +37,7 @@ P = "http://schemas.openxmlformats.org/presentationml/2006/main"
 R_ID = f"{{{OFFICE_REL_NS}}}id"
 _SLIDE_REL = f"{OFFICE_REL_NS}/slide"
 
-# Rel types dropped from cloned output per the compile contract (notes and
+# Rel types dropped from cloned output per PPTX_COMPILER.md §3 (notes and
 # comments of the source slide don't belong in a generated deck).
 DROP_REL_TYPES = frozenset({"notesSlide", "comments", "commentAuthors"})
 
@@ -221,7 +221,7 @@ def build_multi_slide_deck(
 
     out = OpcPackage(out_parts)
 
-    # Hard gates (package validity): full content-type coverage and
+    # Hard gates (PPTX_COMPILER.md §8): full content-type coverage and
     # zero dangling relationships before anything is written to disk.
     missing_ct = out.content_type_coverage(
         {n for n in out_parts if n != CONTENT_TYPES}

@@ -2,6 +2,7 @@ import { createBrowserRouter, Navigate } from 'react-router'
 import { routePatterns } from '@/shared/config'
 import { ProjectLayout } from '../layouts/ProjectLayout'
 import { RootLayout } from '../layouts/RootLayout'
+import { ProjectRedirect } from './ProjectRedirect'
 import { RouteError } from './RouteError'
 
 export const router = createBrowserRouter([
@@ -19,15 +20,20 @@ export const router = createBrowserRouter([
         path: routePatterns.project,
         element: <ProjectLayout />,
         children: [
-          { index: true, element: <Navigate to={routePatterns.template} replace /> },
-          { path: routePatterns.template, lazy: async () => ({ Component: (await import('@/pages/template')).TemplatePage }) },
-          { path: routePatterns.brief, lazy: async () => ({ Component: (await import('@/pages/brief')).BriefPage }) },
+          { index: true, element: <Navigate to={routePatterns.start} replace /> },
+          { path: routePatterns.start, lazy: async () => ({ Component: (await import('@/pages/intake')).IntakePage }) },
+          { path: routePatterns.understanding, lazy: async () => ({ Component: (await import('@/pages/understanding')).UnderstandingPage }) },
+          { path: routePatterns.questions, lazy: async () => ({ Component: (await import('@/pages/questions')).QuestionsPage }) },
+          { path: routePatterns.style, lazy: async () => ({ Component: (await import('@/pages/style')).StylePage }) },
+          { path: routePatterns.template, element: <ProjectRedirect to="start" /> },
+          { path: routePatterns.brief, element: <ProjectRedirect to="start" /> },
           { path: routePatterns.planDraft, lazy: async () => ({ Component: (await import('@/pages/plan')).PlanDraftPage }) },
           { path: routePatterns.run, lazy: async () => ({ Component: (await import('@/pages/generation')).GenerationPage }) },
-          { path: routePatterns.plan, lazy: async () => ({ Component: (await import('@/pages/plan')).PlanPage }) },
-          { path: routePatterns.variants, lazy: async () => ({ Component: (await import('@/pages/variants')).VariantsPage }) },
-          { path: routePatterns.audit, lazy: async () => ({ Component: (await import('@/pages/audit')).AuditPage }) },
-          { path: routePatterns.export, lazy: async () => ({ Component: (await import('@/pages/export')).ExportPage }) },
+          { path: routePatterns.plan, element: <ProjectRedirect to="planDraft" /> },
+          { path: routePatterns.polish, lazy: async () => ({ Component: (await import('@/pages/audit')).AuditPage }) },
+          { path: routePatterns.variants, element: <ProjectRedirect to="polish" /> },
+          { path: routePatterns.audit, element: <ProjectRedirect to="polish" /> },
+          { path: routePatterns.export, element: <ProjectRedirect to="polish" /> },
         ],
       },
     ],

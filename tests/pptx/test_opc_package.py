@@ -1,4 +1,4 @@
-"""OpcPackage.open zip-bomb guards.
+"""OpcPackage.open zip-bomb guards: hardening check #20.
 
 Before this, ``open`` read and decompressed every member into memory
 (``{name: zf.read(name) for name in zf.namelist()}``) with no limit on
@@ -118,3 +118,80 @@ def test_open_still_rejects_corrupt_member_after_size_checks(tmp_path):
     with pytest.raises(DeckDNAError) as exc:
         OpcPackage.open(out)
     assert exc.value.code == "package_corrupt"
+
+
+def test_set_core_properties_creates_part_when_absent(tmp_path):
+    """Пакет без docProps/core.xml получает его с rel и content-type."""
+    from deckdna.pptx.opc.package import CORE_PROPS_PART, CORE_PROPS_REL
+    from lxml import etree
+
+    src = tmp_path / "bare.pptx"
+    _write_zip(src, {CONTENT_TYPES: _MIN_CONTENT_TYPES, PRESENTATION: _MIN_PRESENTATION})
+    pkg = OpcPackage.open(src)
+    pkg.set_core_properties(title="Тема колоды", subject="Предмет", creator="DeckDNA")
+    assert CORE_PROPS_PART in pkg.parts
+    root = etree.fromstring(pkg.parts[CORE_PROPS_PART])
+    texts = {etree.QName(el).localname: el.text for el in root}
+    assert texts["title"] == "Тема колоды" and texts["creator"] == "DeckDNA"
+    assert any(r.type == CORE_PROPS_REL for r in pkg.rels(""))
+    assert not pkg.content_type_coverage({CORE_PROPS_PART})
+    assert not pkg.check_rel_integrity()
+
+
+def test_generate_deck_overrides_template_metadata(tmp_path):
+    """BE3: собранная колода не наследует dc:title/dc:creator шаблона —
+    свойства пакета описывают тему новой колоды."""
+    from deckdna.contracts.deck_plan import (
+        Brief,
+        DeckPlan,
+        DensityBudget,
+        Level,
+        Provenance,
+        Purpose,
+        SlidePlan,
+    )
+    from deckdna.pptx.composing.minimal import generate_deck
+    from pptx import Presentation
+
+    tpl = tmp_path / "tpl.pptx"
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[0])
+    slide.shapes.title.text = "Чужой заголовок"
+    prs.core_properties.title = "Где Хайп?: КТ-2 исследование"
+    prs.core_properties.author = "Анастасия Юшкова"
+    prs.save(tpl)
+
+    plan = DeckPlan(
+        schema_version="deck-plan/1",
+        id="dp",
+        brief=Brief(
+            purpose="Итоги квартала по регионам", audience="команда продукта",
+            language="ru", target_slide_count=3,
+        ),
+        evidence_graph_id="eg",
+        provenance=Provenance(
+            planner="test", prompt_version="t", schema_version="deck-plan/1"
+        ),
+        objective="Итоги квартала по регионам",
+        audience="команда продукта",
+        language="ru",
+        slides=[
+            SlidePlan(
+                id="s1", index=0, purpose=Purpose.title,
+                title_intent="Итоги квартала по регионам",
+                key_message="Итоги квартала по регионам",
+                evidence_ids=["e1"], content_units=[],
+                density_budget=DensityBudget(level=Level.medium),
+            )
+        ],
+    )
+    out = tmp_path / "out.pptx"
+    generate_deck(tpl, plan, out)
+
+    with zipfile.ZipFile(out) as zf:
+        core = zf.read("docProps/core.xml").decode()
+    assert "Где Хайп" not in core and "Анастасия Юшкова" not in core
+    props = Presentation(str(out)).core_properties
+    assert props.title == "Итоги квартала по регионам"
+    assert props.author == "DeckDNA"
+    assert props.subject == "Итоги квартала по регионам"

@@ -1,4 +1,4 @@
-"""Измеримые метрики Quality Passport, которых не было в v0 (contract D3).
+"""Измеримые метрики Quality Passport, которых не было в v0 (handoff D3).
 
 Все три считаются детерминированно по итоговой колоде и уже собранным
 audit-issues — без модели и без выдуманных чисел:
@@ -83,17 +83,25 @@ def _normalise(match: re.Match[str]) -> str:
     return f"{whole}{'.' + frac if frac else ''}{unit}"
 
 
-def extract_numbers(text: str) -> set[str]:
+def extract_numbers(text: str, *, strict: bool = False) -> set[str]:
     """Нормализованные значимые числа текста.
 
     Значимое — многозначное (≥2 цифр), дробное или с единицей: одиночные
-    «1», «2» — нумерация пунктов, а не факты, и в сверку не идут."""
+    «1», «2» — нумерация пунктов, а не факты, и в сверку не идут.
+    strict=True включает однозначные значения и сохраняет знак;
+    используется для интерпретации фактов, где нумерации нет."""
     found: set[str] = set()
     for m in _NUMBER_RE.finditer(text):
         digits = len(m.group(1).replace(" ", "").replace(" ", "").replace(" ", ""))
         significant = digits >= 2 or m.group(2) or m.group(3)
-        if significant:
-            found.add(_normalise(m))
+        if significant or strict:
+            value = _normalise(m)
+            before = text[:m.start()]
+            if strict and before.endswith(("-", "−")) and (
+                len(before) == 1 or not before[-2].isalnum()
+            ):
+                value = "-" + value
+            found.add(value)
     return found
 
 
@@ -208,6 +216,16 @@ def pack_text(pack: Any) -> str:
             parts.extend(str(v) for v in getattr(series, "values", None) or [])
     for asset in getattr(pack, "assets", None) or []:
         parts.append(getattr(asset, "caption", None) or "")
+    # ADR-033: выводы из данных — числа заголовков-выводов сверяются с ними
+    for insight in getattr(pack, "insights", None) or []:
+        parts.extend(
+            t for t in (insight.fact, insight.headline, insight.meaning, insight.implication) if t
+        )
+    for ds in getattr(pack, "datasets", None) or []:
+        parts.append(getattr(ds, "title", None) or "")
+        if getattr(ds, "row_count", None) is not None:
+            parts.append(str(ds.row_count))
+        parts.extend(c.name for c in getattr(ds, "columns", None) or [] if getattr(c, "name", None))
     return "\n".join(parts)
 
 
@@ -254,3 +272,73 @@ def usage_delta(
         calls += d_calls
         total_tokens += d_in + d_out
     return {"total_tokens": total_tokens, "model_calls": calls, "per_model": per_model}
+
+
+def merge_usage(*reports: Mapping[str, Any]) -> dict[str, Any]:
+    """Sum disjoint preparation/variant usage, retaining per-model detail."""
+    models: dict[str, dict[str, Any]] = {}
+    for report in reports:
+        for row in report.get('per_model') or []:
+            model = row['model_id']
+            total = models.setdefault(model, {'model_id': model, 'calls': 0,
+                                             'input_tokens': 0, 'output_tokens': 0})
+            for key in ('calls', 'input_tokens', 'output_tokens'):
+                total[key] += row.get(key) or 0
+    return {
+        'total_tokens': sum(r.get('total_tokens') or 0 for r in reports),
+        'model_calls': sum(r.get('model_calls') or 0 for r in reports),
+        'per_model': [models[m] for m in sorted(models)],
+    }
+
+
+def telemetry_snapshot(gateway: object | None) -> dict[str, dict[str, Any]]:
+    """Снимок расширенной телеметрии провайдера (prefill/decode/image/cache)."""
+    report_fn = getattr(gateway, "telemetry_report", None)
+    if callable(report_fn):
+        raw = report_fn()
+        if isinstance(raw, Mapping):
+            return {str(m): dict(c) for m, c in raw.items() if isinstance(c, Mapping)}
+    return {}
+
+
+def telemetry_delta(
+    before: Mapping[str, Mapping[str, Any]],
+    after: Mapping[str, Mapping[str, Any]],
+) -> dict[str, Any]:
+    """Разность телеметрии между двумя снимками провайдера."""
+    input_tokens = 0
+    output_tokens = 0
+    image_tokens = 0
+    prefill_ms = 0.0
+    decode_ms = 0.0
+    cache_hits = 0
+    for model in sorted(after):
+        cur = after[model]
+        prev = before.get(model, {})
+        input_tokens += max(
+            0, int(cur.get("input_tokens", 0)) - int(prev.get("input_tokens", 0))
+        )
+        output_tokens += max(
+            0, int(cur.get("output_tokens", 0)) - int(prev.get("output_tokens", 0))
+        )
+        image_tokens += max(
+            0, int(cur.get("image_tokens", 0)) - int(prev.get("image_tokens", 0))
+        )
+        prefill_ms += max(
+            0.0, float(cur.get("prefill_ms", 0.0)) - float(prev.get("prefill_ms", 0.0))
+        )
+        decode_ms += max(
+            0.0, float(cur.get("decode_ms", 0.0)) - float(prev.get("decode_ms", 0.0))
+        )
+        cache_hits += max(
+            0, int(cur.get("cache_hits", 0)) - int(prev.get("cache_hits", 0))
+        )
+    return {
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "image_tokens": image_tokens,
+        "prefill_ms": round(prefill_ms, 2),
+        "decode_ms": round(decode_ms, 2),
+        "cache_hit": cache_hits > 0,
+    }
+

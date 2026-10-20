@@ -1,0 +1,30 @@
+# Prompt asset — versioned, referenced by name+version from code (never embedded).
+#
+# The image is a grid of small graphics cut out of a presentation
+# TEMPLATE, each cell numbered in red in its top-left corner. Labels feed
+# icon placement (backend/deckdna/template/icons.py): a card about
+# "Безопасность" gets the template's own shield icon, not a random one.
+name: icon_labels
+version: "1.1.0"
+model_role: vision
+output_schema: backend/deckdna/template/icons.py:IconLabelBatch
+language: en
+temperature: 0.1
+instructions: |
+  The image is a grid of `count` small graphics cut out of a presentation
+  template. Each cell has its number (0-based) in red in the top-left
+  corner.
+
+  For EVERY numbered cell return one item:
+  - `i`: the cell number.
+  - `label`: 1-3 plain English words naming WHAT the icon depicts
+    (e.g. "shield", "rocket", "calendar", "money bag", "team", "chart
+    growth", "light bulb"). Name the object, not its colour or style.
+  - `is_icon`: false when the cell is not a meaningful pictogram: an
+    empty or cut-off cell, a plain dot, line, arrow fragment, decorative
+    squiggle, background blob, a letter or a number, and ANY brand logo
+    or product mark (company logos, app logos, wordmarks) -- a logo is
+    not a pictogram for a topic.
+
+  Output ONLY JSON: {"icons": [{"i": 0, "label": "...", "is_icon": true}]}.
+input_fields: [count]

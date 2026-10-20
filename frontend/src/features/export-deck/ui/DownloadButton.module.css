@@ -74,3 +74,26 @@
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+
+.compact {
+  position: relative;
+  flex-direction: row;
+}
+
+.compactButton {
+  width: auto;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.compact .note {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  white-space: nowrap;
+}
+
+.compact .note:not(.error) {
+  display: none;
+}

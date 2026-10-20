@@ -12,27 +12,27 @@ describe('projectStatus', () => {
   it('describes setup progress when there is no run', () => {
     expect(projectStatus(draft, { kind: 'none' })).toEqual({ label: 'Черновик', tone: 'neutral', stage: 'Нужен шаблон' })
     expect(projectStatus(withTemplate, { kind: 'none' })?.stage).toBe('Шаблон разобран · нужен бриф')
-    expect(projectStatus(withContent, { kind: 'none' })).toMatchObject({ label: 'Готов к генерации', tone: 'info' })
+    expect(projectStatus(withContent, { kind: 'none' })).toMatchObject({ label: 'Готов к сборке', tone: 'info' })
   })
 
   it('reads the state of the latest run', () => {
     expect(projectStatus(withContent, { kind: 'ready', generation })).toEqual({ label: 'Готово', tone: 'ok', stage: 'Готово · 3 варианта' })
     expect(projectStatus(withContent, { kind: 'ready', generation: { ...generation, state: 'running' } })).toMatchObject({ label: 'Идёт', tone: 'info' })
-    expect(projectStatus(withContent, { kind: 'ready', generation: { ...generation, state: 'failed' } })).toMatchObject({ tone: 'error', stage: 'Ошибка генерации' })
+    expect(projectStatus(withContent, { kind: 'ready', generation: { ...generation, state: 'failed' } })).toMatchObject({ tone: 'error', stage: 'Сборка не удалась' })
   })
 
   it('waits while the run is loading and falls back when the run is gone', () => {
     expect(projectStatus(withContent, { kind: 'loading' })).toBeNull()
-    expect(projectStatus(withContent, { kind: 'missing' })?.label).toBe('Готов к генерации')
+    expect(projectStatus(withContent, { kind: 'missing' })?.label).toBe('Готов к сборке')
     expect(projectStatus({ ...draft, status: 'archived' }, { kind: 'none' })).toMatchObject({ label: 'В архиве', tone: 'muted' })
   })
 })
 
 describe('projectHref', () => {
-  it('opens the variants of the latest run, otherwise the template step', () => {
-    expect(projectHref(draft, 'gen_1', { kind: 'ready', generation })).toBe(`/projects/${draft.id}/runs/gen_1/variants`)
-    expect(projectHref(draft, 'gen_1', { kind: 'missing' })).toBe(`/projects/${draft.id}/template`)
-    expect(projectHref(draft, undefined, { kind: 'none' })).toBe(`/projects/${draft.id}/template`)
+  it('opens the finished deck of the latest run, otherwise the first step', () => {
+    expect(projectHref(draft, 'gen_1', { kind: 'ready', generation })).toBe(`/projects/${draft.id}/runs/gen_1/polish`)
+    expect(projectHref(draft, 'gen_1', { kind: 'missing' })).toBe(`/projects/${draft.id}/start`)
+    expect(projectHref(draft, undefined, { kind: 'none' })).toBe(`/projects/${draft.id}/start`)
   })
 })
 

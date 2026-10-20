@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://deckdna/schemas/dataset.schema.json",
+  "title": "Dataset",
+  "description": "ADR-033: tabular data, insights and visualization recommendations. Hand-maintained together with backend/deckdna/contracts/dataset.py.",
+  "$ref": "#/$defs/dataset",
+  "$defs": {
+    "source_ref": {
+      "type": "object",
+      "required": ["artifact_id"],
+      "properties": {
+        "artifact_id": { "type": "string" },
+        "page": { "type": "integer" },
+        "sheet": { "type": "string" },
+        "range": { "type": "string" },
+        "heading_path": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "dataset": {
+      "type": "object",
+      "required": ["id", "title", "columns", "row_count", "source_ref"],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "type": "string" },
+        "columns": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "values"],
+            "properties": {
+              "name": { "type": "string" },
+              "values": { "type": "array", "items": { "type": ["string", "number", "null"] } }
+            }
+          }
+        },
+        "row_count": { "type": "integer", "minimum": 0 },
+        "source_ref": { "$ref": "#/$defs/source_ref" },
+        "file_name": { "type": "string", "description": "user file name for the source line" },
+        "context_text": { "type": "string", "description": "text around the table: caption, stated goal" }
+      }
+    },
+    "insight": {
+      "type": "object",
+      "required": ["id", "dataset_id", "fact", "strength"],
+      "properties": {
+        "id": { "type": "string" },
+        "dataset_id": { "type": "string" },
+        "view_id": { "type": "string" },
+        "kind": { "type": "string", "enum": ["fact", "recommendation"] },
+        "fact_type": { "type": "string" },
+        "fact": { "type": "string", "description": "computed by code" },
+        "headline": { "type": "string", "description": "title-conclusion form of the fact" },
+        "meaning": { "type": "string", "description": "model wording, numbers checked against the fact" },
+        "implication": { "type": "string", "description": "model proposal; needs user confirmation" },
+        "strength": { "type": "number", "minimum": 0, "maximum": 1 },
+        "confirmed": { "type": "boolean" },
+        "needs_confirmation": { "type": "boolean" },
+        "evidence": { "type": "array", "items": { "type": "string" } },
+        "numbers": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "viz_recommendation": {
+      "type": "object",
+      "required": ["chart_type", "score", "reasons"],
+      "properties": {
+        "chart_type": { "type": "string" },
+        "score": { "type": "number" },
+        "reasons": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "rejected_viz": {
+      "type": "object",
+      "required": ["chart_type", "reasons"],
+      "properties": {
+        "chart_type": { "type": "string" },
+        "reasons": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

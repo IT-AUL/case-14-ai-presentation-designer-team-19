@@ -32,7 +32,7 @@ def _sp(sid, x, y, w, h, text="", *, fill=False, title=False, sz=None):
     fill_xml = '<a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill>' if fill else "<a:noFill/>"
     rpr = f'<a:rPr sz="{int(sz * 100)}"/>' if sz else ""
     body = (
-        f'<p:txBody><a:bodyPr/><a:p><a:r>{rpr}<a:t>{text}</a:t></a:r></a:p></p:txBody>'
+        f"<p:txBody><a:bodyPr/><a:p><a:r>{rpr}<a:t>{text}</a:t></a:r></a:p></p:txBody>"
         if text is not None
         else ""
     )
@@ -48,7 +48,7 @@ def _slide(*shapes: str) -> bytes:
         f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
         f'<p:sld xmlns:p="{P}" xmlns:a="{A}"><p:cSld><p:spTree>'
         f'<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>'
-        f'<p:grpSpPr/>{"".join(shapes)}</p:spTree></p:cSld></p:sld>'
+        f"<p:grpSpPr/>{''.join(shapes)}</p:spTree></p:cSld></p:sld>"
     ).encode()
 
 
@@ -99,7 +99,8 @@ def test_mock_without_fixture_cannot_rewrite():
 def test_budget_fit_shortens_only_over_budget_slides_and_keeps_numbers():
     plan = _plan()
     target = next(
-        i for i, s in enumerate(plan.slides)
+        i
+        for i, s in enumerate(plan.slides)
         if len([u for u in s.content_units if u.kind == Kind.bullet and u.text]) >= 2
     )
     parts = [f"p{i}" for i in range(len(plan.slides))]
@@ -164,8 +165,9 @@ def test_orphan_avatar_next_to_cleared_name_is_removed():
     before = _slide(
         _sp(2, 0, 0, 6 * EMU_IN, EMU_IN, "Спасибо", title=True),
         _sp(3, int(1.6 * EMU_IN), 4 * EMU_IN, 3 * EMU_IN, 300000, "Имя Фамилия"),
-        _sp(4, int(0.7 * EMU_IN), 4 * EMU_IN, int(0.7 * EMU_IN), int(0.7 * EMU_IN), None,
-            fill=True),
+        _sp(
+            4, int(0.7 * EMU_IN), 4 * EMU_IN, int(0.7 * EMU_IN), int(0.7 * EMU_IN), None, fill=True
+        ),
         _sp(5, 8 * EMU_IN, 0, int(0.5 * EMU_IN), int(0.5 * EMU_IN), None, fill=True),
     )
     after = before.replace("Имя Фамилия".encode(), b"")
@@ -178,6 +180,53 @@ def test_orphan_avatar_next_to_cleared_name_is_removed():
 def test_orphans_untouched_when_nothing_cleared():
     xml = _slide(_sp(3, 0, 0, EMU_IN, EMU_IN, "Текст"))
     assert remove_orphans(xml, xml, 10 * EMU_IN, 5 * EMU_IN) == (xml, 0)
+
+
+def test_emptied_panel_container_is_removed():
+    """Колонка-подложка эталона, державшая очищенный текст, не остаётся
+    цветным прямоугольником и не отнимает место у графика (пустые «чёрные
+    прямоугольники» слотов картинок — живой дефект на невиданном шаблоне)."""
+    before = _slide(
+        _sp(2, 0, 0, 7 * EMU_IN, int(0.4 * EMU_IN), "Заголовок", title=True),
+        _sp(3, int(5.5 * EMU_IN), EMU_IN, 4 * EMU_IN, int(3.5 * EMU_IN), None, fill=True),
+        _sp(
+            4, int(5.8 * EMU_IN), int(1.3 * EMU_IN), int(3.4 * EMU_IN), 2 * EMU_IN, "Текст колонки"
+        ),
+        _sp(5, 0, EMU_IN, 4 * EMU_IN, 3 * EMU_IN, "Основной текст слева"),
+    )
+    after = before.replace(">Текст колонки<".encode(), b"><")
+    out, _ = remove_orphans(before, after, 10 * EMU_IN, int(5.6 * EMU_IN))
+    ids = {el.get("id") for el in etree.fromstring(out).iter(f"{{{P}}}cNvPr")}
+    assert "3" not in ids  # опустевшая панель ушла
+    assert "2" in ids and "5" in ids  # заголовок и живой текст остались
+
+
+def test_panel_with_live_content_inside_is_kept():
+    """Панель — не сирота, если внутри остался живой контент (таблица,
+    текст): правило не должно снимать рабочие подложки."""
+    xml = _slide(
+        _sp(2, 0, 0, 7 * EMU_IN, int(0.4 * EMU_IN), "Заголовок", title=True),
+        _sp(3, int(5.5 * EMU_IN), EMU_IN, 4 * EMU_IN, int(3.5 * EMU_IN), None, fill=True),
+        _sp(
+            4, int(5.8 * EMU_IN), int(1.3 * EMU_IN), int(3.4 * EMU_IN), 2 * EMU_IN, "Текст колонки"
+        ),
+    )
+    out, _ = remove_orphans(xml, xml, 10 * EMU_IN, int(5.6 * EMU_IN))
+    ids = {el.get("id") for el in etree.fromstring(out).iter(f"{{{P}}}cNvPr")}
+    assert "3" in ids
+
+
+def test_panel_that_never_held_content_is_kept():
+    """Декоративная панель, в эталоне ничего не содержавшая, — часть
+    дизайна, а не опустевший слот: её не трогаем."""
+    xml = _slide(
+        _sp(2, 0, 0, 7 * EMU_IN, int(0.4 * EMU_IN), "Заголовок", title=True),
+        _sp(3, int(5.5 * EMU_IN), EMU_IN, 4 * EMU_IN, int(3.5 * EMU_IN), None, fill=True),
+        _sp(5, 0, EMU_IN, 4 * EMU_IN, 3 * EMU_IN, "Основной текст слева"),
+    )
+    out, _ = remove_orphans(xml, xml, 10 * EMU_IN, int(5.6 * EMU_IN))
+    ids = {el.get("id") for el in etree.fromstring(out).iter(f"{{{P}}}cNvPr")}
+    assert "3" in ids
 
 
 # ------------------------------------------------------------ title frame
@@ -209,8 +258,11 @@ def test_gray_photo_stub_is_removed_colored_decor_kept():
             f"</p:spPr></p:sp>"
         )
 
-    xml = _slide(circle(4, 0, "7C8A9A"), circle(5, 3 * EMU_IN, "0077FF"),
-                 _sp(6, 5 * EMU_IN, 0, 2 * EMU_IN, EMU_IN, "Текст"))
+    xml = _slide(
+        circle(4, 0, "7C8A9A"),
+        circle(5, 3 * EMU_IN, "0077FF"),
+        _sp(6, 5 * EMU_IN, 0, 2 * EMU_IN, EMU_IN, "Текст"),
+    )
     out, removed = remove_orphans(xml, xml, 10 * EMU_IN, int(5.6 * EMU_IN))
     ids = {el.get("id") for el in etree.fromstring(out).iter(f"{{{P}}}cNvPr")}
     assert removed == 1 and "4" not in ids and "5" in ids
@@ -219,10 +271,51 @@ def test_gray_photo_stub_is_removed_colored_decor_kept():
 def test_usable_height_stops_at_caption_frame_inside():
     from deckdna.pptx.composing.text_replace import _usable_box_emu
 
-    root = etree.fromstring(_slide(
-        _sp(2, 0, 0, 4 * EMU_IN, 4 * EMU_IN, "Основной текст карточки"),
-        _sp(3, int(0.2 * EMU_IN), 2 * EMU_IN, int(3.5 * EMU_IN), int(0.8 * EMU_IN), "Подпись"),
-    ))
+    root = etree.fromstring(
+        _slide(
+            _sp(2, 0, 0, 4 * EMU_IN, 4 * EMU_IN, "Основной текст карточки"),
+            _sp(3, int(0.2 * EMU_IN), 2 * EMU_IN, int(3.5 * EMU_IN), int(0.8 * EMU_IN), "Подпись"),
+        )
+    )
     body = next(root.iter(f"{{{P}}}txBody"))
     _w, h = _usable_box_emu(body)
     assert h < 2 * EMU_IN  # не до низа карточки, а до подписи
+
+
+def test_title_shrinks_above_table_inserted_below():
+    from deckdna.pptx.composing.title_fit import fit_title_above_content
+
+    table = (
+        '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="9" name="T"/><p:cNvGraphicFramePr/>'
+        f'<p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="0" y="{int(1.2 * EMU_IN)}"/>'
+        f'<a:ext cx="{8 * EMU_IN}" cy="{2 * EMU_IN}"/></p:xfrm><a:graphic>'
+        '<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/table"/>'
+        "</a:graphic></p:graphicFrame>"
+    )
+    title = "Сервис занимает нишу на стыке хайпа, персонализации и фотопоиска мест"
+    xml = _slide(_sp(2, 0, 0, 6 * EMU_IN, EMU_IN, title, title=True, sz=36), table)
+    out, shrunk = fit_title_above_content(xml, 10 * EMU_IN, int(5.6 * EMU_IN))
+    assert shrunk
+    sz = int(next(etree.fromstring(out).iter(f"{{{A}}}rPr")).get("sz"))
+    assert 16 * 100 <= sz < 36 * 100
+
+    far = _slide(_sp(2, 0, 0, 6 * EMU_IN, EMU_IN, "Короткий", title=True, sz=36), table)
+    assert fit_title_above_content(far, 10 * EMU_IN, int(5.6 * EMU_IN))[1] is False
+
+
+def test_bold_fact_keeps_reserve_for_renderer_word_wrapping():
+    from deckdna.pptx.composing.text_replace import replace_text_runs
+
+    text = "Партнёры: 4%, наименьшая доля"
+    xml = _slide(_sp(3, 0, 0, 4739119, 2589746, "Short donor label", sz=46))
+    root = etree.fromstring(xml)
+    body = root.find(f".//{{{P}}}txBody")
+    body.find(f".//{{{A}}}rPr").set("b", "1")
+    # Metrics for a regular font allowed this at 46 pt, while Play Bold
+    # rendered four lines, crossing the original frame and footer.
+    out, report = replace_text_runs(etree.tostring(root), [text])
+    result = etree.fromstring(out)
+    assert "".join(result.itertext()) == text  # preserve the full fact
+    size = int(result.find(f".//{{{A}}}rPr").get("sz")) / 100
+    assert 8 <= size <= 40
+    assert report.bodies_shrunk == 1 and report.bodies_overflowing == 0

@@ -1,0 +1,42 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T14:04:31.100Z",
+  "method": "GET",
+  "path": "/variants/var_8faf1d9a59e84193a3615b0a8ca7b5e3/slides",
+  "status": 200,
+  "body": {
+    "items": [
+      {
+        "id": "sld_6043730e5b024307b0e8aa7b0c3be5bc",
+        "variant_id": "var_8faf1d9a59e84193a3615b0a8ca7b5e3",
+        "index": 1,
+        "slide_plan_id": "slide-0",
+        "purpose": "title",
+        "title": "Идея",
+        "revision": 1,
+        "preview_artifact_id": "art_87a47806a2764fabb437d02e3af478ae"
+      },
+      {
+        "id": "sld_85c18c2a069b4fb98ae826c3b1637eb0",
+        "variant_id": "var_8faf1d9a59e84193a3615b0a8ca7b5e3",
+        "index": 2,
+        "slide_plan_id": "slide-1",
+        "purpose": "overview",
+        "title": "Тезисы автора",
+        "revision": 1,
+        "preview_artifact_id": "art_4a67ba1651094a56b416acc748c3e71f"
+      },
+      {
+        "id": "sld_40e5690bdac0434899d36f9bb25d45cd",
+        "variant_id": "var_8faf1d9a59e84193a3615b0a8ca7b5e3",
+        "index": 3,
+        "slide_plan_id": "slide-2",
+        "purpose": "thank_you",
+        "title": "Спасибо за внимание",
+        "revision": 1,
+        "preview_artifact_id": "art_efd3c5bfa1954cb3abc45495911bcef1"
+      }
+    ],
+    "next_cursor": null
+  }
+}

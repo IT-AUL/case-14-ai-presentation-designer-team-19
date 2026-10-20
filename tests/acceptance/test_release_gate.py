@@ -881,3 +881,20 @@ def test_run_one_propagates_dropped_units(tmp_path, monkeypatch):
     assert record["dropped_units"] == {"text_unplaced": 2, "chart_unplaced": 0}
     violations = evaluate_variant(record, llm=True, budget_seconds=300.0)
     assert any("text_unplaced x2" in v for v in violations), violations
+
+
+def test_html_gate_accepts_positioned_markup_and_checks_assets(tmp_path):
+    from deckdna.pptx.exporting.render import render_html
+    from pptx import Presentation
+    from pptx.util import Inches
+
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    slide.shapes.add_textbox(Inches(1), Inches(1), Inches(3), Inches(1)).text = "DOM"
+    path = tmp_path / "deck.pptx"
+    prs.save(path)
+    index = render_html(path, tmp_path / "html")
+    assert rg._check_html(index, expected_slides=1) is None
+    assert "expected 2" in rg._check_html(index, expected_slides=2)
+    index.write_text(index.read_text().replace("</main>", '<img src="assets/missing.png"></main>'))
+    assert "asset missing" in rg._check_html(index, expected_slides=1)

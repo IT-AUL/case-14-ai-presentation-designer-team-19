@@ -1,0 +1,29 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:52:51.431Z",
+  "method": "POST",
+  "path": "/variants/var_a9cc34fdabbb4e14af5520ac2384b0ce/slides/sld_0cd5d62557334d4eac42ac037c6fcdf9/regenerate",
+  "status": 200,
+  "request": {
+    "action": "shorter"
+  },
+  "body": {
+    "variant_id": "var_a9cc34fdabbb4e14af5520ac2384b0ce",
+    "slide": {
+      "id": "sld_0cd5d62557334d4eac42ac037c6fcdf9",
+      "variant_id": "var_a9cc34fdabbb4e14af5520ac2384b0ce",
+      "index": 2,
+      "slide_plan_id": "slide-1",
+      "purpose": "overview",
+      "title": "Ключевые выводы",
+      "revision": 2,
+      "preview_artifact_id": "art_9483bd1eddc0482aa3cd77b2b7e27efd"
+    },
+    "deck_revision": 2,
+    "deck_artifact_id": "art_2a86b41abfde40b49f5728980af2bb40",
+    "exemplar": "ppt/slides/slide24.xml",
+    "preview_artifact_id": "art_9483bd1eddc0482aa3cd77b2b7e27efd",
+    "issues": [],
+    "assistant_note": "Сделал слайд короче."
+  }
+}

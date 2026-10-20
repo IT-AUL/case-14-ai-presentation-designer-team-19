@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { useCancelGeneration } from '@/entities/generation'
+import { humanError } from '@/shared/api'
 import { Button, Icon, useToast, X } from '@/shared/ui'
 import styles from './CancelGenerationButton.module.css'
 
@@ -35,7 +36,7 @@ export function CancelGenerationButton({ generationId, onCanceled }: CancelGener
         toast.show('Генерация отменена. Бриф сохранён.')
         onCanceled?.()
       },
-      onError: (error) => toast.show(error.message, { tone: 'error' }),
+      onError: (error) => toast.show(humanError(error), { tone: 'error' }),
     })
   }
 

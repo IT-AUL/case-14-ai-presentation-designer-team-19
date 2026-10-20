@@ -11,6 +11,8 @@
   заголовков карточек — деловая типографика, а не плакат;
 * рамки одного размера на слайде получают общий кегль (минимум из
   вмещаемых) — карточки сетки выглядят одинаково;
+* краткие выводы в крупных рамках overview могут вырасти до отдельного
+  конфигурируемого потолка; системные footer/date/slide-number исключены;
 * кегль только растёт, никогда не уменьшается.
 """
 
@@ -22,6 +24,7 @@ from deckdna.pptx.composing.text_replace import (
     _body_font_size_pt,
     _body_is_decorative,
     _fits_in_box,
+    _is_system_body,
     _is_title_run,
     _set_body_sz,
     _shape_id,
@@ -48,7 +51,11 @@ def _in_table(tx_body: etree._Element) -> bool:
     return any(etree.QName(a).localname == "tbl" for a in tx_body.iterancestors())
 
 
-def grow_text(slide_xml: bytes, hints: dict[str, dict] | None = None) -> tuple[bytes, int]:
+def grow_text(slide_xml: bytes, hints: dict[str, dict] | None = None, *,
+              body_cap: float = BODY_CAP_PT, label_cap: float = LABEL_CAP_PT,
+              slide_size: tuple[int, int] | None = None,
+              large_frame_cap: float | None = None,
+              font_scale: list[float] | tuple[float, ...] | None = None) -> tuple[bytes, int]:
     """Увеличить мелкий текст слайда; возвращает (xml, число выросших рамок).
 
     *hints* — метрики фигур эталона с наследованием плейсхолдеров
@@ -59,7 +66,7 @@ def grow_text(slide_xml: bytes, hints: dict[str, dict] | None = None) -> tuple[b
     root = etree.fromstring(slide_xml)
     candidates: list[tuple[etree._Element, str, float, int, int, bool, float]] = []
     for tx_body in root.iter(f"{{{P}}}txBody"):
-        if _in_table(tx_body) or _body_is_decorative(tx_body):
+        if _in_table(tx_body) or _body_is_decorative(tx_body) or _is_system_body(tx_body):
             continue
         runs = [t for t in tx_body.iter(f"{{{A}}}t") if (t.text or "").strip()]
         if not runs or any(_is_title_run(t) for t in runs):
@@ -75,17 +82,50 @@ def grow_text(slide_xml: bytes, hints: dict[str, dict] | None = None) -> tuple[b
         body_pr = tx_body.find(f"{{{A}}}bodyPr")
         wrap_none = body_pr is not None and body_pr.get("wrap") == "none"
         is_label = len(text) <= _LABEL_MAX_CHARS and "\n" not in text
-        cap = LABEL_CAP_PT if is_label else BODY_CAP_PT
+        cap = label_cap if is_label else body_cap
+        # Overview facts in genuinely large donor boxes need display-like
+        # emphasis. This opt-in is passed only for summary slides, never cover
+        # subtitles, sources or data commentary. Long prose keeps its own cap.
+        if (large_frame_cap is not None and slide_size is not None
+                and box[0] >= .3 * slide_size[0] and box[1] >= .3 * slide_size[1]
+                and len(text.split()) <= 24):
+            cap = max(cap, large_frame_cap)
         if size >= cap:
             continue
         best = size
-        probe = size + _STEP_PT
         usable_w, usable_h = box
-        while probe <= cap and _fits_in_box(
-            tx_body, text, probe, usable_w, int(usable_h * _HEIGHT_RESERVE), wrap_none
-        ):
-            best = probe
-            probe += _STEP_PT
+        if font_scale:
+            from deckdna.pptx.composing.font_scale import scale_candidates
+
+            probes = [
+                s
+                for s in scale_candidates(
+                    font_scale, size, cap, include_tolerance_steps=False
+                )
+                if s > size
+            ]
+            if not probes:
+                probes = [
+                    s
+                    for s in scale_candidates(
+                        font_scale, size, cap + 2.0, include_tolerance_steps=False
+                    )
+                    if s > size
+                ]
+            for probe in probes:
+                if _fits_in_box(
+                    tx_body, text, probe, usable_w, int(usable_h * _HEIGHT_RESERVE), wrap_none
+                ):
+                    best = probe
+                else:
+                    break
+        else:
+            probe = size + _STEP_PT
+            while probe <= cap and _fits_in_box(
+                tx_body, text, probe, usable_w, int(usable_h * _HEIGHT_RESERVE), wrap_none
+            ):
+                best = probe
+                probe += _STEP_PT
         if best > size:
             candidates.append((tx_body, text, size, usable_w, usable_h, is_label, best))
 
@@ -104,3 +144,4 @@ def grow_text(slide_xml: bytes, hints: dict[str, dict] | None = None) -> tuple[b
     if not grown:
         return slide_xml, 0
     return etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True), grown
+

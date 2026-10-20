@@ -252,8 +252,8 @@ def test_shrink_to_fit_preserves_complete_text_in_a_finite_box():
     shape.text = "Source template text"
     shape.text_frame.paragraphs[0].runs[0].font.size = Pt(32)
     text = (
-        "Полный научный вывод сохраняет условия эксперимента, "
-        "ограничения и числовые показатели 25% и 30%."
+        "Полный научный вывод сохраняет условия эксперимента, ограничения и числовые показатели "
+        "25% и 30%."
     )
     body = shape._element.find(f"{{{P}}}txBody")
     assert _body_overflows(body, text)

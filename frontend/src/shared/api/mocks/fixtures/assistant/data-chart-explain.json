@@ -1,0 +1,130 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:56:49.055Z",
+  "method": "GET",
+  "path": "/slides/sld_1d1ea974740c469cbe2cd05e5ed200de/explain",
+  "status": 200,
+  "body": {
+    "slide_id": "sld_1d1ea974740c469cbe2cd05e5ed200de",
+    "slide_plan_id": "slide-2",
+    "title": "Выручка по месяцам",
+    "dataset": {
+      "id": "ds-95b1eb6e",
+      "title": "Purchases",
+      "file": "purchases.csv",
+      "rows": 8755
+    },
+    "profile_summary": "8755 строк; 6 колонок; период 01.10.2024 – 30.09.2026; метрики: Сумма; разрезы: Регион, Категория, Канал; есть пропуски: Регион, Канал",
+    "view_id": "ds-95b1eb6e-trend",
+    "task": "trend",
+    "task_ru": "динамика",
+    "intent": "trend",
+    "aggregation": "сумма по месяцам",
+    "chosen": {
+      "type": "line",
+      "reasons": [
+        "24 точки по месяцам",
+        "одна метрика",
+        "в задаче сказано про динамика"
+      ]
+    },
+    "recommended": {
+      "type": "line",
+      "reasons": [
+        "24 точки по месяцам",
+        "одна метрика",
+        "в задаче сказано про динамика"
+      ]
+    },
+    "alternatives": [
+      {
+        "type": "bar",
+        "reasons": [
+          "24 периода, каждый столбцом"
+        ]
+      },
+      {
+        "type": "table",
+        "reasons": [
+          "точные значения важнее формы"
+        ]
+      }
+    ],
+    "rejected": [
+      {
+        "type": "bar_horizontal",
+        "reasons": [
+          "ранжирование нужно для категорий, а не для времени"
+        ]
+      },
+      {
+        "type": "bar_stacked",
+        "reasons": [
+          "нужно хотя бы два ряда для накопления"
+        ]
+      },
+      {
+        "type": "bar_stacked_100",
+        "reasons": [
+          "нужно хотя бы два ряда для накопления"
+        ]
+      },
+      {
+        "type": "histogram",
+        "reasons": [
+          "нужна одна числовая колонка со многими значениями"
+        ]
+      },
+      {
+        "type": "pie",
+        "reasons": [
+          "доли показывают для категорий, а не для ряда"
+        ]
+      },
+      {
+        "type": "doughnut",
+        "reasons": [
+          "доли показывают для категорий, а не для ряда"
+        ]
+      },
+      {
+        "type": "scatter",
+        "reasons": [
+          "нужны две метрики на одних объектах"
+        ]
+      },
+      {
+        "type": "kpi",
+        "reasons": [
+          "значений больше, чем помещается на карточки"
+        ]
+      }
+    ],
+    "insights": [
+      {
+        "id": "ds-95b1eb6e-trend-i0",
+        "fact": "Выручка: с 1,2 млн ₽ (окт 2024) до 2,5 млн ₽ (сен 2026), рост в 2,1 раза",
+        "headline": "Выручка: рост в 2,1 раза за 24 месяца",
+        "meaning": null,
+        "implication": null,
+        "kind": "fact",
+        "confirmed": true,
+        "needs_confirmation": false,
+        "strength": 0.864
+      },
+      {
+        "id": "ds-95b1eb6e-trend-i2",
+        "fact": "Рост ускорился во второй половине периода: +42% против +32%",
+        "headline": "Выручка: рост ускорился во второй половине периода",
+        "meaning": null,
+        "implication": null,
+        "kind": "fact",
+        "confirmed": false,
+        "needs_confirmation": false,
+        "strength": 0.55
+      }
+    ],
+    "source": "Источник: purchases.csv; сумма по месяцам",
+    "assistant_note": "Линия: 24 точки по месяцам, одна метрика; задача: динамика."
+  }
+}

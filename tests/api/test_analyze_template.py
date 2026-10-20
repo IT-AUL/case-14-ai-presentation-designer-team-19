@@ -94,7 +94,7 @@ def test_design_dna_matches_autopsy(forensics):
     assert observed == forensics.observed_fonts
 
     # Slide census is real and every semantic field is now computed from the
-    # package itself (contract D1): no "unresolved" markers anywhere.
+    # package itself (handoff D1): no "unresolved" markers anywhere.
     assert len(dna["exemplars"]) == forensics.slides
     assert "unresolved" not in str(dna)
     assert all(e["role"] and e["cluster_id"] for e in dna["exemplars"])
@@ -120,20 +120,31 @@ def test_template_slides_use_real_part_names(forensics):
     assert all(i["part"].startswith("ppt/slides/slide") for i in items)
 
 
-def test_analyze_default_leaves_content_description_empty():
+def test_analyze_default_leaves_content_description_empty(monkeypatch, tmp_path):
     """No use_llm, no provider_session_id -> ADR-018 enrichment stays
     off (same auto semantics as generation: offline MockProvider alone
-    never fabricates content -- see _server_provider_ready)."""
+    never fabricates content -- see _server_provider_ready).
+
+    The template analysis disk cache (artifacts/template_cache) is
+    isolated: descriptions cached by an earlier LLM run of the same
+    bytes are legitimately reused -- this test asserts the model is not
+    CALLED, so the cache must be cold."""
+    monkeypatch.setenv("DECKDNA_ARTIFACT_ROOT", str(tmp_path))
     template_id, _ = _upload_and_analyze("vk_tech_template.pptx", FIXTURE.read_bytes())
     dna = client.get(f"/api/v1/templates/{template_id}/design-dna").json()
     assert all(e.get("content_description") is None for e in dna["exemplars"])
 
 
-def test_analyze_use_llm_fills_content_description(monkeypatch):
+def test_analyze_use_llm_fills_content_description(monkeypatch, tmp_path):
     """ADR-018 end-to-end: use_llm=true routes analyze through
     describe_exemplars, and the result lands in every exemplar the
     fixture answered for -- GET design-dna reflects it, cached for the
-    template, no re-computation needed on future reads."""
+    template, no re-computation needed on future reads.
+
+    Cold disk cache (tmp artifact root): otherwise descriptions come
+    from cache and ``gateway.calls`` stays empty."""
+
+    monkeypatch.setenv("DECKDNA_ARTIFACT_ROOT", str(tmp_path))
 
     def _fixture(payload: dict) -> dict:
         return {
@@ -175,7 +186,7 @@ def test_analyze_use_llm_fills_content_description(monkeypatch):
 
 
 def test_upload_rejects_corrupt_package_before_analyze():
-    """A corrupt package must not reach
+    """hardening check #9: a corrupt package must not reach
     validation_status="valid" — upload itself opens and validates the
     OPC structure now, instead of surfacing corruption only at /analyze."""
     project = client.post("/api/v1/projects", json={"name": "corrupt"}).json()

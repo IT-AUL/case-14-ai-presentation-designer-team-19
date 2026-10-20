@@ -35,7 +35,7 @@ describe('buildPassportView', () => {
     expect(view.usage).toBeNull()
   })
 
-  it('shows style fidelity and usage once the backend sends them', () => {
+  it('shows style fidelity in Russian and omits token counters', () => {
     const raw = structuredClone(passportFixture) as unknown as { metrics: Record<string, unknown> }
     raw.metrics.style_fidelity = { palette_compliance: 0.97, font_compliance: 1, custom_score: 0.5 }
     raw.metrics.usage = { total_tokens: 48200, model_calls: 27 }
@@ -47,10 +47,10 @@ describe('buildPassportView', () => {
       scores: [
         { key: 'palette_compliance', label: 'Палитра', value: '0.97', fraction: 0.97 },
         { key: 'font_compliance', label: 'Шрифты', value: '1.00', fraction: 1 },
-        { key: 'custom_score', label: 'Custom score', value: '0.50', fraction: 0.5 },
+        { key: 'custom_score', label: 'Доп. оценка', value: '0.50', fraction: 0.5 },
       ],
     })
-    expect(view.usage?.map((item) => item.label)).toEqual(['Токенов всего', 'Вызовов модели'])
+    expect(view.usage).toBeNull()
   })
 
   it('keeps supported claims without faking the unsupported count', () => {
@@ -89,20 +89,37 @@ describe('buildPassportView', () => {
     ])
   })
 
-  it('exposes provenance for versioned skills, prompts, models and configs', () => {
+  it('translates provenance planner and modes without exposing internal package names', () => {
     const view = buildPassportView(recorded(), { ...context, serverSkillVersion: '0.2.0' })
     const rows = indexBy(view.provenance)
 
     expect(view.skillVersion).toBe('0.1.0')
+    expect(view.pipelineVersion).toBeNull()
     expect(rows('skill')).toMatchObject({ value: '0.1.0', note: 'сейчас на сервере 0.2.0 — прогон собран предыдущей версией' })
-    expect(rows('pipeline').value).toBe('deckdna-poc/0.1.0')
-    expect(rows('planner').value).toBe('story-director/deterministic-0.1.0')
-    expect(rows('prompts')).toMatchObject({ muted: true })
-    expect(rows('models')).toMatchObject({ value: 'без модели', muted: true })
-    expect(rows('config:configs/generation.default.yaml').value).toBe('configs/generation.default.yaml · sha 80f8…6056')
+    expect(rows('planner').value).toBe('По правилам')
+    expect(rows('mode').value).toBe('Стандартный (по правилам шаблона)')
+    expect(rows('config:configs/generation.default.yaml')).toMatchObject({
+      label: 'Конфигурация сборки',
+      value: 'sha 80f8…6056',
+    })
+    expect(rows('config:configs/audit.default.yaml')).toMatchObject({
+      label: 'Конфигурация проверки',
+      value: 'sha 686b…3694',
+    })
+
+    const dupRaw = structuredClone(passportFixture) as unknown as { provenance: { config_hashes: Record<string, string> } }
+    dupRaw.provenance.config_hashes = {
+      'configs/generation.default.yaml': '80f89b7a7a3b8aae4c3ac5ac571b7e926abf4841ce9afbda9337a24b92426056',
+      'configs/audit.default.yaml': '80f89b7a7a3b8aae4c3ac5ac571b7e926abf4841ce9afbda9337a24b92426056',
+    }
+    const dupView = buildPassportView(parsePassport(dupRaw), context)
+    const configRows = dupView.provenance.filter((row) => row.key.startsWith('config:'))
+    expect(configRows).toEqual([
+      { key: 'config:configs/generation.default.yaml', label: 'Конфигурация', value: 'sha 80f8…6056' },
+    ])
   })
 
-  it('lists prompt versions and model profiles from an LLM run', () => {
+  it('marks extended check mode when semantic profiles are present', () => {
     const raw = structuredClone(passportFixture) as unknown as { provenance: Record<string, unknown> }
     raw.provenance.prompt_versions = { plan: '2026.09.3', rewrite: '2026.09.1' }
     raw.provenance.model_profiles = [{ role: 'text', model_id: 'Qwen3-32B' }, { role: 'vision', model_id: 'Qwen2.5-VL-32B-Instruct' }]
@@ -111,8 +128,22 @@ describe('buildPassportView', () => {
     const rows = indexBy(view.provenance)
 
     expect(rows('skill').note).toBeUndefined()
-    expect(rows('prompts').value).toBe('plan 2026.09.3 · rewrite 2026.09.1')
-    expect(rows('models').value).toBe('text: Qwen3-32B · vision: Qwen2.5-VL-32B-Instruct')
+    expect(rows('mode').value).toBe('Расширенный (правила и смысл)')
+  })
+
+  it('localizes technical disclosures instead of printing raw english text', () => {
+    const raw = structuredClone(passportFixture) as unknown as { fallbacks: unknown[] }
+    raw.fallbacks = [
+      {
+        feature: 'metrics.content_support.numbers_verified',
+        disclosure: 'numbers_verified/numbers_failed count only whether a numeric value appears anywhere in the source text',
+      },
+    ]
+
+    const view = buildPassportView(parsePassport(raw), context)
+
+    expect(view.fallbacks[0]?.label).toBe('Сверка чисел с источником')
+    expect(view.fallbacks[0]?.detail).toBe('Подробности — в техническом приложении паспорта.')
   })
 
   it('falls back to variant PEI and marks unknown proof values', () => {
@@ -126,5 +157,22 @@ describe('buildPassportView', () => {
     expect(byKey('roundTrip')).toMatchObject({ value: '—', tone: 'unknown' })
     expect(byKey('nativeText')).toMatchObject({ value: '—', tone: 'unknown' })
     expect(byKey('pei')).toMatchObject({ value: '5/5', hint: 'шкала 0–5; 5 — всё нативное и привязано к макетам' })
+  })
+})
+
+describe('researchView', () => {
+  it('turns fact origins into shares and labels the text mode', () => {
+    const passport = parsePassport({
+      ...passportFixture,
+      metrics: { ...passportFixture.metrics, content_origin: { user: 6, web: 3, model: 3 }, research: { sources_count: 2, content_fill: 'shrink' } },
+    })
+    const view = buildPassportView(passport, { budgetSeconds: 300 }).research
+    expect(view?.origins.map((origin) => [origin.key, origin.fraction, origin.label])).toEqual([
+      ['user', 0.5, 'ваш контент'],
+      ['web', 0.25, 'интернет'],
+      ['model', 0.25, 'дополнено по смыслу'],
+    ])
+    expect(view).toMatchObject({ sources: 2, mode: 'сохранить как есть', seconds: null })
+    expect(buildPassportView(parsePassport(passportFixture), { budgetSeconds: 300 }).research).toBeNull()
   })
 })

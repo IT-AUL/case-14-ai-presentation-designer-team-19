@@ -1,0 +1,69 @@
+# ADR-033 §10: бенчмарк выбора визуализации. Для каждого датасета — эталон:
+# аналитическая задача главного представления и допустимые типы графика
+# (best — что поставит аналитик первым; ok — тоже приемлемо).
+# Файлы из examples/stage2/ (синтетика) и маленькие встроенные таблицы.
+version: "1"
+cases:
+  - {file: examples/stage2/purchases.csv, task: trend, best: [line], ok: [bar]}
+  - {file: examples/stage2/sales_monthly.csv, task: trend, best: [line], ok: [bar]}
+  - {file: examples/stage2/sales_monthly.xlsx, task: trend, best: [line], ok: [bar]}
+  - {file: examples/stage2/sales_monthly.json, task: trend, best: [line], ok: [bar]}
+  - {file: examples/stage2/regions.xlsx, task: comparison, best: [bar_horizontal], ok: [bar]}
+  - {file: examples/stage2/channels_share.json, task: composition, best: [pie, doughnut], ok: [bar_horizontal, bar_stacked_100]}
+  - {file: examples/stage2/order_values.csv, task: distribution, best: [histogram], ok: []}
+  - {file: examples/stage2/products_reference.xlsx, task: reference, best: [table], ok: []}
+  - {file: examples/stage2/nps_with_gaps.csv, task: trend, best: [line], ok: [bar]}
+  - {file: examples/stage2/report_with_table.txt, task: trend, best: [line, bar], ok: []}
+  - {file: examples/stage2/ad_spend_vs_sales.csv, task: relationship, best: [scatter], ok: []}
+  - {file: examples/stage2/kpi.json, task: kpi, best: [kpi], ok: [table]}
+  - name: years_revenue
+    csv: "Год;Выручка, млрд ₽\n2019;1,2\n2020;1,4\n2021;1,9\n2022;2,3\n2023;2,8\n2024;3,6"
+    task: trend
+    best: [line, bar]
+    ok: []
+  - name: quarters_two_series
+    csv: "Квартал,План,Факт\n1 кв. 2025,100,92\n2 кв. 2025,110,118\n3 кв. 2025,120,125\n4 кв. 2025,130,141"
+    task: trend
+    best: [line, bar]
+    ok: []
+  - name: departments_headcount
+    csv: "Отдел,Сотрудники\nПродажи,42\nРазработка,77\nМаркетинг,18\nПоддержка,35\nФинансы,9"
+    task: comparison
+    best: [bar, bar_horizontal]
+    ok: [pie]
+  - name: budget_share_percent
+    csv: "Статья,Доля, %\nЗарплаты,52\nАренда,14\nМаркетинг,19\nИнфраструктура,15"
+    task: composition
+    best: [pie, doughnut]
+    ok: [bar_horizontal]
+  - name: share_intent_text
+    csv: "Канал,Продажи, млн ₽\nСайт,120\nПриложение,80\nМагазины,60"
+    context: "Какая доля продаж приходится на каждый канал"
+    task: composition
+    best: [pie, doughnut]
+    ok: [bar]
+  - name: delivery_times
+    csv: "Время доставки, ч\n12\n18\n24\n19\n31\n22\n17\n48\n20\n26\n15\n23\n21\n19\n30\n25\n16\n22\n27\n72\n18\n20\n24\n29"
+    task: distribution
+    best: [histogram]
+    ok: []
+  - name: price_vs_demand
+    csv: "Товар,Цена, ₽,Спрос, шт.\nA,100,950\nB,120,900\nC,140,820\nD,160,760\nE,180,700\nF,200,640\nG,220,600\nH,240,530\nI,260,480\nJ,280,430\nK,300,390\nL,320,340"
+    task: relationship
+    best: [scatter]
+    ok: []
+  - name: single_row_kpi
+    csv: "Выручка, млн ₽;Клиенты;NPS\n412,5;18600;46"
+    task: kpi
+    best: [kpi]
+    ok: [table]
+  - name: many_cities
+    csv: "Город,Заказы\nМосква,9100\nСПб,4300\nКазань,1900\nЕкатеринбург,1700\nНовосибирск,1500\nНижний Новгород,1250\nСамара,1100\nКраснодар,990\nРостов,970\nУфа,880\nПермь,760\nВоронеж,700\nВолгоград,640\nОмск,600\nТюмень,580"
+    task: comparison
+    best: [bar_horizontal]
+    ok: [bar]
+  - name: text_only
+    csv: "Сотрудник;Отзыв\nИванов;Хорошо организован процесс адаптации новых сотрудников\nПетров;Не хватает документации по внутренним системам\nСидорова;Удобный график и понятные цели квартала"
+    task: reference
+    best: [table]
+    ok: []

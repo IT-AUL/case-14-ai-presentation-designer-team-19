@@ -1,4 +1,4 @@
-"""Превью слайдов, монтаж и HTML-бандл из готового PDF (contract D5/D6)."""
+"""Превью и монтаж из PDF, объектный HTML-бандл из PPTX (handoff D5/D6)."""
 
 from __future__ import annotations
 
@@ -59,7 +59,7 @@ def test_montage_of_nothing_is_a_typed_error():
     assert err.value.code == "invalid_input"
 
 
-def test_html_bundle_has_markup_captions_and_slide_images(tmp_path):
+def test_html_bundle_has_positioned_text_without_slide_images(tmp_path):
     pngs = previews.pdf_page_pngs(_pdf(tmp_path, 2), width_px=200)
     data = previews.html_bundle_zip(
         _deck(tmp_path, ["Первый <слайд>", "Второй"]),
@@ -68,9 +68,9 @@ def test_html_bundle_has_markup_captions_and_slide_images(tmp_path):
         slide_titles=["Заголовок 1", None],
     )
     with zipfile.ZipFile(io.BytesIO(data)) as zf:
-        assert sorted(zf.namelist()) == ["index.html", "slide-1.png", "slide-2.png"]
+        assert all(n == "index.html" or n.startswith("assets/") for n in zf.namelist())
         html = zf.read("index.html").decode()
     assert '<html lang="ru">' in html and "<h1>Тест &amp; ко</h1>" in html
     assert "Слайд 1 — Заголовок 1" in html and "Слайд 2</h2>" in html
     assert "Первый &lt;слайд&gt;" in html, "text is markup, escaped"
-    assert 'src="slide-1.png"' in html
+    assert "<img" not in html and 'class="text-frame"' in html

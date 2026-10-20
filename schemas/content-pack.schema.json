@@ -79,6 +79,33 @@
           "source_ref": { "$ref": "#/$defs/source_ref" }
         }
       }
+    },
+    "external_sources": {
+      "type": "array",
+      "description": "ADR-030: sources of content added by research (web) or by the model; SourceRef.artifact_id of added blocks points at an id here",
+      "items": {
+        "type": "object",
+        "required": ["id", "origin"],
+        "properties": {
+          "id": { "type": "string" },
+          "origin": { "type": "string", "enum": ["web", "model"] },
+          "url": { "type": "string" },
+          "title": { "type": "string" },
+          "publisher": { "type": "string" },
+          "retrieved_at": { "type": "string" },
+          "query": { "type": "string" }
+        }
+      }
+    },
+    "datasets": {
+      "type": "array",
+      "description": "ADR-033: tabular data (CSV, XLSX, tabular JSON, tables in text); item shape: dataset.schema.json#/$defs/dataset",
+      "items": { "type": "object", "required": ["id", "title", "columns", "row_count", "source_ref"] }
+    },
+    "insights": {
+      "type": "array",
+      "description": "ADR-033 §5: insights computed from datasets; item shape: dataset.schema.json#/$defs/insight",
+      "items": { "type": "object", "required": ["id", "dataset_id", "fact", "strength"] }
     }
   },
   "$defs": {

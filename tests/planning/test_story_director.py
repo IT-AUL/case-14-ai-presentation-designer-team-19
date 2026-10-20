@@ -128,7 +128,8 @@ class TestPlanStructure:
             unit.kind is Kind.subtitle and unit.text == "product"
             for unit in title.content_units
         )
-        assert title.key_message == "product"
+        assert title.key_message == "Тестовая колода"
+        assert plan.brief.purpose == "product"  # Internal metadata remains available.
 
 
 class TestLimits:
@@ -265,7 +266,13 @@ class TestLeadIntroSectionNeverStealsATitle:
             warnings=[],
         )
         plan = plan_deck(pack, Brief(**_brief(target=4)), config=CFG)
-        assert len(plan.slides) == 4  # не падает, не пустой список
+        # не падает и не теряет абзац; одного предложения хватает на
+        # обложку + слайд + финал — колода честно короче (ADR-030)
+        assert len(plan.slides) == plan.brief.target_slide_count == 3
+        assert any(
+            u.text == "Единственный абзац во всём документе."
+            for s in plan.slides for u in s.content_units
+        )
 
 
 class TestSparseContentPadding:
@@ -400,8 +407,10 @@ class TestSparseContentPadding:
         biggest = max(len(t) for t in para_units)
         assert biggest <= len(para) // 2, biggest
 
-    def test_extreme_deficit_still_no_empty(self):
-        """Патологический ratio: даже generic-паддинг несёт title-юнит."""
+    def test_extreme_deficit_shortens_instead_of_padding(self):
+        """ADR-030: при патологическом ratio колода честно короче запроса —
+        без generic-слайдов «Раздел» и повторов, бриф плана отражает
+        фактическое число слайдов."""
         pack = ContentPack(
             schema_version="1.0",
             id="pack-tiny",
@@ -425,15 +434,23 @@ class TestSparseContentPadding:
             warnings=[],
         )
         plan = plan_deck(pack, Brief(**_brief(15)), config=CFG)
-        assert len(plan.slides) == 15
-        assert all(s.content_units for s in plan.slides)
-        assert all(s.evidence_ids for s in plan.slides)
-        # recap-слайд присутствует как структурный добор
-        assert any(s.title_intent.startswith("Итоги:") for s in plan.slides)
+        assert len(plan.slides) == plan.brief.target_slide_count < 15
+        assert not any(s.title_intent.startswith("Раздел") for s in plan.slides)
+        assert not any(s.title_intent.startswith("Итоги:") for s in plan.slides)
+        body = [
+            u.text
+            for s in plan.slides
+            if s.purpose not in {Purpose.title, Purpose.thank_you, Purpose.cta}
+            for u in s.content_units
+            if u.kind != Kind.title
+        ]
+        assert body == ["Коротко."]
 
 
 class TestEmptyContent:
-    def test_empty_pack_still_plans(self):
+    def test_empty_pack_is_a_typed_error(self):
+        """ADR-030: из пустого пака без модели честно нечего строить —
+        typed invalid_input вместо колоды из заглушек."""
         pack = ContentPack(
             schema_version="1.0",
             id="pack-empty",
@@ -443,9 +460,9 @@ class TestEmptyContent:
             assets=[],
             warnings=[],
         )
-        plan = plan_deck(pack, Brief(**_brief(3)), config=CFG)
-        assert len(plan.slides) == 3
-        validate(instance=json.loads(plan.model_dump_json(exclude_none=True)), schema=SCHEMA)
+        with pytest.raises(DeckDNAError) as exc:
+            plan_deck(pack, Brief(**_brief(3)), config=CFG)
+        assert exc.value.code == "invalid_input"
 
 
 class TestConclusionTitles:
@@ -507,10 +524,13 @@ class TestConclusionTitles:
         assert bodies == ["Вторая мысль остаётся в теле слайда."]
         assert "Раздел: Тема 0" in (slide.speaker_note or "")
 
-    def test_whole_paragraph_moves_into_the_title_without_leaving_an_empty_unit(self):
+    def test_single_sentence_stays_in_the_body_not_the_title(self):
+        """ADR-030: абзац из одного предложения целиком в заголовок не
+        уходит — иначе на слайде остался бы один заголовок (заглушка)."""
         plan = self._plan("balanced")
-        slide = next(s for s in plan.slides if s.title_intent.startswith("Ручная адаптация"))
-        assert not [u for u in slide.content_units if u.kind.value == "paragraph"]
+        slide = next(s for s in plan.slides if s.title_intent == "Тема 3")
+        bodies = [u.text for u in slide.content_units if u.kind.value == "paragraph"]
+        assert bodies == ["Ручная адаптация контента под фирменный шаблон — узкое место."]
 
     def test_unsuitable_sentences_keep_the_section_heading(self):
         plan = self._plan("balanced")

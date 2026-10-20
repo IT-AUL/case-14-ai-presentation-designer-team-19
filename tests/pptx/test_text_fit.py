@@ -21,6 +21,15 @@ LONG = (
 )
 
 
+@pytest.mark.parametrize("prefix", ["Предположение:", "Assumption:"])
+def test_rewrite_cannot_remove_the_assumption_disclosure(prefix):
+    source = [f"{prefix} Сервис обеспечивает шифрование и многоуровневую защиту."]
+    removed = text_fit.FitText(paragraphs=["Сервис защищает данные"])
+    assert text_fit.validate(source, removed, 100) is not None
+    kept = text_fit.FitText(paragraphs=[f"{prefix} Защита данных"])
+    assert text_fit.validate(source, kept, 100) is None
+
+
 class FakeGateway:
     """Отвечает заданной функцией от payload; считает вызовы."""
 

@@ -12,6 +12,8 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from pydantic import BaseModel
+
 from deckdna.contracts.deck_plan import (
     ContentUnit,
     DeckPlan,
@@ -63,12 +65,69 @@ def image_generation_config(cfg: GenerationConfig | None = None) -> dict:
                 purposes.append(Purpose(p))
             except ValueError:
                 continue
+    strategies = []
+    for name in section.get("strategies") or ["visual"]:
+        try:
+            strategies.append(Strategy(name))
+        except ValueError:
+            continue
     return {
         "enabled": bool(section.get("enabled", _DEFAULT_ENABLED)),
         "max_per_deck": int(section.get("max_per_deck", _DEFAULT_MAX_PER_DECK)),
         "style_suffix": str(section.get("style_suffix", _DEFAULT_STYLE_SUFFIX)),
         "purposes": purposes,
+        "strategies": strategies,
+        "size": str(section.get("size", "1536x1024")),
+        "max_text_units": int(section.get("max_text_units", 4)),
     }
+
+
+SCENE_PROMPT = "image_scene"
+
+
+class SceneItem(BaseModel):
+    i: int
+    scene: str
+
+
+class ImageScenes(BaseModel):
+    scenes: list[SceneItem]
+
+
+def _can_describe(gateway: object) -> bool:
+    if not hasattr(gateway, "text_json"):
+        return False
+    fixtures = getattr(gateway, "fixtures", None)
+    return fixtures is None or SCENE_PROMPT in fixtures
+
+
+async def _scene_prompts(
+    gateway: ModelGateway, candidates: list[tuple[SlidePlan, str]], style_suffix: str,
+) -> list[str]:
+    """Один вызов текстовой модели на колоду: слайд → конкретная сцена на
+    английском. Маленькие T2I-модели рисуют абстрактные русские заголовки
+    пустым листом; при любой ошибке остаётся детерминированный промпт."""
+    prompts = [prompt for _, prompt in candidates]
+    if not _can_describe(gateway):
+        return prompts
+    payload = {"slides": [
+        {
+            "i": k,
+            "title": slide.title_intent,
+            "points": [u.text for u in slide.content_units if u.text][:4],
+        }
+        for k, (slide, _) in enumerate(candidates)
+    ]}
+    try:
+        answer = await gateway.text_json(SCENE_PROMPT, payload, ImageScenes)  # type: ignore[attr-defined]
+    except Exception as exc:  # noqa: BLE001 — без сцены остаётся исходный промпт
+        logger.warning("image_scene failed (%s); deterministic prompts kept", exc)
+        return prompts
+    for item in answer.scenes:
+        scene = item.scene.strip().rstrip(".")
+        if 0 <= item.i < len(prompts) and len(scene.split()) >= 4:
+            prompts[item.i] = f"{scene}. {style_suffix}"
+    return prompts
 
 
 def build_prompt(slide: SlidePlan, style_suffix: str) -> str:
@@ -95,7 +154,7 @@ def select_candidates(
     reproducible test fixtures awkward.
     """
     cfg = config if config is not None else image_generation_config()
-    if strategy != Strategy.visual or not cfg["enabled"]:
+    if strategy not in cfg.get("strategies", [Strategy.visual]) or not cfg["enabled"]:
         return []
     purposes = set(cfg["purposes"])
     max_per_deck = cfg["max_per_deck"]
@@ -107,12 +166,36 @@ def select_candidates(
             continue
         if slide.desired_visual not in (None, DesiredVisual.none):
             continue
+        # картинке нужно место: плотный слайд с 6 карточками её не вместит
+        text_units = sum(
+            1 for u in slide.content_units if u.text and u.kind != Kind.title
+        )
+        if text_units > cfg.get("max_text_units", 4):
+            continue
         candidates.append((slide, build_prompt(slide, cfg["style_suffix"])))
     return candidates
 
 
+def can_generate(gateway: object) -> bool:
+    """Есть ли у шлюза настоящая модель картинок. Mock — только с явной
+    фикстурой (иначе тесты получали бы непрошеные вызовы); OpenAI-совместимый
+    провайдер — только с моделью картинок или делегатом (DECKDNA_IMAGE_*)."""
+    if gateway is None or not hasattr(gateway, "image_generate"):
+        return False
+    if getattr(gateway, "provider_name", None) == "mock":
+        return "image_generate" in (getattr(gateway, "fixtures", None) or {})
+    if hasattr(gateway, "_image_delegate") or hasattr(gateway, "_model_image"):
+        delegate = getattr(gateway, "_image_delegate", None)
+        return bool(delegate or getattr(gateway, "_model_image", ""))
+    return True
+
+
 async def _generate_one(
-    gateway: ModelGateway, slide: SlidePlan, prompt: str, sem: asyncio.Semaphore
+    gateway: ModelGateway,
+    slide: SlidePlan,
+    prompt: str,
+    sem: asyncio.Semaphore,
+    size: str = "1024x1024",
 ) -> bytes | None:
     """One image_generate call. ``None`` (not an exception) is the honest
     "this slide gets no generated image" signal -- a provider failure, a
@@ -120,16 +203,40 @@ async def _generate_one(
     the same way callers treat every other ADR-016/017 model call: the
     slide simply keeps what it already had, never blocks the variant."""
     async with sem:
-        try:
-            data = await gateway.image_generate(prompt)
-        except Exception as exc:  # noqa: BLE001 — provider failure = honest per-slide skip
+        for attempt in range(2):
+            try:
+                data = await gateway.image_generate(prompt, size=size)
+            except Exception as exc:  # noqa: BLE001 — provider failure = honest per-slide skip
+                logger.warning(
+                    "image_generate failed for slide %d (%s); slide left without a generated image",
+                    slide.index,
+                    exc,
+                )
+                return None
+            if not data or not is_blank_image(data):
+                return data or None
+            # пустой холст (модель буквально исполнила «минимализм») в
+            # слайд не ставим: один повтор с явным требованием сюжета
             logger.warning(
-                "image_generate failed for slide %d (%s); slide left without a generated image",
-                slide.index,
-                exc,
+                "blank generated image for slide %d (attempt %d)", slide.index, attempt + 1
             )
-            return None
-    return data or None
+            prompt = f"{prompt}, one clear detailed subject in the center, saturated colors"
+    return None
+
+
+def is_blank_image(data: bytes, min_stddev: float = 6.0) -> bool:
+    """Почти однотонное изображение (белый/серый лист) — инвариант
+    качества, не эвристика под модель: такой кадр не несёт смысла."""
+    try:
+        from io import BytesIO
+
+        from PIL import Image, ImageStat
+
+        with Image.open(BytesIO(data)) as im:
+            gray = im.convert("L").resize((64, 64))
+            return ImageStat.Stat(gray).stddev[0] < min_stddev
+    except Exception:  # noqa: BLE001 — нераспознанные байты проверит вставка
+        return False
 
 
 async def generate_images(
@@ -137,6 +244,7 @@ async def generate_images(
     gateway: ModelGateway,
     strategy: Strategy,
     config: dict | None = None,
+    palette: list[str] | None = None,
 ) -> tuple[DeckPlan, dict[str, bytes]]:
     """Generate images for the deterministically-selected candidate
     slides (see :func:`select_candidates`) and fold them into a NEW
@@ -158,12 +266,20 @@ async def generate_images(
     ready for ``generate_deck(..., generated_images=...)``. A slide whose
     call failed keeps its plan entry byte-identical to the input.
     """
-    candidates = select_candidates(plan, strategy, config)
-    if not candidates or not hasattr(gateway, "image_generate"):
+    cfg = config if config is not None else image_generation_config()
+    candidates = select_candidates(plan, strategy, cfg)
+    if not candidates or not can_generate(gateway):
         return plan, {}
+    # иллюстрации в цветах шаблона, а не в случайной палитре модели
+    colors = ", ".join(c if c.startswith("#") else f"#{c}" for c in (palette or [])[:5])
+    tone = f", color palette limited to {colors} and white" if colors else ""
+    prompts = await _scene_prompts(gateway, candidates, cfg["style_suffix"])
     sem = asyncio.Semaphore(MAX_CONCURRENT_IMAGE_CALLS)
     results = await asyncio.gather(
-        *(_generate_one(gateway, slide, prompt, sem) for slide, prompt in candidates)
+        *(
+            _generate_one(gateway, slide, prompt + tone, sem, cfg.get("size", "1024x1024"))
+            for (slide, _), prompt in zip(candidates, prompts, strict=True)
+        )
     )
     generated: dict[str, bytes] = {}
     updated_by_id: dict[str, SlidePlan] = {}

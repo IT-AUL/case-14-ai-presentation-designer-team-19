@@ -9,14 +9,42 @@ export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant
   size?: Size
   block?: boolean
+  pending?: boolean
 }
 
-export function Button({ variant = 'secondary', size = 'md', block, className, type = 'button', ...rest }: ButtonProps) {
+export function Button({
+  variant = 'secondary',
+  size = 'md',
+  block,
+  pending = false,
+  disabled,
+  className,
+  type = 'button',
+  children,
+  ...rest
+}: ButtonProps) {
   return (
     <button
       type={type}
-      className={clsx(styles.button, styles[variant], styles[size], block && styles.block, className)}
+      disabled={disabled || pending}
+      aria-busy={pending || undefined}
+      data-pending={pending || undefined}
+      className={clsx(
+        styles.button,
+        styles[variant],
+        styles[size],
+        block && styles.block,
+        pending && styles.pending,
+        className,
+      )}
       {...rest}
-    />
+    >
+      {pending && <span aria-hidden="true" className={styles.spinner} />}
+      <span className={styles.label}>{children}</span>
+    </button>
   )
+}
+
+export function LinkButton({ variant = 'secondary', size = 'sm', className, ...rest }: ButtonProps) {
+  return <Button variant={variant} size={size} className={clsx(styles.linkButton, className)} {...rest} />
 }

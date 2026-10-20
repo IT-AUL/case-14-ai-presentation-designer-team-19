@@ -2,6 +2,7 @@ import { defineConfig, devices } from '@playwright/test'
 
 const PORT = Number(process.env.E2E_LIVE_PORT ?? 4318)
 const BACKEND_URL = process.env.BACKEND_URL ?? 'http://localhost:8000'
+const chromiumPath = process.env.PW_CHROMIUM_PATH
 
 export default defineConfig({
   testDir: './e2e-live',
@@ -18,7 +19,12 @@ export default defineConfig({
     viewport: { width: 1440, height: 900 },
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } }],
+  projects: [
+    {
+      name: 'chromium',
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 }, ...(chromiumPath ? { launchOptions: { executablePath: chromiumPath } } : {}) },
+    },
+  ],
   webServer: {
     command: `npx vite build --outDir dist-live --emptyOutDir && npx vite preview --outDir dist-live --host 127.0.0.1 --port ${PORT} --strictPort`,
     url: `http://127.0.0.1:${PORT}`,

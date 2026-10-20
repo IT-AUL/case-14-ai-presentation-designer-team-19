@@ -1,4 +1,4 @@
-"""Метрики паспорта, добавленные по contract D3 (deckdna.evaluation.measures)."""
+"""Метрики паспорта, добавленные по handoff D3 (deckdna.evaluation.measures)."""
 
 from __future__ import annotations
 
@@ -100,3 +100,18 @@ class TestUsage:
         p._record_usage("t", {"usage": {"prompt_tokens": 7, "completion_tokens": 3}})
         p._record_usage("t", {})  # без блока usage вызов всё равно считается
         assert p.usage_report() == {"t": {"calls": 2, "input_tokens": 7, "output_tokens": 3}}
+
+
+def test_merge_usage_adds_shared_preparation_and_own_variant_without_mutation():
+    preparation = {'total_tokens': 12, 'model_calls': 1, 'per_model': [
+        {'model_id': 'm', 'calls': 1, 'input_tokens': 5, 'output_tokens': 7}]}
+    variant = {'total_tokens': 28, 'model_calls': 2, 'per_model': [
+        {'model_id': 'm', 'calls': 1, 'input_tokens': 10, 'output_tokens': 3},
+        {'model_id': 'v', 'calls': 1, 'input_tokens': 11, 'output_tokens': 4}]}
+    merged = measures.merge_usage(preparation, variant)
+    assert merged == {'total_tokens': 40, 'model_calls': 3, 'per_model': [
+        {'model_id': 'm', 'calls': 2, 'input_tokens': 15, 'output_tokens': 10},
+        {'model_id': 'v', 'calls': 1, 'input_tokens': 11, 'output_tokens': 4}]}
+    assert preparation['per_model'][0]['calls'] == 1
+    assert measures.merge_usage({}, {}) == {
+        'total_tokens': 0, 'model_calls': 0, 'per_model': []}

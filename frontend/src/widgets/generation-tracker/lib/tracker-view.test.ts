@@ -90,7 +90,7 @@ describe('failure description', () => {
       error: null,
       job: undefined,
     })
-    expect(failure).toEqual({ code: 'llm_timeout', message: 'Модель не вернула план в срок', stage: 'План структуры', retryable: null })
+    expect(failure).toEqual({ code: 'llm_timeout', message: 'Модель не вернула план в срок', stage: 'План структуры', retryable: null, technical: null })
     expect(failureMeta(failure)).toBe('LLM_TIMEOUT · этап: план структуры')
   })
 
@@ -102,7 +102,17 @@ describe('failure description', () => {
 
   it('falls back to a neutral message', () => {
     expect(describeFailure({ jobError: null, error: null, job: undefined }).message).toBe('Сервис сообщил об ошибке без подробностей.')
-    expect(failureMeta({ code: null, message: '', stage: null, retryable: null })).toBeNull()
+    expect(failureMeta({ code: null, message: '', stage: null, retryable: null, technical: null })).toBeNull()
+  })
+
+  it('hides raw exceptions behind a plain message', () => {
+    const failure = describeFailure({ jobError: { code: 'internal_error', message: "AttributeError: 'NoneType' object has no attribute 'text'", stage: 'composing.deck' }, error: null, job: undefined })
+    expect(failure.message).toMatch(/^Не получилось собрать колоду/)
+    expect(failure.technical).toContain('AttributeError')
+
+    const providerFail = describeFailure({ jobError: { code: 'provider_unavailable', message: 'provider HTTP 500', stage: 'providers' }, error: null, job: undefined })
+    expect(providerFail.message).toContain('Черновики слайдов сохранены')
+    expect(providerFail.technical).toBe('provider HTTP 500')
   })
 
   it('recognises a lost tracking id', () => {

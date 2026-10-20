@@ -1,9 +1,36 @@
+export {
+  cancelVariantChange,
+  fetchVariantChanges,
+  regenerateVariantSlide,
+  submitVariantChange,
+  useVariantChanges,
+} from './api/changesApi'
 export { useVariant, useVariants, useVariantSlides, variantKeys } from './api/variantApi'
 export { resolveDeckFiles, slidePreviewUrl } from './lib/artifacts'
 export type { DeckFile, DeckFileFormat, DeckFiles } from './lib/artifacts'
 export { AUDIT_STATUS_LABEL, PEI_MAX, variantMetrics } from './lib/metrics'
 export { telltaleSlides } from './lib/slides'
 export type { VariantMetricsView } from './lib/metrics'
+export {
+  hasPendingVariantChanges,
+  isSlideChangeActive,
+  isSlideChangeCanceled,
+  latestSlideChange,
+  normalizeSlideChangeItem,
+  normalizeVariantChangesSnapshot,
+  slideChangeErrorMessage,
+  slideChangeNote,
+} from './model/changes'
+export type {
+  SlideChangeAction,
+  SlideChangeChartType,
+  SlideChangeErrorObject,
+  SlideChangeItem,
+  SlideChangeRequest,
+  SlideChangeResult,
+  SlideChangeState,
+  VariantChangesSnapshot,
+} from './model/changes'
 export { isVariantSettled } from './model/status'
 export {
   DEFAULT_STRATEGY,
@@ -29,3 +56,4 @@ export type {
   VariantStrategy,
   VariantSummary,
 } from './model/types'
+

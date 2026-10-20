@@ -1,7 +1,8 @@
 .summary {
   display: flex;
   flex: none;
-  gap: 14px;
+  flex-wrap: wrap;
+  gap: 10px 14px;
   min-width: 0;
   align-items: center;
   padding: 10px 16px;
@@ -74,48 +75,29 @@
   font-size: 12px;
 }
 
-.severities {
-  flex: none;
-  flex-direction: row;
-  gap: 4px;
-}
-
-.tile {
-  --tone: var(--error);
-  --tone-bg: var(--error-bg);
-  display: flex;
-  flex-direction: column;
+.calmSummary {
   gap: 2px;
-  min-width: 44px;
-  padding: 4px 7px;
-  border-radius: var(--radius-md);
-  background: var(--tone-bg);
-  color: var(--tone);
 }
 
-.tile[data-severity='blocker'] {
-  --tone: var(--blocker);
-  --tone-bg: var(--blocker-bg);
-}
-
-.tile[data-severity='warning'] {
-  --tone: var(--warn);
-  --tone-bg: var(--warn-bg);
-}
-
-.tile[data-severity='info'] {
-  --tone: var(--info);
-  --tone-bg: var(--info-bg);
-}
-
-.tileValue {
-  font-size: 18px;
+.calmHeadline {
+  color: var(--ink);
+  font-size: 14px;
   font-weight: 500;
-  line-height: 1.1;
+  white-space: nowrap;
 }
 
-.tileLabel {
-  font-size: 11px;
+.calmNumber {
+  font-weight: 600;
+}
+
+.calmNumber[data-alert='true'] {
+  color: var(--blocker);
+}
+
+.calmSub {
+  color: var(--ink-3);
+  font-size: 12px;
+  white-space: nowrap;
 }
 
 .checks {
@@ -156,10 +138,24 @@
   margin-left: auto;
 }
 
+.actionGroup {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+}
+
+.downloadsWrap {
+  display: inline-flex;
+  align-items: center;
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+}
+
 .reason {
-  margin: 0 4px 0 -2px;
   color: var(--ink-3);
-  font-size: 12px;
+  font-size: 10px;
+  line-height: 1;
   white-space: nowrap;
 }
 
@@ -169,10 +165,10 @@
   flex: none;
   gap: 6px;
   align-items: center;
-  height: 36px;
-  padding: 0 12px;
+  height: 32px;
+  padding: 0 10px;
   border-radius: var(--radius-md);
-  font-size: 13px;
+  font-size: 12px;
   white-space: nowrap;
 }
 
@@ -185,32 +181,6 @@
 .action:disabled {
   opacity: 0.6;
   cursor: not-allowed;
-}
-
-@media (max-width: 1439px) {
-  .summary {
-    gap: 12px;
-    padding: 10px 14px;
-  }
-
-  .bordered {
-    padding-left: 12px;
-  }
-
-  .action {
-    justify-content: center;
-    width: 36px;
-    padding: 0;
-  }
-
-  .actionLabel {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
 }
 
 .primary {
@@ -291,4 +261,10 @@
 
 .spin {
   animation: global(dd-spin) 1s linear infinite;
+}
+
+.trailing {
+  display: flex;
+  align-items: center;
+  margin-left: auto;
 }

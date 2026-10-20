@@ -35,6 +35,8 @@ from xml.sax.saxutils import escape
 
 from lxml import etree
 
+from deckdna.pptx.composing.artwork import covers_canvas
+
 A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 P = "http://schemas.openxmlformats.org/presentationml/2006/main"
 R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
@@ -450,12 +452,16 @@ def _extract_tokens(
     palette: dict[str, str],
     sw: int,
     sh: int,
+    declared_scale: list[float] | None = None,
 ) -> dict:
     """Дизайн-токены с ИСХОДНОГО слайда (до удаления контента)."""
+    from deckdna.pptx.composing.font_scale import effective_font_scale, snap_font_pt
+
     area = sw * sh
     title_fonts: Counter = Counter()
     body_fonts: Counter = Counter()
     sizes: Counter = Counter()
+    all_slide_sizes: list[float] = []
     body_runs: list[tuple[etree._Element | None, str]] = []
     for el, _ in shapes:
         runs = _runs(el)
@@ -463,13 +469,18 @@ def _extract_tokens(
             for rpr, txt in runs:
                 if (f := _latin(rpr)) is not None:
                     title_fonts[f] += len(txt)
+                if (s := _sz(rpr)) is not None:
+                    all_slide_sizes.append(s)
             continue
         for rpr, txt in runs:
             if (f := _latin(rpr)) is not None:
                 body_fonts[f] += len(txt)
             if (s := _sz(rpr)) is not None:
                 sizes[s] += len(txt)
+                all_slide_sizes.append(s)
             body_runs.append((rpr, txt))
+
+    font_scale = effective_font_scale(declared=declared_scale, observed=all_slide_sizes)
 
     # «тело» — самый частый кегль (по числу символов); крупнее или bold — заголовки
     body_sz = _mode(sizes)
@@ -540,13 +551,18 @@ def _extract_tokens(
     rounded = bool(corners) and corners[True] >= corners[False]
     radius = sorted(radii)[len(radii) // 2] if radii else 0.015 * min(sw, sh)
 
-    body_pt = min(18.0, max(12.0, body_sz)) if body_sz else 14.0
-    heading_pt = min(24.0, max(14.0, _round_half(body_pt * 1.3)))
+    raw_body_pt = min(18.0, max(12.0, body_sz)) if body_sz else 14.0
+    body_pt = snap_font_pt(raw_body_pt, font_scale, mode="nearest", min_pt=12.0, max_pt=18.0)
+    raw_head_pt = min(24.0, max(14.0, _round_half(body_pt * 1.3)))
+    heading_pt = snap_font_pt(
+        raw_head_pt, font_scale, mode="nearest", min_pt=max(14.0, body_pt), max_pt=24.0
+    )
     return {
         "title_font": _mode(title_fonts),
         "body_font": _mode(body_fonts),
         "body_size_pt": body_pt,
         "heading_size_pt": heading_pt,
+        "font_scale": font_scale,
         "text_color": text_color,
         "heading_color": heading_color,
         "accent": accent,
@@ -697,7 +713,12 @@ def slide_frame(
             continue
         frac = b.area / area
         texty = bool(_text(el))
-        if frac >= _BG_AREA and not texty:
+        raster = next(el.iter(f"{{{P}}}pic"), None) is not None
+        if (
+            frac >= _BG_AREA
+            and not texty
+            and (not raster or covers_canvas(b.x, b.y, b.w, b.h, sw, sh))
+        ):
             keep.add(id(el))
         elif (
             frac >= _PANEL_AREA
@@ -732,8 +753,13 @@ def slide_frame(
             background = _color_of(el.find(f"{{{P}}}spPr")) or background
     background = background or _bg_of(root) or _bg_of(layout) or _bg_of(master)
 
+    from deckdna.pptx.composing.font_scale import snap_font_pt, xml_declared_font_scale
+
     removed = [(el, b) for el, b in shapes if id(el) not in keep]
-    tokens = _extract_tokens(shapes, title_el, removed, background, palette, sw, sh)
+    declared_scale = xml_declared_font_scale(layout_xml, master_xml)
+    tokens = _extract_tokens(
+        shapes, title_el, removed, background, palette, sw, sh, declared_scale=declared_scale
+    )
     tokens["title_size_pt"] = _title_size(title_el, layout)
     for el, _ in removed:
         tree.remove(el)
@@ -745,8 +771,19 @@ def slide_frame(
     if title_box is None:
         title_box = Box(int(0.05 * sw), int(0.05 * sh), int(0.9 * sw), int(0.15 * sh))
     if tokens["title_size_pt"] is None:
-        # кегль не задан нигде в доступных частях: оценка по высоте рамки (2 строки)
-        tokens["title_size_pt"] = max(20.0, min(40.0, title_box.h / EMU_PER_PT / 2.6))
+        # кегль не задан нигде в доступных частях: оценка по высоте рамки со снапом к шкале
+        raw_title = max(20.0, min(40.0, title_box.h / EMU_PER_PT / 2.6))
+        tokens["title_size_pt"] = snap_font_pt(
+            raw_title, tokens.get("font_scale"), mode="nearest", min_pt=20.0, max_pt=40.0
+        )
+    elif tokens["title_size_pt"] < 36.0:
+        tokens["title_size_pt"] = snap_font_pt(
+            tokens["title_size_pt"],
+            tokens.get("font_scale"),
+            mode="nearest",
+            min_pt=18.0,
+            max_pt=40.0,
+        )
     tokens["title_shape_id"] = _shape_id(title_el)
     tokens["title_box"] = [title_box.x, title_box.y, title_box.w, title_box.h]
 
@@ -794,8 +831,13 @@ def _add_title_box(
     tree: etree._Element, root: etree._Element, tokens: dict, sw: int, sh: int
 ) -> tuple[etree._Element, Box]:
     """Заголовка на эталоне нет — добавить текстовую рамку в токенах шаблона."""
+    from deckdna.pptx.composing.font_scale import snap_font_pt
+
     box = Box(int(0.05 * sw), int(0.05 * sh), int(0.9 * sw), int(0.14 * sh))
-    size = tokens.get("title_size_pt") or min(40.0, tokens["heading_size_pt"] * 1.6)
+    raw_size = tokens.get("title_size_pt") or min(40.0, tokens["heading_size_pt"] * 1.6)
+    size = snap_font_pt(
+        raw_size, tokens.get("font_scale"), mode="nearest", min_pt=20.0, max_pt=40.0
+    )
     tokens["title_size_pt"] = size
     run = (" ", size, True, tokens["heading_color"], tokens.get("title_font"))
     el = _sp(_max_id(root) + 1, "Title", box, None, None, [_Par([run])], text_box=True, anchor="b")
@@ -1026,12 +1068,37 @@ def _set_title(el: etree._Element, title: str, tokens: dict) -> None:
         bold = rpr.get("b") == "1"
         new = size
         floor = max(14.0, 0.55 * size)
-        while new > floor:
-            n, ok = _lines(title, new, width, bold)
-            if ok and n * new * _LINE_FACTOR * ln * EMU_PER_PT <= height * _FIT_SLACK:
-                break
-            new -= 1
-        if new < size:
+        f_scale = tokens.get("font_scale")
+        if f_scale:
+            from deckdna.pptx.composing.font_scale import (
+                in_font_scale,
+                scale_candidates,
+                snap_font_pt,
+            )
+
+            cands = list(
+                reversed(scale_candidates(f_scale, floor, size, include_tolerance_steps=False))
+            )
+            floor_snap = snap_font_pt(floor, f_scale, mode="up", min_pt=14.0, max_pt=size)
+            if floor_snap not in cands:
+                cands.append(floor_snap)
+            if not cands:
+                cands = [size]
+            new = cands[-1]
+            for cand in cands:
+                n, ok = _lines(title, cand, width, bold)
+                if ok and n * cand * _LINE_FACTOR * ln * EMU_PER_PT <= height * _FIT_SLACK:
+                    new = cand
+                    break
+            if new < 36.0 and not in_font_scale(new, f_scale):
+                new = snap_font_pt(new, f_scale, mode="down", min_pt=14.0)
+        else:
+            while new > floor:
+                n, ok = _lines(title, new, width, bold)
+                if ok and n * new * _LINE_FACTOR * ln * EMU_PER_PT <= height * _FIT_SLACK:
+                    break
+                new -= 1
+        if new != size or (f_scale and rpr.get("sz") is not None and new < 36.0):
             rpr.set("sz", str(int(round(new * 100))))
     for i, line in enumerate(title.split("\n")):
         if i:
@@ -1047,17 +1114,19 @@ def _set_title(el: etree._Element, title: str, tokens: dict) -> None:
 def choose_archetype(items: list[dict], hint: str | None = None) -> str:
     """Архетип по форме контента.
 
-    kpi — ≥2 пунктов с числовым ``value`` (и не больше 4 пунктов);
+    kpi — ≥2 пунктов с числовым ``value`` (или ``hint="kpi"`` при ≥1, не больше 4);
     process — подсказка ``hint="process"`` или все заголовки-шаги («Шаг 1»,
     «Этап», «1.»); two_column — ровно 2 пункта; list — больше 6 пунктов
     или ни у одного нет заголовка; иначе cards."""
     n = len(items)
     numeric = sum(1 for it in items if it.get("value") and _NUM_RE.search(str(it["value"])))
-    if numeric >= 2 and n <= 4:
+    if (numeric >= 2 and n <= 4) or (hint == "kpi" and numeric >= 1 and 1 <= n <= 4):
         return "kpi"
     heads = [str(it.get("heading") or "") for it in items]
     if 2 <= n <= 6 and (hint == "process" or all(_STEP_RE.match(h) for h in heads)):
         return "process"
+    if hint == "cards" and 1 <= n <= 6:
+        return "cards"
     if n == 2:
         return "two_column"
     if n > 6 or not any(heads):
@@ -1122,7 +1191,7 @@ _REF_WIDTH = 12192000  # 13.33" — опорная ширина слайда д�
 
 
 def _sizes(tokens: dict, slide_w: int) -> list[tuple[float, float]]:
-    """Пары (body, heading) по убыванию с шагом 1pt до 11pt.
+    """Пары (body, heading) по убыванию до 11pt (со снапом к шкале шаблона).
 
     Старт — кегль тела шаблона; при избытке места текст может вырасти до
     ×1.25 (но не выше 18pt, приведённых к ширине слайда): редкий контент не
@@ -1131,6 +1200,24 @@ def _sizes(tokens: dict, slide_w: int) -> list[tuple[float, float]]:
     head = float(tokens.get("heading_size_pt") or _round_half(body * 1.3))
     ratio = head / body
     cap = 18.0 * slide_w / _REF_WIDTH
+    f_scale = tokens.get("font_scale")
+    if f_scale:
+        from deckdna.pptx.composing.font_scale import scale_candidates, snap_font_pt
+
+        top_b = max(body, _round_half(min(body * 1.25, cap)))
+        b_steps = list(
+            reversed(scale_candidates(f_scale, _MIN_BODY_PT, top_b, include_tolerance_steps=False))
+        )
+        floor_b = snap_font_pt(_MIN_BODY_PT, f_scale, mode="up", min_pt=_MIN_BODY_PT)
+        if floor_b not in b_steps:
+            b_steps.append(floor_b)
+        out_scaled: list[tuple[float, float]] = []
+        for b in b_steps:
+            raw_h = max(b + 1.0, _round_half(b * ratio))
+            h = snap_font_pt(raw_h, f_scale, mode="nearest", min_pt=b, max_pt=max(28.0, raw_h))
+            out_scaled.append((b, h))
+        if out_scaled:
+            return out_scaled
     out = []
     b = max(body, _round_half(min(body * 1.25, cap)))
     while b >= _MIN_BODY_PT - 1e-6:
@@ -1187,6 +1274,8 @@ def _grids(n: int, kpi: bool) -> list[tuple[int, int]]:
 
 
 def _plan_cards(ctx: _Ctx, items: list[dict], rows: int, cols: int, kpi: bool) -> dict:
+    from deckdna.pptx.composing.font_scale import snap_font_pt
+
     t, reg = ctx.tokens, ctx.region
     gx, gy = int(0.02 * ctx.sw), int(0.03 * ctx.sh)
     cw = (reg.w - (cols - 1) * gx) / cols
@@ -1195,10 +1284,12 @@ def _plan_cards(ctx: _Ctx, items: list[dict], rows: int, cols: int, kpi: bool) -
     pad = int(max(0.018 * ctx.sw, 1.1 * t["body_size_pt"] * EMU_PER_PT))
     pad = int(min(pad, 0.12 * cw, 0.2 * avail_h))
     with_value = kpi or any(it.get("value") for it in items)
+    f_scale = t.get("font_scale")
 
     def build(body: float, head: float):
         marker = 0 if kpi else int(0.28 * head * EMU_PER_PT) + int(0.9 * head * EMU_PER_PT)
-        vpt = _round_half(body * 2.6) if kpi else _round_half(head * 1.25)
+        raw_vpt = _round_half(body * 2.6) if kpi else _round_half(head * 1.25)
+        vpt = snap_font_pt(raw_vpt, f_scale, mode="nearest", min_pt=head) if f_scale else raw_vpt
         pars = [
             _item_pars(ctx, it, body, head, fill, value_pt=vpt if with_value else None)
             for it in items
@@ -1233,8 +1324,9 @@ def _compose_cards(ctx: _Ctx, items: list[dict], *, kpi: bool = False) -> bool:
     best = max(enumerate(plans), key=lambda ip: (ip[1]["fits"], ip[1]["body"], -ip[0]))[1]
     rows, cols, cw, avail_h = best["rows"], best["cols"], best["cw"], best["avail_h"]
     pad, marker, head, gx, gy = best["pad"], best["marker"], best["head"], best["gx"], best["gy"]
-    # высота карточек: по контенту с воздухом, но не «щелью» и не выше доступной
-    card_h = int(min(avail_h, max(best["need"] * 1.2, (0.5 if kpi else 0.6) * avail_h)))
+    # высота карточек: по контенту с воздухом, но без раздувания в гигантские пустые плашки
+    min_frac = 0.42 if kpi else (0.45 if rows == 1 else 0.55)
+    card_h = int(min(avail_h, max(best["need"] * 1.25, min_frac * avail_h)))
     block_h = rows * card_h + (rows - 1) * gy
     y0 = ctx.v_offset(block_h, 0.35 if kpi else 0.15)
     fill, geom = t["card_fill"], t.get("corner", "rect")
@@ -1287,6 +1379,8 @@ def _step_colors(ctx: _Ctx) -> tuple[dict, dict]:
 def _compose_process(ctx: _Ctx, items: list[dict]) -> bool:
     """Шаги в ряд (круг с номером, стрелка, текст под кругом); если в ряд не
     влезает — столбцом (круги слева, текст справа, стрелки вниз)."""
+    from deckdna.pptx.composing.font_scale import snap_font_pt
+
     reg = ctx.region
     n = len(items)
     gx = int(0.025 * ctx.sw)
@@ -1324,9 +1418,15 @@ def _compose_process(ctx: _Ctx, items: list[dict]) -> bool:
     if not row_ok and not col_ok:
         use_row = cw >= 0.2 * ctx.sw
     body, head, total, (pars, need), fits = row if use_row else col
+    f_scale = ctx.tokens.get("font_scale")
+    lbl_pt = (
+        snap_font_pt(_round_half(head * 1.1), f_scale, mode="nearest", min_pt=head)
+        if f_scale
+        else _round_half(head * 1.1)
+    )
 
     def label(i: int) -> list[_Par]:
-        run = (str(i + 1), _round_half(head * 1.1), True, num, ctx.display_font)
+        run = (str(i + 1), lbl_pt, True, num, ctx.display_font)
         return [_Par([run], algn="ctr")]
 
     if use_row:
@@ -1406,12 +1506,20 @@ def _compose_two_column(ctx: _Ctx, items: list[dict]) -> bool:
 
 
 def _compose_list(ctx: _Ctx, items: list[dict]) -> bool:
+    from deckdna.pptx.composing.font_scale import snap_font_pt
+
     reg = ctx.region
     width = int(min(reg.w, max(0.6 * ctx.sw, reg.w * 0.85)))
     hc, tc, accent = ctx.colors(None)
+    f_scale = ctx.tokens.get("font_scale")
 
     def build(body: float, head: float):
-        size = _round_half(body * 1.1)
+        raw_sz = _round_half(body * 1.1)
+        size = (
+            snap_font_pt(raw_sz, f_scale, mode="nearest", min_pt=_MIN_BODY_PT)
+            if f_scale
+            else raw_sz
+        )
         indent = int(1.1 * size * EMU_PER_PT)
         pars = []
         for it in items:
@@ -1420,7 +1528,14 @@ def _compose_list(ctx: _Ctx, items: list[dict]) -> bool:
             if it.get("value"):
                 runs.append((f"{it['value']} ", size, True, accent, ctx.display_font))
             if h:
-                runs.append((f"{h}: " if b else str(h), size, True, hc, ctx.font))
+                # разделитель «Термин: тело» уже в heading (native_plan
+                # сохраняет пунктуацию источника) — второй двоеточие не нужно
+                h_run = (
+                    (f"{h} " if str(h).rstrip().endswith((":", "—", "–")) else f"{h}: ")
+                    if b
+                    else str(h)
+                )
+                runs.append((h_run, size, True, hc, ctx.font))
             if b:
                 runs.append((str(b), size, False, tc, ctx.font))
             if runs:
@@ -1443,7 +1558,7 @@ def _compose_list(ctx: _Ctx, items: list[dict]) -> bool:
     return fits
 
 
-_LIMITS = {"cards": (1, 6), "process": (2, 6), "kpi": (2, 4), "two_column": (2, 2), "list": (1, 99)}
+_LIMITS = {"cards": (1, 6), "process": (2, 6), "kpi": (1, 4), "two_column": (2, 2), "list": (1, 99)}
 
 
 def compose(
@@ -1455,7 +1570,9 @@ def compose(
     items: list[dict],
     slide_w: int,
     slide_h: int,
-) -> bytes:
+    *,
+    allow_shorten: bool = True,
+) -> bytes | None:
     """Новая композиция в области *region* рамки *frame_xml*.
 
     *items* — ``[{"heading": str|None, "body": str|None, "value": str|None}]``.
@@ -1463,7 +1580,11 @@ def compose(
     list (1–7+). Если число пунктов не подходит архетипу — cards (1–6)
     или list. Если текст не влезает даже на 11pt — следующий, более ёмкий
     архетип, в конце — список с сокращёнными (…) текстами. Все фигуры
-    строго внутри *region*, id уникальны в слайде."""
+    строго внутри *region*, id уникальны в слайде.
+
+    *allow_shorten=False*: без права резать тексты многоточием — если ни
+    один архетип цепочки не вмещает пункты вербатим, возвращает None
+    (вызывающий выбирает эталонную заливку с уменьшением кегля)."""
     if archetype not in ARCHETYPES:
         raise ValueError(f"unknown archetype: {archetype}")
     items = [it for it in items if it.get("heading") or it.get("body") or it.get("value")]
@@ -1489,6 +1610,15 @@ def compose(
         "list": ["list"],
     }[archetype]
     chain = [a for a in chain if _LIMITS[a][0] <= n <= _LIMITS[a][1]] or ["list"]
+    # Короткий список без заголовков влезает и в карточки — а они дают
+    # пункту отдельную фигуру (редактируемость по пункту, как у эталонной
+    # сетки). list остаётся запасным вариантом, когда карточки не влезли.
+    if (
+        archetype == "list"
+        and not any(str(it.get("heading") or "") for it in items)
+        and _LIMITS["cards"][0] <= n <= _LIMITS["cards"][1]
+    ):
+        chain = ["cards", "list"]
     draw = {
         "cards": _compose_cards,
         "kpi": lambda c, its: _compose_cards(c, its, kpi=True),
@@ -1499,10 +1629,11 @@ def compose(
     # не влезает даже на 11pt — следующий, более ёмкий архетип; в конце —
     # список с сокращёнными текстами (многоточие), но не переполнение
     attempts = [(a, items) for a in chain]
-    keep = 0.75
-    while keep > 0.04:
-        attempts.append(("list", _shorten(items, keep)))
-        keep *= 0.8
+    if allow_shorten:
+        keep = 0.75
+        while keep > 0.04:
+            attempts.append(("list", _shorten(items, keep)))
+            keep *= 0.8
     for arch, its in attempts:
         ctx = _Ctx(tree, region, tokens, slide_w, slide_h, base_id)
         mark = len(tree)
@@ -1511,6 +1642,8 @@ def compose(
         for el in list(tree)[mark:]:
             tree.remove(el)
     else:
+        if not allow_shorten:
+            return None
         draw["list"](_Ctx(tree, region, tokens, slide_w, slide_h, base_id), attempts[-1][1])
     return _dump(root)
 

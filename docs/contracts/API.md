@@ -1,48 +1,47 @@
 # HTTP API
 
-Базовый путь `/api/v1`, JSON в UTF-8, загрузки — multipart, время — UTC.
-Авторитетная машиночитаемая схема — [`openapi.json`](openapi.json)
-(генерируется из кода) и интерактивный Swagger UI на `/docs` запущенного API.
+Базовый путь — `/api/v1`, формат тел — JSON в UTF-8, загрузка файлов — `multipart/form-data`,
+время — UTC. Полная спецификация OpenAPI 3.1 находится в [`openapi.json`](openapi.json)
+(генерируется напрямую из FastAPI-приложения) и доступна на `/docs` запущенного сервера.
 
 ## Соглашения
 
-- Длинные операции отвечают `202` + `job_id`; статус — `GET /jobs/{id}`,
-  события — `GET /jobs/{id}/events` (SSE-снапшот состояния).
-- Мутирующие запросы принимают `Idempotency-Key`; повтор с тем же телом
-  возвращает исходный ответ, с другим — `409 idempotency_conflict`.
-- Ответы несут `X-Request-ID`. Списки — курсорная пагинация
+- Длительные операции возвращают `202 Accepted` с `job_id`; статус опрашивается через
+  `GET /jobs/{id}`, а поток обновлений доступен по SSE `GET /jobs/{id}/events`.
+- Потоковый чат помощника (`POST /projects/{id}/agent/messages`) передаёт события
+  `message_start`, `delta`, `proposed_actions`, `message_end` по `text/event-stream`.
+- Мутирующие запросы поддерживают заголовок `Idempotency-Key`: повтор с тем же телом
+  возвращает сохранённый ответ, а с изменённым телом — `409 idempotency_conflict`.
+- Каждый ответ содержит `X-Request-ID`. Списки используют курсорную пагинацию
   (`next_cursor` → `cursor`, `limit` ≤ 200).
-- Ошибки — единый конверт `{error: {code, message, stage, retryable,
-  request_id, details}}`; `stage` указывает стадию пайплайна.
+- Ошибки возвращаются в едином формате `{error: {code, message, stage, retryable, request_id, details}}`.
 
-## Сквозной пример: от брифа до файла
+## Сквозной пример: от проекта до готового PPTX
 
-Скрипт ниже выполняется целиком — нужны `bash`, `curl`, `jq`, корень
-репозитория как рабочая директория и запущенный API
-(`docker compose up -d --build` → `127.0.0.1:8000`):
+Скрипт ниже выполняется целиком при запущенном стеке (`docker compose up -d --build`):
 
 ```bash
 set -euo pipefail
 API="http://127.0.0.1:8000/api/v1"
 
-# 1. Проект → 201 {"id": "prj_..."}
+# 1. Создание проекта → 201 {"id": "prj_..."}
 PJ=$(curl -fsS "$API/projects" -H 'Content-Type: application/json' \
   -d '{"name":"demo","target_slide_count":10}' | jq -r .id)
 
-# 2. Шаблон (multipart) → 201 {"id": "tpl_...", "validation_status": "valid"}
+# 2. Загрузка шаблона PPTX → 201 {"id": "tpl_...", "validation_status": "valid"}
 TPL=$(curl -fsS "$API/projects/$PJ/templates" \
   -F 'file=@tests/fixtures/pptx/synthetic_unseen.pptx' | jq -r .id)
 
-# 3. Анализ шаблона → 202 {"job_id","analysis_id"}, затем Design DNA
+# 3. Анализ шаблона и получение Design DNA
 curl -fsS -X POST "$API/templates/$TPL/analyze" \
-  -H 'Content-Type: application/json' -d '{}'
+  -H 'Content-Type: application/json' -d '{}' >/dev/null
 curl -fsS "$API/templates/$TPL/design-dna" | jq '.declared | keys'
 
-# 4. Контент-пак → 202 {"content_pack": {"id": "pack_..."}}; ингест идёт job'ом
+# 4. Загрузка материалов → 202 {"content_pack": {"id": "pack_..."}}
 PACK=$(curl -fsS "$API/projects/$PJ/content-packs" \
   -F 'files=@tests/fixtures/content/poc_article.md' | jq -r .content_pack.id)
 
-# 5. Генерация одного варианта → 202 {"generation_id","variant_ids"}
+# 5. Запуск генерации колоды → 202 {"generation_id", "variant_ids"}
 GEN=$(curl -fsS "$API/projects/$PJ/generations" -H 'Content-Type: application/json' -d "{
   \"template_id\": \"$TPL\",
   \"content_pack_id\": \"$PACK\",
@@ -50,7 +49,7 @@ GEN=$(curl -fsS "$API/projects/$PJ/generations" -H 'Content-Type: application/js
   \"variants\": [{\"strategy\":\"faithful\"}]
 }" | jq -r .generation_id)
 
-# 6. Опрос: queued → running → completed (bounded, до ~5 минут)
+# 6. Ожидание завершения сборки
 for _ in $(seq 1 150); do
   STATE=$(curl -fsS "$API/generations/$GEN" | jq -r .state)
   case "$STATE" in
@@ -61,58 +60,33 @@ for _ in $(seq 1 150); do
 done
 [ "$STATE" = "completed" ] || { echo "timeout waiting for generation"; exit 1; }
 
-# 7. Экспорт варианта → 202 {"export_id"}; артефакты с sha256/size_bytes
+# 7. Экспорт в PPTX, PDF, HTML и Quality Passport
 VAR=$(curl -fsS "$API/generations/$GEN/variants" | jq -r '.items[0].id')
 EXP=$(curl -fsS "$API/variants/$VAR/exports" -H 'Content-Type: application/json' \
   -d '{"formats":["pptx","pdf","html","quality_passport"]}' | jq -r .export_id)
 ART=$(curl -fsS "$API/exports/$EXP" \
   | jq -r '.artifacts[] | select(.format=="pptx") | .artifact_id')
-curl -fsSL "$API/artifacts/$ART/download" -o deck.pptx   # реальные байты PPTX
+curl -fsSL "$API/artifacts/$ART/download" -o deck.pptx
 ```
 
-## Ресурсы
+## Основные группы маршрутов
 
 | Группа | Маршруты |
 |---|---|
-| Проекты | `POST/GET /projects`, `GET/PATCH/DELETE /projects/{id}`, `GET /projects/{id}/generations` |
-| Шаблоны | `POST /projects/{id}/templates`, `GET /templates/{id}`, `POST /templates/{id}/analyze`, `GET /templates/{id}/design-dna`, `GET /templates/{id}/slides` |
-| Контент | `POST /projects/{id}/content-packs`, `GET /content-packs/{id}`, `GET /content-packs/{id}/evidence-graph` |
-| План | `POST /projects/{id}/plans` — DeckPlan по стратегиям без рендера; `deck_plan_id` или отредактированный `deck_plan` подаётся в `/generations` |
-| Генерация | `POST /projects/{id}/generations`, `GET /generations/{id}`, `GET /generations/{id}/variants`, `POST /generations/{id}/cancel`, `POST /generations/{id}/retry` (всегда новый прогон через `parent_run_id`) |
-| Слайды | `GET /variants/{id}`, `GET /variants/{id}/slides`, `GET /slides/{id}`, `GET /slides/{id}/preview` (PNG) |
-| Аудит | `POST /variants/{id}/audits`, `GET /audits/{id}`, `GET /audits/{id}/issues`, `POST /audits/{id}/repairs`, `POST /issues/{id}/dismiss`, `GET /audit/rules` |
-| Экспорт | `POST /variants/{id}/exports`, `GET /exports/{id}`, `GET /artifacts/{id}/download` (`ETag` = sha256, `Range`, `If-None-Match` → `304`) |
-| Система | `GET /health/live`, `GET /health/ready`, `GET /version`, `GET /capabilities`, `GET /skill/manifest` |
-
-Полезные детали поведения: `POST /audits` идемпотентен (возвращает аудит,
-уже посчитанный генерацией; с живой `provider_session_id` может дополнить
-его контекстным слоем); `repairs` принимает `selected_issue_ids`,
-`max_iterations` и `?dry_run=true` (план без применения); `cancel`
-кооперативный — queued-варианты не стартуют, текущий доводится до
-`completed`, дальше job терминируется `canceled`.
-
-`brief` в `/generations` — объект `{purpose, audience, language,
-target_slide_count, tone?, mandatory_sections?}`; `use_llm`:
-`null` = авто (модель при наличии провайдера), `false` = выкл, `true` =
-серверный gateway.
-
-## Провайдер-сессии
-
-`POST /provider-sessions` регистрирует endpoint `{label, base_url,
-api_token, models{text,vision,embedding,image}, capabilities,
-timeout_seconds, max_concurrency, ttl_seconds}`. Токен арендуется в памяти,
-TTL соблюдается лениво (просроченная сессия отвечает `404`), `DELETE` —
-немедленный отзыв; токен не возвращается ни одним ответом. `base_url`
-приватных/loopback/metadata-хостов отклоняется; оператор может разрешить
-только через серверную `DECKDNA_PROVIDER_ALLOW_PRIVATE_NETWORKS=true` —
-клиентским полем это не переопределяется.
-`POST /provider-sessions/{id}/test` — живые пробы capability (см.
-[docs/MODELS.md](../MODELS.md)).
+| Проекты и мастер | `POST/GET /projects`, `GET/PATCH/DELETE /projects/{id}`, `GET /projects/{id}/generations`, `GET/PUT /projects/{id}/assistant-flow` |
+| Диалоговый помощник | `GET /projects/{id}/agent/messages`, `POST /projects/{id}/agent/messages` (SSE), `POST /projects/{id}/agent/actions/{action_id}/apply` |
+| Шаблоны и брендбук | `POST /projects/{id}/templates`, `GET /templates/{id}`, `POST /templates/{id}/analyze`, `POST /templates/{id}/brandbook`, `GET /templates/{id}/design-dna`, `GET /templates/{id}/slides` |
+| Контент и факты | `POST /projects/{id}/content-packs`, `GET /content-packs/{id}`, `GET /content-packs/{id}/evidence-graph` |
+| Планирование | `POST /projects/{id}/plans`, `GET/PATCH /plans/{id}` |
+| Генерация | `POST /projects/{id}/generations`, `GET /generations/{id}`, `GET /generations/{id}/variants`, `POST /generations/{id}/cancel`, `POST /generations/{id}/retry` |
+| Слайды и пересборка | `GET /variants/{id}`, `GET /variants/{id}/slides`, `GET /slides/{id}`, `GET /slides/{id}/preview`, `POST /variants/{id}/slides/{slide_id}/regenerate` |
+| Аудит и ремонт | `POST /variants/{id}/audits`, `GET /audits/{id}`, `GET /audits/{id}/issues`, `POST /audits/{id}/repairs`, `POST /issues/{id}/dismiss`, `GET /audit/rules` |
+| Экспорт и артефакты | `POST /variants/{id}/exports`, `GET /exports/{id}`, `GET /artifacts/{id}/download` (`ETag`, `Range`, `If-None-Match`) |
+| Система и провайдеры | `GET /health/live`, `GET /health/ready`, `GET /version`, `GET /capabilities`, `GET /skill/manifest`, `POST/GET/DELETE /provider-sessions` |
 
 ## Коды ответов
 
-`200/201` синхронный успех · `202` job принят · `409` конфликт
-жизненного цикла/идемпотентности · `413` upload > `DECKDNA_MAX_UPLOAD_MB`
-· `415` неподдерживаемый тип · `422` доменная валидация · `429` лимит
-провайдера/параллелизма · `503` недоступен рендерер (soffice/pdftoppm)
-или провайдер.
+`200 / 201` синхронный успех · `202` фоновая задача принята · `409` конфликт состояния или идемпотентности ·
+`413` превышен `DECKDNA_MAX_UPLOAD_MB` · `415` неподдерживаемый формат файла ·
+`422` ошибка доменной валидации · `429` превышен лимит параллелизма ·
+`503` рендерер или внешний провайдер недоступен.

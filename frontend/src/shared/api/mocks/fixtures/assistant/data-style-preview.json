@@ -1,0 +1,126 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:52:21.269Z",
+  "method": "GET",
+  "path": "/style-previews/prev_d66480fd27184d8684bcec46204480cb",
+  "status": 200,
+  "body": {
+    "preview_id": "prev_d66480fd27184d8684bcec46204480cb",
+    "plan_id": "plan_d578eef1413d4373b79bffa790333a90",
+    "project_id": "prj_dcfe27bda1874f76b03a28e7ee495aa1",
+    "template_id": "tpl_7c4f33420b0e4c1cb783c86d1cfb12c1",
+    "deck_plan_id": "plan-pack_52549aa7639543a8b68b55c5f60d42a8-balanced",
+    "plan_digest": "2fdd02155d1edd9266c8eef1f4d4a53f05b3b8f218290284b4823acfee8930a1",
+    "template_digest": "cbbe3aa6a21d23cebc4d1383b93dd07a9cea460d683de1903567b616c839485d",
+    "created_at": "2026-10-17T13:52:19.798777+00:00",
+    "slide_ids": [
+      "slide-0",
+      "slide-2",
+      "slide-1"
+    ],
+    "recommended": "visual",
+    "assistant_note": "Советую визуальный: на 4 из 6 слайдов графики и схемы.",
+    "seconds": 13.77,
+    "styles": [
+      {
+        "strategy": "faithful",
+        "title": "Строгий",
+        "difference": "Ближе всего к вашему шаблону: его привычные раскладки, спокойная плотность текста.",
+        "recommended": false,
+        "previews": [
+          {
+            "slide_id": "slide-0",
+            "index": 0,
+            "exemplar": "ppt/slides/slide1.xml",
+            "image_artifact_id": "art_b6f2f4ec55844965855f6fee3e21b31f"
+          },
+          {
+            "slide_id": "slide-1",
+            "index": 1,
+            "exemplar": "ppt/slides/slide24.xml",
+            "image_artifact_id": "art_af344b43c8344fa7b2333ca3c323a182"
+          },
+          {
+            "slide_id": "slide-2",
+            "index": 2,
+            "exemplar": "ppt/slides/slide11.xml",
+            "image_artifact_id": "art_63850ac3ce254da59f7aa0e043658407"
+          }
+        ],
+        "exemplars": {
+          "slide-0": "ppt/slides/slide1.xml",
+          "slide-1": "ppt/slides/slide24.xml",
+          "slide-2": "ppt/slides/slide11.xml"
+        },
+        "seconds": 13.46,
+        "error": null
+      },
+      {
+        "strategy": "balanced",
+        "title": "Сбалансированный",
+        "difference": "Другие подходящие раскладки шаблона, текст и визуал поровну.",
+        "recommended": false,
+        "previews": [
+          {
+            "slide_id": "slide-0",
+            "index": 0,
+            "exemplar": "ppt/slides/slide1.xml",
+            "image_artifact_id": "art_00a7738836f84b92a3f4b333c1c0ae0f"
+          },
+          {
+            "slide_id": "slide-1",
+            "index": 1,
+            "exemplar": "ppt/slides/slide24.xml",
+            "image_artifact_id": "art_223cc9b3806841a085c4b4460188cb8f"
+          },
+          {
+            "slide_id": "slide-2",
+            "index": 2,
+            "exemplar": "ppt/slides/slide11.xml",
+            "image_artifact_id": "art_a62c45ce68054b79a1880c016ed9aec5"
+          }
+        ],
+        "exemplars": {
+          "slide-0": "ppt/slides/slide1.xml",
+          "slide-1": "ppt/slides/slide24.xml",
+          "slide-2": "ppt/slides/slide11.xml"
+        },
+        "seconds": 13.74,
+        "error": null
+      },
+      {
+        "strategy": "visual",
+        "title": "Визуальный",
+        "difference": "Больше графиков и схем, меньше текста, смелее группировка.",
+        "recommended": true,
+        "previews": [
+          {
+            "slide_id": "slide-0",
+            "index": 0,
+            "exemplar": "ppt/slides/slide1.xml",
+            "image_artifact_id": "art_8c02eb48d9884f0c9bc8a50f78c5b8b4"
+          },
+          {
+            "slide_id": "slide-1",
+            "index": 1,
+            "exemplar": "ppt/slides/slide22.xml",
+            "image_artifact_id": "art_2b1ff396bb31465f976422b1537692a7"
+          },
+          {
+            "slide_id": "slide-2",
+            "index": 2,
+            "exemplar": "ppt/slides/slide11.xml",
+            "image_artifact_id": "art_f1a676113d604cbdb4b989fe3574ddcb"
+          }
+        ],
+        "exemplars": {
+          "slide-0": "ppt/slides/slide1.xml",
+          "slide-1": "ppt/slides/slide22.xml",
+          "slide-2": "ppt/slides/slide11.xml"
+        },
+        "seconds": 13.05,
+        "error": null
+      }
+    ]
+  }
+}

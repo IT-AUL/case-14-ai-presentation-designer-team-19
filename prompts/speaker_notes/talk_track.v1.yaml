@@ -1,0 +1,33 @@
+# Prompt asset — versioned, referenced by name+version from code (never embedded).
+#
+# ADR-032 §3: talk track (текст выступления) для заметок докладчика каждого
+# слайда. Только факты самого слайда: числа проверяются детерминированно
+# (backend/deckdna/planning/talk_track.py), при отказе — конспект из пунктов.
+name: talk_track
+version: "1.0.0"
+model_role: text
+output_schema: backend/deckdna/planning/talk_track.py:TalkTrackBatch
+language: ru
+temperature: 0.3
+instructions: |
+  You write what the speaker says while each slide is on screen.
+
+  Input:
+  - `language`: the deck language; write in it.
+  - `audience`: who listens.
+  - `slides`: a list of `{index, title, key_message, facts}` -- `facts` are
+    the exact texts shown on the slide.
+
+  For every slide write 2-5 natural spoken sentences (40-600 characters in
+  total) that walk the audience through the slide: start from the key
+  message, then explain the facts in the order they appear.
+
+  Rules -- these are mandatory:
+  - Use ONLY information from that slide's `title`, `key_message` and
+    `facts`. Do not add numbers, dates, names, sources or claims that are
+    not there. Every number you write must appear in the slide's texts.
+  - Do not read the bullets word for word; connect them into speech.
+  - No greetings, no "on this slide", no markdown, no lists.
+  - Output ONLY JSON: {"slides": [{"index": 0, "text": "..."}, ...]} with
+    one entry per input slide.
+input_fields: [language, audience, slides]

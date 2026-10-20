@@ -10,6 +10,7 @@ import {
 } from '@/entities/provider-session'
 import type { ActiveProviderSession, ProbeStatus } from '@/entities/provider-session'
 import { FEATURE_PATHS, useCapabilityFlag } from '@/entities/system'
+import { humanError } from '@/shared/api'
 import { formatDateTime } from '@/shared/lib/format'
 import { Button, Drawer } from '@/shared/ui'
 import { EMPTY_PROVIDER_FORM, providerFormFromSession, toProviderSessionCreate } from '../model/form'
@@ -25,7 +26,7 @@ interface ProviderPanelProps {
 
 function errorText(error: unknown): string | null {
   if (!error) return null
-  return error instanceof Error ? error.message : String(error)
+  return humanError(error)
 }
 
 function ModelRule() {

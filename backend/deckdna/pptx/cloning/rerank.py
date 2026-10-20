@@ -27,6 +27,7 @@ from deckdna.contracts.deck_plan import Purpose
 from deckdna.contracts.variant_spec import Strategy
 from deckdna.pptx.composing.text_replace import count_content_slots
 from deckdna.pptx.opc.package import OpcPackage
+from deckdna.template.meta import meta_slides
 
 from .exemplar import (
     A,
@@ -171,7 +172,10 @@ def _candidate_pool(
             s,
         )
     )
-    candidates = ranked + extras
+    # ADR-031 §6: служебные страницы шаблона (каталоги иконок) — не образцы
+    # контента ни для одной стратегии
+    meta = meta_slides(pkg, ranked + extras)
+    candidates = [part for part in ranked + extras if part not in meta]
     safe = [part for part in candidates if not has_offslide_content_slots(pkg, part)]
     if not safe:
         return candidates[:max_candidates]

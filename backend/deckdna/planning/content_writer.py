@@ -46,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 CONTENT_WRITER_PROMPT = "content_writer"
 MAX_CONCURRENT_WRITER_CALLS = 8
-_DEFAULT_MAX_BULLETS = 6
+_DEFAULT_MAX_BULLETS = 5
 _DEFAULT_MAX_BODY_CHARS = 800
 # Синтез — не построчная выжимка одного evidence-узла, он ожидаемо длиннее
 # суммы source-фрагментов (объединяет несколько тезисов в связный текст);
@@ -113,9 +113,7 @@ def validate(pool_text: str, answer: SlideContent, max_chars: int) -> str | None
     body_text = " ".join([answer.title_intent, answer.key_message, *bullets])
     invented = _bare(extract_numbers(body_text)) - _bare(extract_numbers(pool_text))
     if invented:
-        return "модель добавила числа, которых нет в evidence-пуле: " + ", ".join(
-            sorted(invented)
-        )
+        return "модель добавила числа, которых нет в evidence-пуле: " + ", ".join(sorted(invented))
     total = len(answer.title_intent) + len(answer.key_message) + sum(len(b) for b in bullets)
     if total > max_chars * _MAX_GROWTH_RATIO:
         return f"текст сильно длиннее ожидаемого: {total} симв. при ориентире {max_chars}"
@@ -139,8 +137,10 @@ def _fallback_units(
 
     for eid in slide.evidence_ids:
         node = nodes_by_id.get(eid)
-        if node and is_equation(node.text or "") and not any(
-            eid in (u.evidence_ids or []) for u in units
+        if (
+            node
+            and is_equation(node.text or "")
+            and not any(eid in (u.evidence_ids or []) for u in units)
         ):
             unit = _unit_from_evidence_node(node)
             if unit is not None:

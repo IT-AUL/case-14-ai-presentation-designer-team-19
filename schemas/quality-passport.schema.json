@@ -8,6 +8,7 @@
     "metrics", "issues_summary", "provenance", "exports"
   ],
   "properties": {
+    "deck_revision": { "type": "integer", "minimum": 1, "default": 1 },
     "schema_version": { "type": "string" },
     "run_id": { "type": "string" },
     "variant_id": { "type": ["string", "null"] },
@@ -58,7 +59,11 @@
             "supported_claims": { "type": "integer" },
             "unsupported_claims": { "type": "integer" },
             "numbers_verified": { "type": "integer" },
-            "numbers_failed": { "type": "integer" }
+            "numbers_failed": { "type": "integer" },
+            "facts_from_user": { "type": "integer", "description": "ADR-030: content facts supplied by the user" },
+            "facts_from_web": { "type": "integer", "description": "ADR-030: facts added by web research, each backed by a verbatim quote" },
+            "facts_from_model": { "type": "integer", "description": "ADR-030: facts written from model knowledge, not confirmed by a source" },
+            "web_sources": { "type": "integer", "description": "ADR-030: web pages that contributed facts" }
           }
         },
         "readability": {
@@ -69,10 +74,41 @@
             "avg_occupancy": { "type": "number" }
           }
         },
+        "speaker_notes": {
+          "type": "object",
+          "description": "ADR-032: talk track in the PPTX speaker notes",
+          "properties": {
+            "slides_with_notes": { "type": "integer" },
+            "model_written": { "type": "integer", "description": "written by the model, passed the slide-facts check" },
+            "extractive": { "type": "integer", "description": "deterministic summary of the slide bullets" },
+            "rejected": { "type": "integer", "description": "model answers rejected (numbers not on the slide, length)" }
+          }
+        },
+        "content_origin": {
+          "type": "object",
+          "description": "ADR-034 §0: deck facts by origin",
+          "properties": {
+            "user": { "type": "integer" },
+            "web": { "type": "integer" },
+            "model": { "type": "integer" }
+          }
+        },
+        "research": {
+          "type": "object",
+          "description": "ADR-034 §0: content fill summary",
+          "properties": {
+            "sources_count": { "type": "integer" },
+            "duration_s": { "type": "number" },
+            "content_fill": { "type": "string", "description": "brief.content_fill mode" }
+          }
+        },
         "timings": {
           "type": "object",
           "properties": {
             "total_seconds": { "type": "number" },
+            "render_ms": { "type": "number" },
+            "prefill_ms": { "type": "number" },
+            "decode_ms": { "type": "number" },
             "per_stage": {
               "type": "array",
               "items": {
@@ -92,6 +128,12 @@
           "properties": {
             "total_tokens": { "type": "integer" },
             "model_calls": { "type": "integer" },
+            "input_tokens": { "type": "integer" },
+            "output_tokens": { "type": "integer" },
+            "image_tokens": { "type": "integer" },
+            "prefill_ms": { "type": "number" },
+            "decode_ms": { "type": "number" },
+            "cache_hit": { "type": "boolean" },
             "per_model": {
               "type": "array",
               "items": {
@@ -100,12 +142,24 @@
                   "model_id": { "type": "string" },
                   "calls": { "type": "integer" },
                   "input_tokens": { "type": "integer" },
-                  "output_tokens": { "type": "integer" }
+                  "output_tokens": { "type": "integer" },
+                  "image_tokens": { "type": "integer" },
+                  "prefill_ms": { "type": "number" },
+                  "decode_ms": { "type": "number" },
+                  "cache_hit": { "type": "boolean" }
                 }
               }
             }
           }
-        }
+        },
+        "prefill_ms": { "type": "number" },
+        "decode_ms": { "type": "number" },
+        "input_tokens": { "type": "integer" },
+        "output_tokens": { "type": "integer" },
+        "image_tokens": { "type": "integer" },
+        "cache_hit": { "type": "boolean" },
+        "render_ms": { "type": "number" },
+        "repair_count": { "type": "integer" }
       }
     },
     "issues_summary": {
@@ -116,6 +170,7 @@
         "warning": { "type": "integer" },
         "info": { "type": "integer" },
         "fixed": { "type": "integer" },
+        "repair_count": { "type": "integer" },
         "dismissed": { "type": "integer" },
         "unresolved": { "type": "integer" }
       }
@@ -153,6 +208,57 @@
         },
         "config_hashes": { "type": "object", "additionalProperties": { "type": "string" } },
         "seed": { "type": "integer" }
+      }
+    },
+    "brand": {
+      "type": ["object", "null"],
+      "description": "ADR-033 §9: applied brandbook — priority, replaced colors and fonts, conflicts with the template",
+      "required": ["brandbook_id", "priority", "applied", "conflicts"],
+      "properties": {
+        "brandbook_id": { "type": "string" },
+        "priority": { "enum": ["brandbook", "template"] },
+        "applied": { "type": "boolean" },
+        "colors": { "type": "object", "additionalProperties": { "type": "string" } },
+        "fonts": { "type": "object", "additionalProperties": { "type": "string" } },
+        "conflicts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["field", "kind", "resolved"],
+            "properties": {
+              "field": { "type": "string" },
+              "kind": { "enum": ["color", "font", "contrast"] },
+              "template": { "type": ["string", "null"] },
+              "brandbook": { "type": ["string", "null"] },
+              "resolved": { "enum": ["brandbook", "template"] },
+              "note": { "type": ["string", "null"] }
+            }
+          }
+        },
+        "template": { "type": "object" }
+      }
+    },
+    "analysis": {
+      "type": "object",
+      "description": "ADR-033 §10: chart choice per dataset (profile, task, chosen type with reasons, alternatives, rejected, insights)",
+      "properties": {
+        "datasets": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "title", "views"],
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" },
+              "file": { "type": "string" },
+              "rows": { "type": "integer" },
+              "profile_summary": { "type": "string" },
+              "typable": { "type": "boolean" },
+              "reason": { "type": ["string", "null"] },
+              "views": { "type": "array", "items": { "type": "object" } }
+            }
+          }
+        }
       }
     },
     "exports": {

@@ -9,15 +9,34 @@ forensic tool behind the benchmark claims.
 
 from __future__ import annotations
 
+import hashlib
+import json
+import os
 import posixpath
 import re
 import zipfile
 from collections import Counter
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
 from lxml import etree
 
+ANALYZER_VERSION = "autopsy-1"
+PARSER_VERSION = ANALYZER_VERSION
+SCHEMA_VERSION = "1.0.0"
+RENDERER_VERSION = "libreoffice-poppler-1"
+_DEFAULT_FONTS_LIST = (
+    "Arial", "Arial Narrow", "Book Antiqua", "Calibri", "Calibri Light",
+    "Cambria", "Cambria Math", "Candara", "Century Gothic", "Comic Sans MS",
+    "Consolas", "Courier New", "Franklin Gothic Book", "Garamond", "Georgia",
+    "Gill Sans MT", "Helvetica", "Impact", "Lucida Sans", "Palatino Linotype",
+    "Rockwell", "Segoe UI", "Symbol", "Tahoma", "Times New Roman",
+    "Trebuchet MS", "Verdana", "Wingdings",
+)
+_DEFAULT_FONTS_HASH = hashlib.sha256(
+    ",".join(sorted(f.lower() for f in _DEFAULT_FONTS_LIST)).encode("utf-8")
+).hexdigest()[:16]
+FONTS_HASH = _DEFAULT_FONTS_HASH
 A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 P = "http://schemas.openxmlformats.org/presentationml/2006/main"
 NS = {"a": A, "p": P}
@@ -25,6 +44,43 @@ NS = {"a": A, "p": P}
 _SLIDE_RE = re.compile(r"^ppt/slides/slide(\d+)\.xml$")
 _LAYOUT_RE = re.compile(r"slideLayout(\d+)\.xml")
 _RELS_LAYOUT_RE = re.compile(r"slideLayout(\d+)\.xml")
+
+
+def effective_parser_version(override: str | None = None) -> str:
+    if override is not None:
+        return str(override)
+    if PARSER_VERSION != "autopsy-1":
+        return str(PARSER_VERSION)
+    return str(ANALYZER_VERSION)
+
+
+def template_cache_key(
+    pptx_bytes: bytes,
+    *,
+    parser_version: str | None = None,
+    schema_version: str | None = None,
+    fonts_hash: str | None = None,
+    renderer_version: str | None = None,
+) -> str:
+    """Cache key: sha256(pptx_bytes + parser_version + schema_version + fonts + renderer)."""
+    p_ver = effective_parser_version(parser_version)
+    s_ver = str(schema_version if schema_version is not None else SCHEMA_VERSION)
+    f_hash = str(fonts_hash if fonts_hash is not None else FONTS_HASH)
+    r_ver = str(renderer_version if renderer_version is not None else RENDERER_VERSION)
+    h = hashlib.sha256()
+    h.update(pptx_bytes)
+    h.update(p_ver.encode("utf-8"))
+    h.update(s_ver.encode("utf-8"))
+    h.update(f_hash.encode("utf-8"))
+    h.update(r_ver.encode("utf-8"))
+    return h.hexdigest()
+
+
+def brandbook_cache_key(book: object, priority: str = "brandbook") -> str:
+    """Отдельный ключ кэша брендбука (не влияет на template_cache_key)."""
+    from deckdna.template.brandbook import brandbook_cache_key as _bkey
+
+    return _bkey(book, priority=priority)
 
 
 @dataclass
@@ -303,8 +359,14 @@ def _count_tables(zf: zipfile.ZipFile, names: list[str]) -> int:
     return total
 
 
-def analyze_template(path: str | Path) -> TemplateForensics:
-    path = Path(path)
+def _cache_dir() -> Path:
+    from deckdna.settings import settings
+
+    root = os.environ.get("DECKDNA_ARTIFACT_ROOT") or settings.artifact_root
+    return Path(root) / "template_cache"
+
+
+def _parse_template(path: Path) -> TemplateForensics:
     f = TemplateForensics(path=str(path))
     with zipfile.ZipFile(path) as zf:
         names = zf.namelist()
@@ -324,3 +386,59 @@ def analyze_template(path: str | Path) -> TemplateForensics:
         )
         f.tables = _count_tables(zf, names)
     return f
+
+
+def _autopsy_cache_file(
+    raw: bytes,
+    *,
+    parser_version: str | None = None,
+    schema_version: str | None = None,
+    fonts_hash: str | None = None,
+    renderer_version: str | None = None,
+) -> Path:
+    key = template_cache_key(
+        raw,
+        parser_version=parser_version,
+        schema_version=schema_version,
+        fonts_hash=fonts_hash,
+        renderer_version=renderer_version,
+    )
+    return _cache_dir() / f"{key}.autopsy.json"
+
+
+def analyze_template(
+    path: str | Path,
+    *,
+    analyzer_version: str | None = None,
+    parser_version: str | None = None,
+    schema_version: str | None = None,
+    fonts_hash: str | None = None,
+    renderer_version: str | None = None,
+) -> TemplateForensics:
+    path = Path(path)
+    raw = path.read_bytes()
+    cache_file = _autopsy_cache_file(
+        raw,
+        parser_version=parser_version or analyzer_version,
+        schema_version=schema_version,
+        fonts_hash=fonts_hash,
+        renderer_version=renderer_version,
+    )
+    if cache_file.is_file():
+        try:
+            cached = json.loads(cache_file.read_text(encoding="utf-8"))
+            cached["path"] = str(path)
+            return TemplateForensics(**cached)
+        except (ValueError, TypeError, KeyError, OSError):
+            pass
+    forensics = _parse_template(path)
+    try:
+        cache_file.parent.mkdir(parents=True, exist_ok=True)
+        tmp_file = cache_file.with_suffix(f".{os.getpid()}.tmp")
+        payload = asdict(forensics)
+        payload["path"] = ""
+        tmp_file.write_text(json.dumps(payload, ensure_ascii=False), encoding="utf-8")
+        tmp_file.replace(cache_file)
+    except OSError:
+        pass
+    return forensics

@@ -60,6 +60,34 @@ function seedRun(store: MockStore): { run: RunRecord; identities: Map<string, Va
   return { run, identities }
 }
 
+const EXTRA_PROJECTS: readonly { name: string; template: boolean; pack: boolean }[] = [
+  { name: 'Итоги года для совета директоров', template: true, pack: true },
+  { name: 'Запуск продукта: дорожная карта', template: true, pack: true },
+  { name: 'Питч для инвесторов', template: true, pack: false },
+  { name: 'Обзор рынка доставки', template: false, pack: false },
+  { name: 'Стратегия продаж 2027', template: true, pack: true },
+]
+
+function seedExtraProjects(store: MockStore, packId: string): void {
+  const base = Date.now()
+  EXTRA_PROJECTS.forEach((item, index) => {
+    const created = new Date(base - (index + 2) * 26 * 60 * 60 * 1000).toISOString()
+    store.projects.set(`seed-project-${index + 1}`, {
+      ...projectFixture,
+      id: `seed-project-${index + 1}`,
+      name: item.name,
+      status: 'draft',
+      template_id: item.template ? templateDetailFixture.id : null,
+      content_pack_id: item.pack ? packId : null,
+      latest_run_id: null,
+      latest_run_state: null,
+      latest_run_stage: null,
+      created_at: created,
+      updated_at: created,
+    })
+  })
+}
+
 export async function seedStore(store: MockStore): Promise<void> {
   const pack = contentPackFixture.content_pack
   store.projects.set(projectFixture.id, { ...projectFixture, template_id: templateDetailFixture.id, content_pack_id: pack.id })
@@ -68,4 +96,6 @@ export async function seedStore(store: MockStore): Promise<void> {
   store.jobs.set(contentPackFixture.job.id, contentPackFixture.job)
   const { run, identities } = seedRun(store)
   await completeGeneration(store, run.detail.id, generationFixture.finished_at ?? generationFixture.created_at, identities)
+  store.touchProject(projectFixture.id, { latest_run_id: run.detail.id, latest_run_state: 'completed' })
+  seedExtraProjects(store, pack.id)
 }

@@ -17,7 +17,7 @@ actually gates release-readiness:
 - duration per deck <= the official 5-minute-per-deck budget (OR-013);
 - zero blocker-severity audit issues;
 - zero NEW hard-gate deterministic findings — overflow, out-of-bounds,
-  unintended overlap, slide-edge clip, font floor, contrast (the required
+  unintended overlap, slide-edge clip, font floor, contrast (architecture spec
   "deterministic hard gates"). Findings inherited verbatim from the
   template itself — on protected slides (cloned byte-identical) or
   matching the template baseline on the same exemplar slide the output
@@ -25,7 +25,7 @@ actually gates release-readiness:
   generation regression, and never silently suppressed (they land in
   `hard_gate.inherited` of the report);
 - PEI level >= 3 (per pei.py's own rubric, L3 is the first level that
-  actually guarantees no raster-only slide -- the required "native
+  actually guarantees no raster-only slide -- architecture spec "native
   editable PPTX; no whole-slide rasterization");
 - pptx/pdf/html actually produced and structurally valid (HTML rendered
   via the same `render_html` the CLI exporter uses);
@@ -95,7 +95,7 @@ def _variant_slug(template: Path, stem_counts: Counter) -> str:
     return f"{template.stem}-{digest}"
 
 
-# Official submission set: three organizer benchmark templates.
+# Official submission set (organizer benchmark): three organizer benchmark templates.
 # Never treated as the supported-template set anywhere else in the
 # pipeline -- here specifically because OR-027 requires 3x3=9 decks on
 # exactly these three for the intermediate submission.
@@ -115,7 +115,7 @@ MIN_PEI_LEVEL = 3  # "no raster-only slide" per pei.py's own rubric (L0-L2 do NO
 # provably capped at 2, so >=3 is the correct floor to actually enforce
 # "no whole-slide rasterization" -- gating at 2 would silently accept it)
 
-# Deterministic hard gates per the evaluation principles
+# Deterministic hard gates per architecture spec evaluation principles
 # (overflow, bounds, collisions, font floor, contrast). integrity.package
 # and editability.raster_only already gate via severity=blocker;
 # content.source_support is the contextual layer, not deterministic.
@@ -177,6 +177,23 @@ def _check_html(path: Path, expected_slides: int | None = None) -> str | None:
         return f"html index unreadable: {exc}"
     if not text.strip():
         return "html index is empty"
+    # Current export uses positioned DOM objects. Keep legacy screenshot bundle
+    # checks below for historical release records.
+    from lxml import html
+
+    doc = html.fromstring(text)
+    canvases = doc.xpath(
+        '//section[contains(concat(" ",normalize-space(@class)," ")," slide ")]'
+        '/div[contains(concat(" ",normalize-space(@class)," ")," canvas ")]'
+    )
+    if canvases:
+        if expected_slides is not None and len(canvases) != expected_slides:
+            return f"html export has {len(canvases)} slide container(s), expected {expected_slides}"
+        for src in doc.xpath("//img/@src"):
+            asset = (index.parent / src).resolve()
+            if not asset.is_relative_to(index.parent.resolve()) or not asset.is_file():
+                return f"html asset missing or outside bundle: {src}"
+        return None
     pngs = {p.name for p in index.parent.glob("slide-*.png")}
     if not pngs:
         return "html export produced no slide-*.png renders"
@@ -399,9 +416,7 @@ def evaluate_variant(
         if not record["contextual_audit_ran"]:
             problems.append("--llm requested but contextual (VLM) audit never ran")
         elif record.get("contextual_audit_complete") is not True:
-            problems.append(
-                "--llm requested but contextual (VLM) audit coverage is incomplete"
-            )
+            problems.append("--llm requested but contextual (VLM) audit coverage is incomplete")
         if require_llm_planner and record.get("planner") != LLM_PLANNER_VERSION:
             problems.append(
                 "--llm requested but planner fell back to "

@@ -146,11 +146,43 @@ describe('DownloadButton', () => {
 
     await user.click(screen.getByRole('button', { name: 'PDF' }))
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Рендер PDF упал')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Сервер не справился. Попробуйте ещё раз через минуту.')
     expect(root()).toHaveAttribute('data-status', 'error')
 
     await user.click(screen.getByRole('button', { name: 'PDF' }))
     expect(await screen.findByRole('link', { name: 'PDF' })).toBeInTheDocument()
     expect(root()).toHaveAttribute('data-status', 'ready')
   })
+
+  it('downloads HTML as a file via blob without navigating away from the page', async () => {
+    const user = userEvent.setup()
+    const click = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
+    vi.spyOn(globalThis, 'fetch').mockResolvedValueOnce(new Response('<html><body>deck</body></html>', { status: 200 }))
+    const htmlFile = {
+      format: 'html' as const,
+      artifactId: 'art_html_1',
+      exportId: 'exp_html_1',
+      deckRevision: 1,
+      sizeBytes: 2048,
+      sha256: null,
+      mimeType: 'text/html',
+    }
+    renderButton({ format: 'html', file: htmlFile, fileName: 'квартальный-отчёт-сбалансированный.html', label: 'HTML' })
+
+    const link = screen.getByRole('link', { name: 'HTML' })
+    expect(link).toHaveAttribute('download', 'квартальный-отчёт-сбалансированный.html')
+    await user.click(link)
+    await waitFor(() => expect(click).toHaveBeenCalledTimes(1))
+  })
+
+  it('disables download and shows explanatory caption while slide changes are pending', () => {
+    renderButton({ format: 'pptx', file: files.pptx, label: 'Скачать PPTX', primary: true, pendingChanges: true })
+
+    expect(root()).toHaveAttribute('data-status', 'pending-changes')
+    const button = screen.getByRole('button', { name: 'Скачать PPTX' })
+    expect(button).toBeDisabled()
+    expect(screen.queryByRole('link', { name: 'Скачать PPTX' })).not.toBeInTheDocument()
+    expect(screen.getByText('Дождитесь завершения правок')).toBeInTheDocument()
+  })
 })
+

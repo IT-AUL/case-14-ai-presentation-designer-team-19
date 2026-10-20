@@ -14,6 +14,8 @@ describe('generation stage labels', () => {
     expect(pipelineStage('content_ingestion')).toBe('content')
     expect(pipelineStage('deck_plan')).toBe('plan')
     expect(pipelineStage('compose_layout')).toBe('layout')
+    expect(pipelineStage('icons')).toBe('layout')
+    expect(stageLabel('icons')).toBe('Вёрстка')
     expect(pipelineStage('audit.deterministic')).toBe('audit')
     expect(pipelineStage('render_pdf')).toBe('render')
     expect(pipelineStage('quality_passport')).toBe('passport')

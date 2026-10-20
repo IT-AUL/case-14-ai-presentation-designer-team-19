@@ -1,0 +1,26 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:51:33.630Z",
+  "method": "POST",
+  "path": "/projects",
+  "status": 201,
+  "request": {
+    "name": "T01 fixtures data 2026-10-17T13:51:33.348Z",
+    "default_language": "ru",
+    "target_slide_count": 5
+  },
+  "body": {
+    "id": "prj_dcfe27bda1874f76b03a28e7ee495aa1",
+    "name": "T01 fixtures data 2026-10-17T13:51:33.348Z",
+    "status": "draft",
+    "default_language": "ru",
+    "target_slide_count": 5,
+    "template_id": null,
+    "content_pack_id": null,
+    "latest_run_id": null,
+    "latest_run_state": null,
+    "latest_run_stage": null,
+    "created_at": "2026-10-17T13:51:33.397320Z",
+    "updated_at": "2026-10-17T13:51:33.397320Z"
+  }
+}

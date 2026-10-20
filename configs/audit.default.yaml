@@ -6,6 +6,7 @@ aspect_tolerance: 0.03              # image.aspect_ratio: допуск откл�
 raster_only_slide_area: 0.90        # editability.raster_only: доля площади картинкой
 out_of_bounds_tolerance: 0.005      # layout.out_of_bounds: допуск за край [0,1]
 duplicate_similarity_threshold: 0.9 # integrity.duplicate_slide: jaccard-порог
+filler_min_body_chars: 20          # integrity.filler_slide (ADR-030): мин. символов тела
 max_bullets_per_slide: 6            # density.bullet_count: буллетов в одном txBody
 overlap_min_cover: 0.25             # layout.unintended_overlap: мин. покрытие меньшей
 overlap_containment: 0.90           #   покрытие ≥ = вложенность, не коллизия
@@ -20,6 +21,8 @@ max_table_rows: 7                   # density.table_size: строк табли�
 max_table_cols: 5                   # density.table_size: колонок таблицы
 max_font_families: 2                # template.font_family: семейств шрифтов на слайде
 max_chart_series: 5                 # density.chart_series: серий (c:ser) в диаграмме
+chart_min_width_ratio: 0.4          # chart.readability: ширина итогового frame / слайд
+chart_min_height_ratio: 0.4         # chart.readability: высота итогового frame / слайд
 occupancy_min: 0.25                 # density.occupancy: мин. доля площади под контентом
 occupancy_max: 0.75                 # density.occupancy: макс. доля площади под контентом
 font_scale_tolerance: 0.10          # template.font_scale: допуск отклонения кегля от шага шкалы
@@ -43,16 +46,26 @@ contextual:
   low_temperature: 0.0
   uncertain_downgrade_to: warning
   second_pass_on_error: true
+  flagged_only: true
+  max_sample_slides: 3
+  max_concurrent_calls: 3
+  risk_threshold: 0.45
+  risk_weights:
+    overflow: 0.30
+    font_substitution: 0.20
+    novel_layout: 0.20
+    dense_chart: 0.15
+    low_style_confidence: 0.15
   # Фаза 4 (надёжность) — страховочные дедлайны, не основное решение
   # проблемы латентности (см. audit/contextual.py). call_timeout_seconds —
   # hard timeout ОДНОГО vision_json-вызова; budget_seconds — общий бюджет
   # на всю contextual-аудит стадию одного варианта. Слайды, не успевшие
   # в бюджет, остаются честно непроверенными (uncertain), а не блокируют
   # вариант навечно.
-  call_timeout_seconds: 90
-  budget_seconds: 240
+  call_timeout_seconds: 30
+  budget_seconds: 45
 repair:
-  max_iterations: 2
+  max_iterations: 1
   allowed_actions:
     - shorten_text
     - rewrite_title

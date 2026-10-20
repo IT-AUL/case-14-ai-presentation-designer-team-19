@@ -1,0 +1,54 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:51:59.385Z",
+  "method": "GET",
+  "path": "/projects/prj_dcfe27bda1874f76b03a28e7ee495aa1/questions",
+  "status": 200,
+  "body": {
+    "questions": [
+      {
+        "id": "audience",
+        "kind": "audience",
+        "reason": "Не знаю, для кого презентация: от этого зависят тон и подробность.",
+        "options": [
+          {
+            "value": "",
+            "label": "Пока не определено — нейтральный черновик",
+            "recommended": true
+          },
+          {
+            "value": "руководство",
+            "label": "Руководство",
+            "recommended": false
+          },
+          {
+            "value": "совет директоров",
+            "label": "Совет директоров",
+            "recommended": false
+          },
+          {
+            "value": "команда",
+            "label": "Команда",
+            "recommended": false
+          },
+          {
+            "value": "клиенты",
+            "label": "Клиенты",
+            "recommended": false
+          }
+        ],
+        "allow_custom": true,
+        "optional": false
+      }
+    ],
+    "suggested_brief": {
+      "purpose": "Итоги продаж за год для совета директоров",
+      "language": "ru",
+      "audience": "",
+      "target_slide_count": 8,
+      "content_fill": "expand"
+    },
+    "deferred_questions": [],
+    "assistant_note": "Пара уточнений, и составлю план."
+  }
+}

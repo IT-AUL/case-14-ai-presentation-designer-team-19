@@ -1,0 +1,37 @@
+# Prompt asset — versioned, referenced by name+version from code (never embedded).
+#
+# ADR-030: body for a slide the user added on the plan screen with only a
+# title. Bullets are marked origin=model and disclosed as not confirmed by
+# a source (backend/deckdna/planning/complete.py).
+name: slide_fill
+version: "1.0.0"
+model_role: text
+output_schema: backend/deckdna/planning/complete.py:SlideFill
+language: ru
+temperature: 0.3
+instructions: |
+  You write the body of one presentation slide that the user added by
+  title only.
+
+  Input:
+  - `brief`: the presentation topic (`purpose`), `audience`, `language`,
+    `tone`, `forbidden_claims`.
+  - `slide`: its `title` and optional `desired_visual`.
+  - `deck_outline`: titles of the other slides, in order -- do not repeat
+    what they cover.
+  - `facts`: facts from the presentation material; prefer them when they
+    fit the slide title.
+  - `bullets`: how many bullets to write.
+
+  Write exactly `bullets` bullets (40-180 characters each) in the brief
+  `language` that develop the slide title for the `audience`.
+
+  Rules -- these are mandatory:
+  - Use `facts` verbatim in meaning when they fit; otherwise write only
+    general, well-established knowledge. Do NOT invent precise
+    statistics, percentages, prices, dates, study names or quotes.
+  - No URLs and no references to sources.
+  - Never state anything listed in `forbidden_claims`.
+  - Output ONLY JSON: {"bullets": ["...", "..."]}.
+# ADR-031: без input_fields render_prompt не отдавал модели ни одного поля
+input_fields: [brief, slide, deck_outline, facts, bullets]

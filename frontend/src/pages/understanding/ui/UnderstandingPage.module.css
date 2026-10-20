@@ -1,0 +1,222 @@
+.thesis {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: var(--surface-2);
+}
+
+.thesisTitle {
+  margin: 0;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.thesisHint {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.thesis .noteForm {
+  align-self: stretch;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.noteForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.noteLabel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  color: var(--ink);
+  font: var(--type-body);
+  font-weight: 500;
+}
+
+.noteInput {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-control);
+  background: var(--surface);
+  color: var(--ink);
+  font: var(--type-body);
+  line-height: 1.5;
+  resize: vertical;
+  transition: border-color var(--motion-fast);
+}
+
+.noteInput:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+  border-color: transparent;
+}
+
+.noteActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.error {
+  margin: 0;
+  color: var(--error);
+  font: var(--type-body);
+}
+
+.table {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.groupTitle {
+  margin: 0;
+  color: var(--ink-2);
+  font: var(--type-card-title);
+}
+
+.emptyTable {
+  margin: 0;
+  color: var(--ink-2);
+  font: var(--type-body);
+}
+
+.details {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+.detailLead {
+  margin: 0;
+  color: var(--ink);
+  font: var(--type-step-title);
+  font-size: 20px;
+  line-height: 1.3;
+}
+
+.detailBlock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.detailHeading {
+  margin: 0;
+  color: var(--ink-2);
+  font: var(--type-body);
+  font-weight: 500;
+}
+
+.detailText {
+  margin: 0;
+  color: var(--ink);
+  font: var(--type-body);
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.detailMuted {
+  margin: 0;
+  color: var(--ink-3);
+  font: var(--type-body);
+  line-height: 1.5;
+}
+
+.detailChart {
+  padding: var(--space-4);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+}
+
+.figure {
+  color: var(--ink);
+  font-size: clamp(22px, 2.6vw, 38px);
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.editForm {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.editField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.editLabel {
+  color: var(--ink-2);
+  font: var(--type-caption);
+}
+
+.progressStage {
+  display: flex;
+  justify-content: center;
+  padding-top: 4vh;
+}
+
+.progressStage > * {
+  width: min(100%, 720px);
+}
+
+.shortageBanner {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-control);
+  background: var(--surface-2);
+}
+
+.shortageText {
+  margin: 0;
+  color: var(--ink);
+  font: var(--type-body);
+  line-height: 1.5;
+}
+
+.shortageHint {
+  margin: 0;
+  color: var(--ink-2);
+  font: var(--type-caption);
+  line-height: 1.45;
+}
+
+.shortageActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}

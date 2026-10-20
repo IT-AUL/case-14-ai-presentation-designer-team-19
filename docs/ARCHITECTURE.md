@@ -1,22 +1,23 @@
 # Архитектура
 
-DeckDNA — двухсервисная система: статический фронтенд с reverse-proxy и один
-API-процесс, в котором живёт весь pipeline генерации. Ниже — устройство
-текущей сборки как есть.
+DeckDNA — двухсервисная система: статический фронтенд с reverse-proxy (`web`) и
+API-процесс (`api`), в котором выполняются разбор шаблонов и брендбуков,
+анализ данных, планирование, сборка OOXML, аудит, ремонт и экспорт.
 
 ## Системная диаграмма
 
 ```text
                     ┌────────────────────────────────────────────┐
-  Browser ── :8080 ▶│  web — React SPA + nginx                   │
+  Browser ── :8080 ▶│  web — React 19 SPA + nginx                │
                     │  статика UI, прокси /api/* → api:8000      │
                     └───────────────┬────────────────────────────┘
                                     │ /api/v1 (JSON, SSE, multipart)
                     ┌───────────────▼────────────────────────────┐
                     │  api — FastAPI :8000 (uvicorn)             │
                     │                                            │
-                    │  _Store — проекты, шаблоны, колоды,        │
-                    │  аудиты, артефакты (байты в памяти)        │
+                    │  _Store — проекты, шаблоны, брендбуки,     │
+                    │  колоды, диалоги помощника, артефакты      │
+                    │  (+ снапшот на диск /data/artifacts)       │
                     │                                            │
                     │  Executor — джобы генерации в процессе     │
                     │                                            │
@@ -26,86 +27,84 @@ API-процесс, в котором живёт весь pipeline генера�
                     └──────┬───────────────────────┬─────────────┘
                            │                       │
                      LibreOffice + poppler    prompts/, configs/,
-                     (PDF/HTML рендер)        schemas/ — файлы в образе
+                     (PDF/HTML/PNG рендер)    schemas/ — файлы в образе
 ```
 
 `web` собирается из `frontend/Dockerfile` (Vite build → nginx с шаблоном
-`frontend/docker/nginx.conf.template`, SSE-совместимый прокси). `api` — из
-`backend/Dockerfile` с корневым build-контекстом: `backend/`, `configs/`,
-`schemas/`, `prompts/`, `skill/`, `assets/fonts`, `pyproject.toml`; образ
-включает LibreOffice и poppler — они нужны для PDF/HTML-рендера и PNG-превью.
+`frontend/docker/nginx.conf.template` и поддержкой SSE без буферизации для
+событий джобов и потокового чата). `api` собирается из `backend/Dockerfile`
+с корневым build-контекстом (`backend/`, `configs/`, `schemas/`, `prompts/`,
+`skill/`, `assets/fonts`, `pyproject.toml`) и включает LibreOffice + Poppler
+для рендера `.pdf`, `.png` и `.html`.
 
 ## Слои кода
 
 ```text
-Интерфейс     api/ (FastAPI) · cli/ (typer) · frontend SPA · skill/run_skill.py
-Оркестрация   generation/pipeline.py — линейный проход стадий на вариант
-Контракты     contracts/ + domain/ — pydantic-модели без I/O-импортов
-Документы     pptx/ — OPC-пакет, клонирование эталонов, типизированные слоты
+Интерфейсы    api/ (FastAPI) · assistant/ (SSE-чат) · mcp/ (stdio) · cli/ · frontend SPA · skill/
+Оркестрация   generation/pipeline.py — линейный проход стадий + послайдовая пересборка
+Исследование  research/ — веб-поиск с дословной верификацией цитат и библиографией
+Планирование  planning/ — FactLedger, beam-search историй по данным, SCQA-дуга, 8 архетипов
+Контракты     contracts/ + domain/ — строгие pydantic-модели без I/O-импортов
+Документы     pptx/ — OPC-пакет, клонирование эталонов, нативные диаграммы, таблицы, фигуры
 Качество      audit/ + repair/ + evaluation/quality_passport.py
 Модели        providers/ (адаптеры) + prompts/ (версионируемые YAML-файлы)
 ```
 
-Направление зависимостей — внутрь: `contracts/` и `domain/` не импортируют
-FastAPI, python-pptx или SDK провайдеров.
+Направление зависимостей — строго внутрь: `contracts/` и `domain/` не импортируют
+FastAPI, `python-pptx` или сетевые клиенты. На фронтенде соблюдается
+Feature-Sliced Design (`app → pages → widgets → features → entities → shared`),
+контролируемый автоматической проверкой `npm run lint:fsd`.
 
-## Пять стадий пайплайна (на вариант)
+## Стадии пайплайна
 
 ```text
-1. ingest   content-файл → ContentPack → EvidenceGraph (источники и опоры)
-2. analyze  шаблон → DesignDNA + пул эталонных слайдов (layouts, палитра,
-            шрифтовая шкала, якоря, роли, ёмкости)
-3. plan     ContentPack + DesignDNA + Brief → DeckPlan
-            (детерминированный baseline всегда считается первым;
-            опционально LLM-стадии: storyline-батчи, стилизация текста,
-            rerank эталонов — каждая с послайдовым фолбэком)
-4. compose  клон эталона + заполнение слотов нативными объектами OOXML
-            → детерминированный аудит → auto-fix безопасных правил
-            → опциональный контекстный VLM-аудит → Quality Passport
-5. export   .pptx нативно; .pdf/.png/.html через soffice → pdftoppm
+1. ingest     документы и таблицы → ContentPack → EvidenceGraph + FactLedger
+              (при дефиците фактов — опциональный добор проверенных цитат через research/)
+2. analyze    шаблон PPTX/POTX + брендбук PDF/DOCX/MD → DesignDNA + пул эталонных слайдов
+              (палитра, шрифтовая шкала, поля, сетка, якоря логотипов, роли и ёмкости слотов)
+3. plan       ContentPack + FactLedger + DesignDNA + Brief → DeckPlan
+              (SCQA-нарратив, заголовки-выводы, выбор из 8 архетипов макета и 7 типов диаграмм;
+              детерминированный baseline + опциональные LLM-стадии с послайдовым откатом)
+4. compose    клон эталона + заполнение слотов нативными объектами OOXML (текст, таблицы,
+              диаграммы, векторные карточки и схемы) → детерминированный аудит → auto-fix
+              безопасных правил → опциональный контекстный VLM-аудит → Quality Passport
+5. export     .pptx нативно; .pdf/.png/.html через soffice → pdftoppm + векторный SVG/DOM-экспорт
 ```
 
-Варианты `faithful` / `balanced` / `visual` делят один ContentPack и
-EvidenceGraph и различаются конфигом `configs/variants.default.yaml`:
-веса rerank-а эталонов, agenda/recap, ограничения плотности текста.
-Внутри прогона варианты выполняются последовательно.
+Варианты `faithful`, `balanced` и `visual` разделяют общий `ContentPack`,
+`EvidenceGraph` и `FactLedger`, различаясь параметрами в `configs/variants.default.yaml`:
+весами выбора эталонов, долей визуальных архетипов и плотностью текста.
+
+## Диалоговый помощник и точечная доводка
+
+Помимо пакетного прогона, в `api` работает диалоговый контур (`backend/deckdna/assistant/`):
+- `POST /api/v1/projects/{id}/agent/messages` принимает сообщение пользователя и стримит
+  ответ по SSE (`text/event-stream`) с типизированными карточками действий (`proposed_actions`).
+- Все числа и факты в ответах помощника сверяются с `EvidenceGraph` и `FactLedger`.
+- Отдельный слайд готового варианта можно пересобрать с новой инструкцией или другим
+  архетипом через `POST /api/v1/variants/{id}/slides/{slide_id}/regenerate` без пересчёта
+  остальных слайдов колоды.
 
 ## Ремонт
 
-`POST /audits/{id}/repairs` применяет выбранные пользователем действия
-(`resize_shape`, `recrop_image`, `move_shape`, `shorten_text`, `map_font`,
-`map_color`, `merge_slide`, `remove_placeholder`) в координатах слайда,
-записывает новую ревизию и делает re-audit затронутых правил. Геометрия
-учитывает трансформации групп. Что не починилось — возвращается `unresolved`
-с причиной, без фиктивных `applied`.
+`POST /api/v1/audits/{id}/repairs` применяет выбранные пользователем типизированные действия
+(`resize_shape`, `recrop_image`, `move_shape`, `shorten_text`, `map_font`, `map_color`,
+`merge_slide`, `remove_placeholder`) в координатах слайда, сохраняет новую ревизию и
+повторно запускает аудит затронутых правил. Если нарушение не устранено после проверки,
+оно честно остаётся в статусе `unresolved` с указанием причины.
 
 ## Ошибки и деградация
 
-Единый типизированный конверт `DeckDNAError` (`code`, `stage`, `retryable`,
-`details`) от парсинга пакета до экспорта: повреждённый входной PPTX
-отклоняется с `package_corrupt` ещё до аудита. Каждая модельная стадия
-послайдово откатывается на детерминированный baseline — упавший батч не
-теряет колоду.
+Все слои используют единый конверт `DeckDNAError` (`code`, `stage`, `retryable`, `details`).
+Повреждённый входной архив отклоняется с кодом `package_corrupt` до запуска пайплайна.
+Любой сбой внешнего провайдера модели на стадии планирования, стилизации или VLM-аудита
+обрабатывается послайдовым откатом на детерминированный алгоритм без потери сборки.
 
 ## Конфигурация рантайма
 
-Всё версионируемое поведение — файлами, а не кодом: пороги аудита
-`configs/audit.default.yaml`, генерация `configs/generation.default.yaml`,
-стратегии `configs/variants.default.yaml`, модельные роли и лицензии
-`configs/model_licenses.yaml`, промпты `prompts/**.yaml` (версия каждого
-промпта попадает в Quality Passport). Продуктовый skill —
-`skill/SKILL.md` + `skill/manifest.yaml` + `skill/run_skill.py`
-(также `GET /api/v1/skill/manifest`).
-
-## Деплой-топология
-
-```text
-localhost / доверенная машина
-├── web  127.0.0.1:8080   SPA + /api прокси
-└── api  127.0.0.1:8000   uvicorn; сборка из корня репо
-   внешний доступ → TLS-прокси с авторизацией перед web
-```
-
-Провайдерские токены сессий хранятся в памяти с TTL, не сериализуются в
-ответы и отзываются `DELETE /provider-sessions/{id}`.
-
+Поведение вынесено в версионируемые конфигурационные файлы:
+- `configs/audit.default.yaml` — пороги правил аудита;
+- `configs/generation.default.yaml` — лимиты генерации и бюджетов времени;
+- `configs/variants.default.yaml` — параметры стратегий `faithful` / `balanced` / `visual`;
+- `configs/model_licenses.yaml` — реестр разрешённых open-weight моделей и их лицензий;
+- `prompts/**.yaml` — версионированные промпты (хэш и версия фиксируются в `QualityPassport`).

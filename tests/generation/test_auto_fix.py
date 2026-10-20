@@ -1,4 +1,4 @@
-"""Безопасные исправления до ревизии 1 (contract Q2) и трекер этапов (D3/D4)."""
+"""Безопасные исправления до ревизии 1 (handoff Q2) и трекер этапов (D3/D4)."""
 
 from __future__ import annotations
 
@@ -58,15 +58,29 @@ def test_issues_carry_revision_one(run):
 
 def _raw_deck(tmp_path):
     """Колода до автоисправления: собрана без него."""
+    import asyncio
+
     from deckdna.contracts.deck_plan import Brief
     from deckdna.ingestion.content_parsers import parse_file
+    from deckdna.planning.agenda import sync_agenda
     from deckdna.planning.story_director import plan_deck
     from deckdna.pptx.composing.minimal import generate_deck
+    from deckdna.research import fill_content
 
-    pack = parse_file(CONTENT)
-    plan = plan_deck(pack, Brief.model_validate(BRIEF))
+    fill = asyncio.run(fill_content(parse_file(CONTENT), Brief.model_validate(BRIEF), None))
+    pack = fill.pack
+    plan = sync_agenda(plan_deck(pack, fill.brief), pack)
     deck = tmp_path / "raw.pptx"
-    generate_deck(TEMPLATE, plan, deck, content_path=CONTENT)
+    generate_deck(
+        TEMPLATE,
+        plan,
+        deck,
+        tables=pack.tables,
+        charts=pack.charts,
+        diagrams=pack.diagrams,
+        assets=pack.assets,
+        content_path=CONTENT,
+    )
     return deck
 
 
@@ -86,19 +100,70 @@ def test_auto_fix_rolls_back_when_it_creates_new_hard_errors(tmp_path, monkeypat
     before = audit_deck(deck, deck_revision=1)
     original = deck.read_bytes()
 
-    real_audit = pipeline.audit_deck
+    real_apply = pipeline.apply_repairs
 
-    def hostile_audit(path, **kw):
-        issues = real_audit(path, **kw)
-        # моделируем регресс: «после исправления» стало больше error/blocker вне списка
-        extra = [i for i in issues if i.severity == "error" and i.rule_code not in AUTO_FIX_RULES]
-        return issues + [extra[0]] * 3 if extra else issues
+    def hostile_repair(source, actions, target, **kw):
+        from pptx import Presentation
+        from pptx.util import Inches
 
-    monkeypatch.setattr(pipeline, "audit_deck", hostile_audit)
+        result = real_apply(source, actions, target, **kw)
+        # Inject an actual regression into the repaired copy. The real audit
+        # must catch it even when the original generated deck has no errors.
+        prs = Presentation(target)
+        shape = prs.slides[0].shapes.add_textbox(
+            -Inches(2), Inches(2), Inches(3), Inches(1),
+        )
+        shape.text = "Deliberately broken repair output"
+        prs.save(target)
+        assert any(i.rule_code == "layout.out_of_bounds" for i in audit_deck(target))
+        return result
+
+    monkeypatch.setattr(pipeline, "apply_repairs", hostile_repair)
     kept, gained, reason = _auto_fix(deck, before, protected=None)
     assert gained == {} and reason and "откат" in reason
     assert kept is before
     assert deck.read_bytes() == original, "a rejected fix must not touch the deck"
+
+
+def test_auto_fix_rolls_back_when_deterministic_warnings_worsen(tmp_path, monkeypatch):
+    """Vision audit gate п.2: патч принимается, только если детерминированный аудит
+    не ухудшился (включая предупреждения warning), иначе откат."""
+    from deckdna.audit.issues import AuditIssue
+
+    deck = _raw_deck(tmp_path)
+    before = audit_deck(deck, deck_revision=1)
+    original = deck.read_bytes()
+
+    def fake_audit_after(path, *, deck_revision=1):
+        # Целевое правило исправлено, но появилось 2 новых детерминированных warning
+        cleaned = [i for i in before if i.rule_code not in AUTO_FIX_RULES]
+        extra = [
+            AuditIssue(
+                id=f"iss_warn_{k}",
+                audit_run_id="aud_after",
+                deck_revision=deck_revision,
+                slide_index=0,
+                rule_code="text.overflow",
+                severity="warning",
+                deterministic=True,
+                message="new warning after patch",
+            )
+            for k in range(len(before) + 1)
+        ]
+        return cleaned + extra
+
+    monkeypatch.setattr(pipeline, "audit_deck", fake_audit_after)
+    kept, gained, reason = _auto_fix(deck, before, protected=None)
+    assert gained == {} and reason and "откат" in reason
+    assert kept is before
+    assert deck.read_bytes() == original
+
+
+def test_sync_auto_repair_capped_at_one_cycle():
+    """Vision audit gate п.2: не больше одного цикла автоисправления в синхронном запросе."""
+    from deckdna.generation.pipeline import _max_auto_repair_cycles
+
+    assert _max_auto_repair_cycles() == 1
 
 
 def test_auto_fix_without_candidates_is_a_no_op(tmp_path):
@@ -107,3 +172,4 @@ def test_auto_fix_without_candidates_is_a_no_op(tmp_path):
     only_other = [i for i in audit_deck(deck, deck_revision=1) if i.rule_code not in AUTO_FIX_RULES]
     issues, gained, reason = _auto_fix(deck, only_other, protected=None)
     assert issues is only_other and gained == {} and reason is None
+

@@ -1,6 +1,6 @@
 """Content Ingestion v0 — нормализация входа в ContentPack.
 
-Поддерживаемые форматы (минимальный срез):
+Поддержка форматов из docs/pipeline/CONTENT_INGESTION.md (минимальный срез):
 - JSON — почти 1-в-1 на contracts/content_pack.py, валидация контрактом;
 - Markdown — заголовки по уровням -> sections (+ heading_path), параграфы/
   списки/цитаты/код/картинки -> blocks, GFM-таблицы -> tables
@@ -37,6 +37,7 @@ from deckdna.contracts.content_pack import (
     Asset,
     Block,
     Chart,
+    ChartSeries,
     ContentPack,
     Diagram,
     Kind,
@@ -428,6 +429,7 @@ def parse_markdown(
 
 
 _DOCX_HEADING_RE = re.compile(r"heading\s*(\d+)", re.IGNORECASE)
+_DOCX_TITLE_RE = re.compile(r"^(?:Title|Название|Заголовок документа)$", re.I)
 
 
 def parse_docx(
@@ -508,6 +510,12 @@ def parse_docx(
             text = element.text.strip()
             style_name = element.style.name if element.style is not None else ""
             heading_match = _DOCX_HEADING_RE.match(style_name)
+            # стиль «Title»/«Название» — название документа (обложка),
+            # а не абзац текста и не первый раздел
+            if text and _DOCX_TITLE_RE.match(style_name) and title_hint is None:
+                title_hint = text
+                text_parts.append(text)
+                continue
             if heading_match:
                 level = int(heading_match.group(1))
                 if title_hint is None:
@@ -562,6 +570,15 @@ def parse_docx(
                     id=f"tbl-{tbl_idx}",
                     headers=headers,
                     rows=rows[1:],
+                    source_ref=_src(artifact_id, heading_path()),
+                )
+            )
+            # table_ref в потоке — иначе таблица не доходит до плана
+            # (тот же мост, что в markdown и PDF)
+            blocks.append(
+                Block(
+                    kind=Kind.table_ref,
+                    text=f"tbl-{tbl_idx}",
                     source_ref=_src(artifact_id, heading_path()),
                 )
             )
@@ -671,7 +688,33 @@ def _pdf_lines(
             out.extend((page_num, size, y, text) for y, _x, size, text in rows)
     finally:
         doc.close()
-    return out
+    return _drop_page_chrome(out)
+
+
+_PAGE_NO_RE = re.compile(
+    r"^(?:page|стр\.?|страница|slide|слайд)?\s*\d{1,4}\s*(?:(?:of|из|/)\s*\d{1,4})?$", re.I
+)
+
+
+def _drop_page_chrome(
+    lines: list[tuple[int, float, float, str]],
+) -> list[tuple[int, float, float, str]]:
+    """Колонтитулы и номера страниц — не контент: строка, повторённая на
+    половине страниц и больше («Untitled», название курса в шапке), и
+    «Page 1 of 10» / «3 / 12» выбрасываются (живой дефект 29.09: слайд
+    «Дополнительно» из «Untitled… Page 1 of 10»)."""
+    pages = {p for p, *_ in lines}
+    if len(pages) >= 3:
+        seen: dict[str, set[int]] = {}
+        for page, _size, _y, text in lines:
+            seen.setdefault(text.strip().casefold(), set()).add(page)
+        chrome = {t for t, ps in seen.items() if len(ps) >= max(3, len(pages) / 2) and len(t) < 80}
+    else:
+        chrome = set()
+    return [
+        line for line in lines
+        if line[3].strip().casefold() not in chrome and not _PAGE_NO_RE.match(line[3].strip())
+    ]
 
 
 def _pdf_structure(lines: list[tuple[int, float, float, str]]):
@@ -1170,6 +1213,77 @@ def _looks_like_css_block(text: str) -> bool:
     return len(_CSS_DECLARATION_RE.findall(text)) >= _MIN_CSS_DECLARATIONS
 
 
+_NUM_CELL_RE = re.compile(r"^([-+−]?\d+(?:[.,]\d+)?)\s*(%|‰)?$")
+
+
+def _cell_number(cell) -> tuple[float, str] | None:
+    """Число и суффикс единиц ячейки («1 200», «3,5%», 42.0) или None."""
+    if isinstance(cell, (int, float)) and not isinstance(cell, bool):
+        return float(cell), ""
+    if not isinstance(cell, str):
+        return None
+    text = re.sub(r"[\s\u00a0\u202f]", "", cell).replace("−", "-")
+    m = _NUM_CELL_RE.match(text)
+    if not m:
+        return None
+    return float(m.group(1).replace(",", ".")), m.group(2) or ""
+
+
+def _table_as_chart(table: Table) -> Chart | None:
+    """Таблица-ряд (подписи + 1–4 числовые колонки одних единиц, 3–12
+    строк) → нативный график. Инвариант, а не эвристика под файл: все
+    значения сохраняются, иначе None и таблица остаётся таблицей."""
+    if not 3 <= len(table.rows) <= 12 or not 2 <= len(table.headers) <= 5:
+        return None
+    width = len(table.headers)
+    if any(len(row) != width for row in table.rows):
+        return None
+    labels = [
+        str(int(row[0])) if isinstance(row[0], float) and row[0].is_integer()
+        else str(row[0] if row[0] is not None else "").strip()
+        for row in table.rows
+    ]
+    if not all(labels) or len(set(labels)) != len(labels):
+        return None
+    series: list[ChartSeries] = []
+    for col in range(1, width):
+        parsed = [_cell_number(row[col]) for row in table.rows]
+        if any(p is None for p in parsed) or len({p[1] for p in parsed}) != 1:
+            return None
+        values = [p[0] for p in parsed]
+        positive = [abs(v) for v in values if v]
+        # одна колонка разнородных метрик (выручка, конверсия, NPS) —
+        # не ряд: на общей оси мелкие значения исчезнут
+        if width == 2 and positive and max(positive) / min(positive) > 100:
+            return None
+        name = str(table.headers[col] or "").strip() or None
+        series.append(ChartSeries(name=name, values=values))
+    return Chart(id=f"{table.id}-chart", categories=labels, series=series,
+                 source_ref=table.source_ref)
+
+
+def _numeric_tables_to_charts(pack: ContentPack) -> ContentPack:
+    """Пост-обработка ЛЮБОГО парсера: числовые таблицы-ряды становятся
+    графиками (chart_ref вместо table_ref) — данные те же, а читаются
+    лучше; явные ```chart-блоки не трогаются."""
+    charts = {t.id: c for t in pack.tables if (c := _table_as_chart(t)) is not None}
+    if not charts:
+        return pack
+    sections = [
+        s.model_copy(update={"blocks": [
+            Block(kind=Kind.chart_ref, text=charts[b.text].id, source_ref=b.source_ref)
+            if b.kind == Kind.table_ref and b.text in charts else b
+            for b in s.blocks
+        ]})
+        for s in pack.sections
+    ]
+    return pack.model_copy(update={
+        "sections": sections,
+        "tables": [t for t in pack.tables if t.id not in charts],
+        "charts": [*pack.charts, *charts.values()],
+    })
+
+
 def _drop_garbage_blocks(pack: ContentPack) -> ContentPack:
     """Пост-обработка результата ЛЮБОГО парсера: убрать блоки (и элементы
     списков), похожие на утёкшую разметку/CSS, а не на реальный контент.
@@ -1212,14 +1326,74 @@ def _drop_garbage_blocks(pack: ContentPack) -> ContentPack:
 
 
 # (parser, mode): "text" — файл читается как utf-8 str; "binary" — как bytes.
+def _parse_pptx(data: bytes, artifact_id: str = "input.pptx") -> ContentPack:
+    from deckdna.ingestion.pptx_content import parse_pptx
+
+    return parse_pptx(data, artifact_id)
+
+
+def _named_dataset(dataset, file_name: str, artifact_id: str):
+    """Имя файла пользователя — в датасет: заголовок и строка «Источник»
+    не должны показывать служебный id артефакта."""
+    from deckdna.ingestion.tabular import title_of
+
+    if dataset.file_name:
+        return dataset
+    title = dataset.title
+    if title == title_of(artifact_id):
+        title = title_of(file_name)
+    return dataset.model_copy(update={"file_name": file_name, "title": title})
+
+
+def _parse_csv(data: bytes, artifact_id: str = "data.csv") -> ContentPack:
+    """ADR-033 §1: CSV — данные, не текст: пак с датасетом."""
+    from deckdna.ingestion.tabular import pack_from_datasets, read_csv
+
+    dataset = read_csv(data, artifact_id)
+    return pack_from_datasets(
+        [dataset], artifact_id,
+        language=detect_language(" ".join(c.name for c in dataset.columns)),
+    )
+
+
+def _parse_json_any(raw: str, artifact_id: str = "input.json") -> ContentPack:
+    """JSON пака (как раньше) или табличный JSON (ADR-033 §1)."""
+    try:
+        return parse_json_content(raw, artifact_id)
+    except DeckDNAError:
+        from deckdna.ingestion.tabular import pack_from_datasets, read_json_table
+
+        dataset = read_json_table(raw, artifact_id)
+        if dataset is None:
+            raise
+        return pack_from_datasets(
+            [dataset], artifact_id,
+            language=detect_language(" ".join(c.name for c in dataset.columns)),
+        )
+
+
+def _parse_xlsx_with_data(data: bytes, artifact_id: str = "input.xlsx") -> ContentPack:
+    """XLSX: таблицы листов (как раньше) + датасеты листов (ADR-033 §1)."""
+    from deckdna.ingestion.tabular import read_xlsx
+
+    pack = parse_xlsx(data, artifact_id)
+    datasets = read_xlsx(data, artifact_id)
+    return pack.model_copy(update={"datasets": datasets}) if datasets else pack
+
+
 _PARSERS: dict[str, tuple[Any, str]] = {
-    ".json": (parse_json_content, "text"),
+    ".json": (_parse_json_any, "text"),
+    # ADR-033: табличные данные
+    ".csv": (_parse_csv, "binary"),
     ".md": (parse_markdown, "text"),
     ".markdown": (parse_markdown, "text"),
     ".txt": (parse_txt, "text"),
     ".docx": (parse_docx, "binary"),
     ".pdf": (parse_pdf, "binary"),
-    ".xlsx": (parse_xlsx, "binary"),
+    ".xlsx": (_parse_xlsx_with_data, "binary"),
+    # ADR-032 §2: старая презентация как контент
+    ".pptx": (_parse_pptx, "binary"),
+    ".potx": (_parse_pptx, "binary"),
 }
 
 
@@ -1242,4 +1416,17 @@ def parse_file(path: str | Path, artifact_id: str | None = None) -> ContentPack:
     else:
         raw = path.read_text(encoding="utf-8", errors="replace")
         pack = parser(raw, artifact_id)
-    return _drop_garbage_blocks(pack)
+    from deckdna.analysis import materialize
+    from deckdna.ingestion.text_tables import attach_text_tables, tables_to_datasets
+
+    # ADR-033 §1: таблицы в тексте — тоже данные
+    if path.suffix.lower() == ".txt":
+        pack = attach_text_tables(pack, raw, artifact_id)
+    elif path.suffix.lower() in (".md", ".markdown"):
+        pack = tables_to_datasets(pack, artifact_id)
+    if pack.datasets:
+        pack = pack.model_copy(update={"datasets": [
+            _named_dataset(d, path.name, artifact_id) for d in pack.datasets
+        ]})
+    # ADR-033: графики, таблицы и выводы по датасетам — сразу при загрузке
+    return materialize(_numeric_tables_to_charts(_drop_garbage_blocks(pack)))

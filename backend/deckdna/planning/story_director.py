@@ -24,11 +24,12 @@ import hashlib
 import logging
 import math
 import re
+from dataclasses import dataclass
 from itertools import chain
 
 from pydantic import BaseModel, Field
 
-from deckdna.contracts.content_pack import ContentPack
+from deckdna.contracts.content_pack import Block, ContentPack
 from deckdna.contracts.content_pack import Section as PackSection
 from deckdna.contracts.deck_plan import (
     Brief,
@@ -51,6 +52,8 @@ from deckdna.contracts.evidence_graph import Node as EvidenceNode
 from deckdna.contracts.evidence_graph import Type as EvidenceType
 from deckdna.contracts.serialize import to_schema_dict
 from deckdna.contracts.variant_spec import Strategy
+from deckdna.errors import DeckDNAError
+from deckdna.ingestion.pptx_content import is_speaker_note
 from deckdna.planning.config import GenerationConfig
 from deckdna.planning.evidence import build_evidence_graph
 from deckdna.planning.protected_content import is_equation
@@ -73,6 +76,18 @@ MAX_CONCURRENT_OUTLINE_CALLS = 4
 # Structural bookend slides: boilerplate, not worth a model call, never
 # rewritten by the LLM path (same "protected slides" principle as text_fit).
 _PROTECTED_OUTLINE_PURPOSES = frozenset({Purpose.title, Purpose.thank_you, Purpose.cta})
+# ADR-030: слайды-рамки колоды, которые по своей роли не несут тела —
+# всё остальное обязано иметь содержание (см. validation.py).
+_BOOKEND_PURPOSES = frozenset(
+    {
+        Purpose.title,
+        Purpose.agenda,
+        Purpose.section_divider,
+        Purpose.thank_you,
+        Purpose.cta,
+        Purpose.qa,
+    }
+)
 # No current caller (pipeline.py, api/app.py) threads design_dna through to
 # plan_deck_llm -- the template's Design DNA isn't computed yet at this
 # pipeline stage (the template package is opened later, for exemplar
@@ -81,10 +96,137 @@ _PROTECTED_OUTLINE_PURPOSES = frozenset({Purpose.title, Purpose.thank_you, Purpo
 # defensive default cap.
 _DEFAULT_MAX_BULLETS = 6
 _DEFAULT_MAX_BODY_CHARS = 800
-_GENERIC_PURPOSES = frozenset({
-    "feature", "product", "project", "initiative", "report",
-    "продукт", "проект", "инициатива", "отчёт", "отчет",
-})
+_GENERIC_PURPOSES = frozenset(
+    {
+        "",
+        "feature",
+        "product",
+        "project",
+        "initiative",
+        "report",
+        "presentation",
+        "deck",
+        "slides",
+        "slide",
+        "balanced",
+        "faithful",
+        "visual",
+        "custom",
+        "default",
+        "продукт",
+        "проект",
+        "инициатива",
+        "отчёт",
+        "отчет",
+        "презентация",
+        "доклад",
+        "слайды",
+        "колода",
+        "сбалансированный",
+        "строгий",
+        "визуальный",
+        "близко к шаблону",
+    }
+)
+
+
+# Преамбула-запрос к сервису («Нужна презентация на 12 слайдов: …»,
+# «Make a 6-slide deck about …») — инструкция автору, а не тема колоды.
+# Отрезаем только когда за ней следует явный разделитель: без двоеточия
+# фраза «Презентация продукта» — легитимный заголовок.
+_META_REQUEST_RE = re.compile(
+    r"^\s*(?:нужн\w*|сдела\w*|созда\w*|подготов\w*|сгенер\w*|напиш\w*|собери\w*|хочу\b|"
+    r"make|create|build|prepare|generate|draft|need)\b[^:;.!?]{0,80}?\b"
+    r"(?:презентац\w*|питч[-\w]*|дек[ауие]?\w*|колод\w*|слайд\w*|"
+    r"presentations?|pitch(?:\s*deck)?|slide\s*deck|deck)\b[^:;.!?]{0,60}?[:—–-]\s*",
+    re.IGNORECASE,
+)
+
+
+def clean_purpose_text(text: str | None) -> str | None:
+    """Отсечь служебные токены и мета-запрос к сервису из текста брифа."""
+    val = (text or "").strip()
+    # «Нужна презентация на 12 слайдов: Умный помощник» — тема после
+    # двоеточия, преамбула не должна попадать ни в заголовок, ни в лид.
+    stripped = _META_REQUEST_RE.sub("", val).strip(" —–-")
+    if stripped:
+        val = stripped
+    val = re.sub(
+        r"^(?:(?:предположение|гипотеза|вывод|тезис|assumption|hypothesis):\s*)+",
+        "",
+        val,
+        flags=re.IGNORECASE,
+    ).strip()
+    # Compare metadata after sentence punctuation, but preserve real copy
+    # verbatim (e.g. "visual analytics" is a topic, not a strategy slug).
+    if not val or val.casefold().rstrip(".!?…;:, ") in _GENERIC_PURPOSES:
+        return None
+    return val
+
+
+def cover_topic(text: str | None) -> str | None:
+    """Service headings are fallback copy, never a substitute for a real topic."""
+    value = clean_purpose_text(text)
+    if value and value.casefold() not in {"идея", "тема", "idea", "topic"}:
+        return value
+    return None
+
+
+def split_cover_headline(raw_title: str | None) -> tuple[str | None, str | None]:
+    """Split an overly long compound purpose/title ('Topic: details...') into
+    a punchy cover headline and a descriptive subtitle."""
+    cleaned = clean_purpose_text(raw_title)
+    if not cleaned:
+        return None, None
+    cleaned = cleaned.rstrip("? ")
+    if len(cleaned) > 55:
+        for sep in (":", " — ", " – "):
+            if sep in cleaned:
+                left, right = cleaned.split(sep, 1)
+                left = left.strip().rstrip(".!? ")
+                right = right.strip().rstrip(".!? ")
+                if 12 <= len(left) <= 75 and len(right) >= 8:
+                    sub = right[0].upper() + right[1:] if right else None
+                    return left, sub
+    return cleaned, None
+
+
+def cover_context(
+    title: str, brief: Brief, *, fallback_subtitle: str | None = None
+) -> tuple[str | None, str | None]:
+    """Category and period without inventing a company name or reporting year."""
+    ru = brief.language.startswith("ru")
+    annual = bool(re.search(r"год|годов|annual|year|20\d{2}", title, re.I))
+    business = bool(
+        re.search(
+            r"продаж|выручк|финанс|отч[её]т|бизнес|аналит|тариф|номенклатур|"
+            r"sales|revenue|report|business|analytics|pricing|catalog",
+            title,
+            re.I,
+        )
+    )
+    eyebrow = None
+    if business:
+        eyebrow = (
+            ("ГОДОВОЙ ОТЧЕТ" if annual else "АНАЛИТИЧЕСКИЙ ОБЗОР")
+            if ru
+            else ("ANNUAL REPORT" if annual else "BUSINESS REVIEW")
+        )
+    subtitle = clean_purpose_text(brief.key_message)
+    if (not subtitle or subtitle.casefold() == title.casefold()) and fallback_subtitle:
+        subtitle = fallback_subtitle
+    if not subtitle or subtitle.casefold() == title.casefold():
+        year = re.search(r"\b20\d{2}\b", title)
+        subtitle = (
+            (
+                (f"Период: {year.group()} год" if year else "Период: отчётный год")
+                if ru
+                else (f"Reporting period: {year.group()}" if year else "Annual review")
+            )
+            if annual and business
+            else None
+        )
+    return eyebrow, subtitle
 
 
 class SlideOutlineItem(BaseModel):
@@ -101,12 +243,14 @@ class SlideOutlineItem(BaseModel):
 
 class SlideOutlineBatch(BaseModel):
     slides: list[SlideOutlineItem] = Field(min_length=1)
+
+
 # Верхняя граница content_units на один слайд перед тем, как секция
 # режется на несколько. Планировщик не знает, какой exemplar (со
 # сколькими реально заполняемыми txBody-слотами, не визуальными
 # "карточками" -- часть карточек decorative-only) достанется слайду:
 # exemplar выбирается позже, в composing ("semantic slot
-# mapping" отложен по архитектуре). Пробовал поднять до 8 под насыщенный контент
+# mapping ... отложен"). Пробовал поднять до 8 под насыщенный контент
 # на vk_tech_template.pptx: на 8-карточном exemplar'е с малым числом
 # реальных текстовых слотов это дало жёсткое наложение текста друг на
 # друга (хуже пустых карточек, не лучше) -- ёмкость слотов конкретного
@@ -146,7 +290,7 @@ def _first_sentence(text: str, limit: int = 200) -> str:
     return sentence[:limit]
 
 
-# Заголовок-вывод (contract Q3): без модели «вывод» — это главная мысль
+# Заголовок-вывод (handoff Q3): без модели «вывод» — это главная мысль
 # слайда, т.е. первое предложение его же абзаца, если оно достаточно
 # короткое, чтобы быть заголовком. Иначе остаётся заголовок раздела.
 _CONCLUSION_MIN_CHARS = 24
@@ -174,7 +318,7 @@ def _conclusion_title(first_para: str | None, heading: str) -> tuple[str, str] |
     if not first_para:
         return None
     parts = _SENTENCE_RE.split(first_para.strip(), maxsplit=1)
-    title = parts[0].strip().rstrip(".;:… ")
+    title = (clean_purpose_text(parts[0]) or heading).rstrip(".;:… ")
     rest = parts[1].strip() if len(parts) > 1 else ""
     words = title.split()
     if not (_CONCLUSION_MIN_CHARS <= len(title) <= _CONCLUSION_MAX_CHARS):
@@ -186,23 +330,184 @@ def _conclusion_title(first_para: str | None, heading: str) -> tuple[str, str] |
     return title, rest
 
 
+# Окончания личных форм глагола (3-е лицо, наст./буд. время) — граница
+# «темы» предложения: «Время сборки | укладывается в пять минут».
+_RU_VERB_RE = re.compile(
+    r"(?:ет|ёт|ит|ут|ют|ат|ят|ется|ётся|ится|утся|ются|атся|ятся|ал|ала|али|ил|ила|или)$"
+)
+_TOPIC_MAX_WORDS = 5
+
+
+def _topic_title(text: str | None, lang: str | None) -> str | None:
+    """Тема предложения (подлежащее с определениями) для заголовка слайда,
+    когда заголовок раздела совпадает с обложкой (ADR-031 §9): короткий
+    вход из одного раздела «Идея» давал слайды «Идея — часть 2», «Идея —
+    часть 3». Только русский; без найденного глагола — None."""
+    if not text or not (lang or "ru").startswith("ru"):
+        return None
+    first = _SENTENCE_RE.split(text.strip(), maxsplit=1)[0]
+    words = first.split()
+    for i, word in enumerate(words[: _TOPIC_MAX_WORDS + 1]):
+        if i and _RU_VERB_RE.search(word.casefold().strip(",.;:")):
+            topic = " ".join(words[:i]).strip(",.;: ")
+            return topic[:1].upper() + topic[1:] if topic else None
+    return None
+
+
+@dataclass
+class _ProseItem:
+    """Пункт прозаического потока секции до сборки юнитов."""
+
+    order: int
+    text: str
+    kind: str  # "bullet" | block.kind.value (paragraph/quote/code/note)
+    in_list: bool
+    block: int  # индекс блока в секции
+    ev: list[str]
+
+
+_SENT_END_RE = re.compile(r"[.!?…:;»\"')\]]\s*$")
+_CONNECTOR_END_RE = re.compile(
+    r"(?:[,—–]|\(|"
+    r"\b(?:и|или|а|но|да|что|как|в|во|на|с|со|к|ко|по|за|для|от|до|из|у|о|об|про|"
+    r"при|над|под|через|без|не|the|a|an|of|to|in|on|for|and|or|with|by))\s*$",
+    re.IGNORECASE,
+)
+
+
+def _is_bare_label(text: str | None) -> bool:
+    """Строка-метка без тела: «Что сделать / проверить:», «Шаги:»."""
+    t = (text or "").rstrip()
+    return t.endswith(":") and "\n" not in t
+
+
+def _continuation(it: _ProseItem, prev: _ProseItem) -> bool:
+    """*it* — обрывок, продолжающий *prev* пункт, а не самостоятельная
+    карточка: скобочный фрагмент, начало со строчной буквы, продолжение
+    внутри незакрытой скобки или после оборванной на связке фразы
+    («…через 7 и» + «30 дней (R7/R30).»). Метка («…:») сама продолжается —
+    её пункты собирает правило карточки, а не склейка в одну строку."""
+    s = (it.text or "").lstrip()
+    p = (prev.text or "").rstrip()
+    if not s or _is_bare_label(p):
+        return False
+    if (
+        p.count("(") > p.count(")")
+        or p.count("[") > p.count("]")
+        or bool(_CONNECTOR_END_RE.search(p))
+    ):
+        return True
+    if s.startswith(("(", "[", "«", "„", "“")):
+        return not bool(_SENT_END_RE.search(p))
+    if it.in_list and prev.in_list:
+        return False
+    if s[:1].islower() and not bool(_SENT_END_RE.search(p)):
+        return True
+    return False
+
+
+def _merge_fragile_items(items: list[_ProseItem]) -> list[_ProseItem]:
+    """Склейка обрывков и сборка карточек «метка + её пункты».
+
+    Парсеры режут список по переносам строки: «(например, …)» и хвосты
+    предложений становятся отдельными пунктами, а строка-метка «Что
+    сделать:» — карточкой без тела. Здесь обрывки приклеиваются к
+    предыдущему пункту, а метка поглощает пункты следующего за ней списка:
+    одна карточка «метка — заголовок, пункты — тело»."""
+    merged: list[_ProseItem] = []
+    for it in items:
+        if merged and _continuation(it, merged[-1]):
+            last = merged[-1]
+            last.text = last.text.rstrip() + " " + it.text.lstrip()
+            last.ev = list(dict.fromkeys([*last.ev, *it.ev]))
+        else:
+            merged.append(it)
+    out: list[_ProseItem] = []
+    i = 0
+    while i < len(merged):
+        it = merged[i]
+        absorbed: list[_ProseItem] = []
+        if _is_bare_label(it.text) and i + 1 < len(merged):
+            nxt = merged[i + 1]
+            if nxt.in_list:
+                # метка + пункты её списка: соседи по блоку (метка — пункт
+                # того же списка) или весь следующий список (метка-абзац)
+                target = it.block if it.in_list else nxt.block
+                j = i + 1
+                while (
+                    j < len(merged)
+                    and merged[j].in_list
+                    and merged[j].block == target
+                    and not _is_bare_label(merged[j].text)
+                ):
+                    absorbed.append(merged[j])
+                    j += 1
+            elif not it.in_list and not _is_bare_label(nxt.text):
+                # метка-абзац + следующий абзац — иначе пустая карточка
+                absorbed.append(nxt)
+        if absorbed:
+            it.text = it.text.rstrip() + "\n" + "\n".join(a.text for a in absorbed)
+            it.ev = list(dict.fromkeys([*it.ev, *(e for a in absorbed for e in a.ev)]))
+            it.kind = "bullet"
+            i += len(absorbed)
+        out.append(it)
+        i += 1
+    return out
+
+
 def _block_to_units(pack_id: str, section: PackSection) -> list[ContentUnit]:
     """Блок ContentPack -> ContentUnits. У bullet-списка на каждый item
-    свой unit (в контракте нет контейнера items)."""
-    units: list[ContentUnit] = []
+    свой unit (в контракте нет контейнера items); сперва прозаический
+    поток чистится от обрывков и голых меток (``_merge_fragile_items``)."""
+    prose: list[_ProseItem] = []
+    ordered: list[tuple[int, _ProseItem | tuple[Block, list[str]]]] = []
+    order = 0
     for i, block in enumerate(section.blocks):
         ev = [f"{pack_id}:{section.id}:b{i}"]
+        if is_speaker_note(block):
+            continue  # ADR-032: заметки докладчика — в speaker_note, не на слайд
         if block.kind.value == "list":
             for item in block.items or []:
-                units.append(
-                    ContentUnit(role="bullet", kind=Kind.bullet, text=item, evidence_ids=ev)
-                )
+                it = _ProseItem(order, item or "", "bullet", True, i, ev)
+                prose.append(it)
+                order += 1
             continue
+        if block.kind.value in ("paragraph", "quote", "code", "note"):
+            it = _ProseItem(order, block.text or "", block.kind.value, False, i, ev)
+            prose.append(it)
+            order += 1
+            continue
+        ordered.append((order, (block, ev)))
+        order += 1
+    ordered.extend((it.order, it) for it in _merge_fragile_items(prose))
+    ordered.sort(key=lambda e: e[0])
+
+    units: list[ContentUnit] = []
+    for _, entry in ordered:
+        if isinstance(entry, _ProseItem):
+            kind = {
+                "bullet": Kind.bullet,
+                "quote": Kind.quote,
+                "code": Kind.paragraph,  # пробел схемы: отдельного kind=code нет
+                "note": Kind.note,
+            }.get(entry.kind, Kind.paragraph)
+            units.append(
+                ContentUnit(
+                    role=(
+                        "bullet"
+                        if entry.kind == "bullet"
+                        else "equation"
+                        if is_equation(entry.text)
+                        else "body"
+                    ),
+                    kind=kind,
+                    text=entry.text,
+                    evidence_ids=entry.ev,
+                )
+            )
+            continue
+        block, ev = entry
         kind = {
-            "paragraph": Kind.paragraph,
-            "quote": Kind.quote,
-            "code": Kind.paragraph,  # пробел схемы: отдельного kind=code нет
-            "note": Kind.note,
             "image_ref": Kind.image,
             "table_ref": Kind.table,
             "chart_ref": Kind.chart,
@@ -258,7 +563,8 @@ def _unit_from_evidence_node(node: EvidenceNode) -> ContentUnit | None:
         return ContentUnit(
             role="equation" if is_equation(text) else "bullet",
             kind=Kind.paragraph if is_equation(text) else Kind.bullet,
-            text=text, evidence_ids=[node.id],
+            text=text,
+            evidence_ids=[node.id],
         )
     if node.type is EvidenceType.number:
         text = (node.text or (node.value.raw if node.value else None) or "").strip()
@@ -267,12 +573,18 @@ def _unit_from_evidence_node(node: EvidenceNode) -> ContentUnit | None:
         return ContentUnit(role="number", kind=Kind.number, text=text, evidence_ids=[node.id])
     if node.type is EvidenceType.table:
         return ContentUnit(
-            role="body", kind=Kind.table, text=node.text, table_ref=node.id,
+            role="body",
+            kind=Kind.table,
+            text=node.text,
+            table_ref=node.id,
             evidence_ids=[node.id],
         )
     if node.type is EvidenceType.visual:
         return ContentUnit(
-            role="body", kind=Kind.image, text=node.text, asset_ref=node.id,
+            role="body",
+            kind=Kind.image,
+            text=node.text,
+            asset_ref=node.id,
             evidence_ids=[node.id],
         )
     return None  # section-узлы — контейнеры, не контент, молча пропускаем
@@ -318,7 +630,7 @@ def _split_evenly(units: list[ContentUnit], parts: int) -> list[list[ContentUnit
 def _allocate_slides(
     groups: list[tuple[PackSection, list[ContentUnit]]], budget: int
 ) -> list[list[tuple[PackSection, list[ContentUnit]]]]:
-    """Распределяет (секция, units) ровно по budget слайдам.
+    """Распределяет (секция, units) в пределах budget слайдов.
 
     Каждый слайд — список вкладов (обычно одна секция; при нехватке
     бюджета соседние мелкие секции объединяются).
@@ -335,24 +647,42 @@ def _allocate_slides(
     def size(slide) -> int:
         return sum(len(u) for _, u in slide)
 
+    def has_structured_visual(slide) -> bool:
+        return any(
+            u.kind in {Kind.chart, Kind.table, Kind.diagram} for _, units in slide for u in units
+        )
+
     while len(slides) > budget:
-        # сливаем соседнюю пару с наименьшим суммарным объёмом
-        i = min(range(len(slides) - 1), key=lambda j: size(slides[j]) + size(slides[j + 1]))
+        # сливаем соседнюю пару с наименьшим суммарным объёмом (не сливая два разных визуала)
+        i = min(
+            range(len(slides) - 1),
+            key=lambda j: (
+                int(has_structured_visual(slides[j]) and has_structured_visual(slides[j + 1])),
+                size(slides[j]) + size(slides[j + 1]),
+            ),
+        )
         slides[i : i + 2] = [slides[i] + slides[i + 1]]
     while len(slides) < budget:
-        # режем самый большой вклад пополам
-        cand = [
-            (len(u), si)
-            for si, slide in enumerate(slides)
-            for _, u in slide
-            if len(u) > 1
-        ]
+        # Короткий список — один слайд. Деление только ради target давало
+        # «часть 2» из одной строки; каждая половина должна нести материал.
+        def splittable(units: list[ContentUnit]) -> bool:
+            half = math.ceil(len(units) / 2)
+            return len(units) >= 4 and all(
+                sum(len(u.text or "") for u in chunk) >= 180
+                or any(u.kind in {Kind.table, Kind.chart, Kind.diagram, Kind.image} for u in chunk)
+                for chunk in (units[:half], units[half:])
+            )
+
+        cand = [(len(u), si) for si, slide in enumerate(slides) for _, u in slide if splittable(u)]
         if not cand:
             break
         _, si = max(cand)
         slide = slides.pop(si)
         # делим вклад с наибольшим числом units внутри слайда
-        k = max(range(len(slide)), key=lambda j: len(slide[j][1]))
+        k = max(
+            (j for j in range(len(slide)) if splittable(slide[j][1])),
+            key=lambda j: len(slide[j][1]),
+        )
         sec, units = slide[k]
         half = math.ceil(len(units) / 2)
         slides.insert(si, slide[:k] + [(sec, units[half:])] + slide[k + 1 :])
@@ -395,10 +725,18 @@ def _split_sentences(
         for si, slide in enumerate(slides):
             for k, (_sec, units) in enumerate(slide):
                 for ui, u in enumerate(units):
-                    if u.kind not in (Kind.paragraph, Kind.note, Kind.quote) or not u.text:
+                    if (
+                        u.locked
+                        or u.kind not in (Kind.paragraph, Kind.note, Kind.quote)
+                        or not u.text
+                    ):
                         continue
                     sents = [s for s in _SENTENCE_RE.split(u.text) if s.strip()]
-                    if len(sents) > 1 and (best is None or len(sents) > best[0]):
+                    half = math.ceil(len(sents) / 2)
+                    substantial = all(
+                        len(" ".join(chunk)) >= 180 for chunk in (sents[:half], sents[half:])
+                    )
+                    if substantial and (best is None or len(sents) > best[0]):
                         best = (len(sents), si, k, ui, sents)
         if best is None:
             break
@@ -439,8 +777,13 @@ def _inject_recaps(
             break
         if not units or not sec.heading or sec.id not in last_idx:
             continue
+        # Итог короткого раздела повторяет его единственный слайд.
+        occurrences = sum(any(s.id == sec.id and us for s, us in slide) for slide in slides)
+        if occurrences < 2:
+            continue
         sents = [s for u in units if u.text for s in [_first_sentence(u.text)] if s][:4]
-        if not sents:
+        if len(sents) < 2:
+            # итог из одного пункта повторяет сам слайд — заглушка (ADR-030)
             continue
         recap_sec = PackSection(
             id=sec.id, heading=f"{prefix}: {sec.heading}", level=sec.level, blocks=[]
@@ -460,30 +803,9 @@ def _inject_recaps(
     return len(inserts)
 
 
-def plan_deck(
-    pack: ContentPack,
-    brief: Brief,
-    config: GenerationConfig | None = None,
-    strategy: Strategy = Strategy.balanced,
-) -> DeckPlan:
-    """ContentPack + Brief → DeckPlan (один вариант, детерминированный).
-
-    ``strategy`` — дифференциация вариантов (OR-007): ``faithful`` держится
-    ближе к исходной структуре контента — без agenda-слайда и без
-    синтезированных recap-слайдов («Итоги: …»); dividers по заголовкам
-    секций и разбиение длинных предложений остаются (это реальный
-    исходный текст). ``balanced`` — дефолтное поведение; ``visual`` и
-    ``custom`` на этой стадии совпадают с balanced (их различия —
-    exemplar ranking и плотность текста в composing)."""
-    cfg = config
-    if cfg is None:
-        from deckdna.planning.config import load_generation_config
-
-        cfg = load_generation_config()
-    validate_slide_count(brief.target_slide_count, cfg)
-
-    lang = brief.language or pack.language
-    target = brief.target_slide_count
+def content_groups(pack: ContentPack) -> list[tuple[PackSection, list[ContentUnit]]]:
+    """(секция, её content units) в порядке пака — общий вход планировщика
+    и оценки ёмкости контента (ADR-030, ``planning/content_fill.py``)."""
     groups = [(s, _block_to_units(pack.id, s)) for s in pack.sections]
     # Live repro (balanced strategy, real generated deck): the document's
     # own lead paragraph -- content_parsers.py gives every format its own
@@ -506,18 +828,117 @@ def plan_deck(
     # only fires when sections[0] really is the redundant title-echo
     # (heading == title_hint), so a genuine first body section without a
     # separate H1 lead-in is untouched.
-    if (
-        len(groups) > 1
-        and pack.title_hint
-        and groups[0][0].heading == pack.title_hint
-    ):
+    if len(groups) > 1 and pack.title_hint and groups[0][0].heading == pack.title_hint:
         _lead_sec, lead_units = groups[0]
         if lead_units:
             next_sec, next_units = groups[1]
             groups[1] = (next_sec, lead_units + next_units)
         groups = groups[1:]
+    return groups
 
-    has_agenda = strategy != Strategy.faithful and target >= 5 and len(pack.sections) >= 2
+
+def plan_deck(
+    pack: ContentPack,
+    brief: Brief,
+    config: GenerationConfig | None = None,
+    strategy: Strategy = Strategy.balanced,
+    *,
+    fact_ledger: object | None = None,
+    story_plan: object | None = None,
+) -> DeckPlan:
+    """ContentPack + Brief → DeckPlan (один вариант, детерминированный).
+
+    ``strategy`` — дифференциация вариантов (OR-007): ``faithful`` держится
+    ближе к исходной структуре контента — без agenda-слайда и без
+    синтезированных recap-слайдов («Итоги: …»); dividers по заголовкам
+    секций и разбиение длинных предложений остаются (это реальный
+    исходный текст). ``balanced`` — дефолтное поведение; ``visual`` и
+    ``custom`` на этой стадии совпадают с balanced (их различия —
+    exemplar ranking и плотность текста в composing)."""
+    cfg = config
+    if cfg is None:
+        from deckdna.planning.config import load_generation_config
+
+        cfg = load_generation_config()
+    from deckdna.planning.request_constraints import resolve_count_goal
+
+    brief = resolve_count_goal(brief)
+    validate_slide_count(brief.target_slide_count, cfg)
+    brief_text = " ".join(
+        filter(
+            None,
+            [
+                getattr(brief, "purpose", None),
+                getattr(brief, "key_message", None),
+                getattr(brief, "call_to_action", None),
+            ],
+        )
+    )
+
+    if pack.datasets or fact_ledger is not None or story_plan is not None:
+        from deckdna.analysis.fact_ledger import FactLedger, build_pack_fact_ledger
+        from deckdna.analysis.pipeline import analyze_pack
+        from deckdna.planning.story_rules import (
+            beam_search_story_plan,
+            compile_story_ledger_to_deck_plan,
+            ledger_source_groups,
+            resolve_story_ledger_plan,
+        )
+
+        ledger = (
+            fact_ledger
+            if isinstance(fact_ledger, FactLedger)
+            else build_pack_fact_ledger(analyze_pack(pack, brief_text))
+        )
+        story_budget = max(3, brief.target_slide_count - len(ledger_source_groups(pack, brief)))
+        resolved_story = (
+            resolve_story_ledger_plan(
+                story_plan,  # type: ignore[arg-type]
+                ledger,
+                brief=brief,
+                max_slides=story_budget,
+            )
+            if story_plan is not None
+            else beam_search_story_plan(
+                ledger,
+                brief=brief,
+                max_slides=story_budget,
+            )
+        )
+        plan = compile_story_ledger_to_deck_plan(
+            resolved_story,
+            ledger,
+            brief,
+            pack=pack,
+            config=cfg,
+            strategy=strategy,
+        )
+        validate_deck_plan(plan, cfg)
+        return plan
+
+    lang = brief.language or pack.language
+    target = brief.target_slide_count
+    groups = content_groups(pack)
+    from deckdna.planning.mandatory import protect_mandatory_groups, protect_mandatory_sections
+    from deckdna.planning.story_rules import (
+        apply_storyline_and_grammar,
+        order_groups_scqa,
+        storyline_config,
+    )
+
+    groups = protect_mandatory_groups(groups, pack, brief)
+    groups = order_groups_scqa(groups)
+    story_cfg = storyline_config(cfg)
+    content_sections = sum(1 for _, units in groups if units)
+
+    has_agenda = (
+        strategy != Strategy.faithful
+        and target >= story_cfg.min_slides_for_agenda
+        and (
+            (len(pack.sections) >= 3 and content_sections >= 3)
+            or (len(pack.sections) >= 2 and bool(pack.external_sources))
+        )
+    )
     reserved = 2 + int(has_agenda)  # title + closing (+ agenda)
     budget = max(target - reserved, 1)
 
@@ -525,20 +946,44 @@ def plan_deck(
 
     # Добор при дефиците контента, по убыванию пользы: легитимные
     # divider перед секцией -> сплит длинных текстов по предложениям ->
-    # recap-слайды -> (ниже) generic-паддинг как последний резерв.
+    # recap-слайды. Заглушек нет (ADR-030): если и этого не хватило,
+    # колода честно короче запрошенной (см. ниже), а добирать контент —
+    # задача стадии ресёрча до планирования (research/fill.py).
     deficit = budget - len(slide_groups)
-    if deficit > 0:
+    # divider имеет смысл только между разделами в длинных колодах (>= 8 слайдов)
+    # при наличии >= 3 содержательных разделов: в коротком материале (1-2 факта/раздела)
+    # разделитель-заглушка запрещён
+    if deficit > 0 and content_sections >= 3 and target >= story_cfg.min_slides_for_agenda:
         deficit -= _inject_dividers(slide_groups, deficit)
     if deficit > 0:
         deficit -= _split_sentences(slide_groups, deficit)
-    # recap-слайды — синтезированная суммаризация: faithful их не делает
-    if deficit > 0 and strategy != Strategy.faithful:
+    if deficit > 0 and pack.external_sources:
+        while deficit > 0:
+            cand = [
+                (len(u), si, k)
+                for si, sld in enumerate(slide_groups)
+                for k, (_, u) in enumerate(sld)
+                if len(u) >= 4
+            ]
+            if not cand:
+                break
+            _, si, k = max(cand)
+            sld = slide_groups.pop(si)
+            sec, units = sld[k]
+            half = math.ceil(len(units) / 2)
+            slide_groups.insert(si, sld[:k] + [(sec, units[half:])] + sld[k + 1 :])
+            slide_groups.insert(si, sld[:k] + [(sec, units[:half])] + sld[k + 1 :])
+            deficit -= 1
+    # recap-слайды — синтезированная суммаризация: faithful и короткий материал (< 3 секций) их
+    # не делают
+    if deficit > 0 and strategy != Strategy.faithful and content_sections >= 3:
         deficit -= _inject_recaps(slide_groups, groups, deficit, pack.id, lang)
 
     slides: list[SlidePlan] = []
     used_titles: set[str] = set()
 
     def unique_title(base: str) -> str:
+        base = clean_purpose_text(base) or ("Обзор" if lang == "ru" else "Overview")
         title = base
         n = 2
         while title in used_titles:
@@ -551,23 +996,42 @@ def plan_deck(
         slides.append(slide)
 
     meta_ev = [f"{pack.id}:meta"]
-    title_text = pack.title_hint or (
-        pack.sections[0].heading if pack.sections and pack.sections[0].heading else None
-    ) or ("Презентация" if lang == "ru" else "Presentation")
-    purpose_text = (brief.purpose or "").strip()
-    display_purpose = (
-        purpose_text
-        if purpose_text.casefold() not in _GENERIC_PURPOSES
-        else None
+    first_sec_heading = next(
+        (clean_purpose_text(s.heading) for s in pack.sections if clean_purpose_text(s.heading)),
+        None,
     )
+    raw_title_text = (
+        cover_topic(pack.title_hint)
+        or clean_purpose_text(brief.purpose)
+        or first_sec_heading
+        or clean_purpose_text(pack.title_hint)
+        or ("Презентация" if lang == "ru" else "Presentation")
+    )
+    split_head, split_sub = split_cover_headline(raw_title_text)
+    title_text = split_head or raw_title_text
+    display_purpose = clean_purpose_text(brief.purpose)
     title_units = [
         ContentUnit(role="title", kind=Kind.title, text=title_text, evidence_ids=meta_ev)
     ]
-    if display_purpose:
+    # ADR-034 §3: главная мысль из ответов помощника — подзаголовком обложки
+    eyebrow, subtitle = cover_context(title_text, brief, fallback_subtitle=split_sub)
+    subtitle = subtitle or split_sub or display_purpose
+    if eyebrow:
         title_units.append(
             ContentUnit(
-                role="subtitle", kind=Kind.subtitle,
-                text=display_purpose, evidence_ids=meta_ev,
+                role="eyebrow",
+                kind=Kind.subtitle,
+                text=eyebrow,
+                evidence_ids=meta_ev,
+            )
+        )
+    if subtitle and subtitle.casefold() != title_text.strip().casefold():
+        title_units.append(
+            ContentUnit(
+                role="subtitle",
+                kind=Kind.subtitle,
+                text=subtitle,
+                evidence_ids=meta_ev,
             )
         )
     emit(
@@ -576,7 +1040,7 @@ def plan_deck(
             index=0,
             purpose=Purpose.title,
             title_intent=unique_title(title_text),
-            key_message=_first_sentence(brief.purpose),
+            key_message=_first_sentence(display_purpose or title_text),
             evidence_ids=meta_ev,
             content_units=title_units,
             density_budget=_density([]),
@@ -590,15 +1054,13 @@ def plan_deck(
                 index=1,
                 purpose=Purpose.agenda,
                 title_intent=unique_title("План презентации" if lang == "ru" else "Agenda"),
-                key_message=(
-                    "Структура доклада" if lang == "ru" else "Talk outline"
-                ),
+                key_message=("Структура доклада" if lang == "ru" else "Talk outline"),
                 evidence_ids=[s.id for s in pack.sections] or meta_ev,
                 content_units=[
                     ContentUnit(
                         role="agenda-item",
                         kind=Kind.bullet,
-                        text=s.heading or f"Секция {i + 1}",
+                        text=clean_purpose_text(s.heading) or f"Секция {i + 1}",
                         evidence_ids=[s.id],
                     )
                     for i, s in enumerate(pack.sections)
@@ -607,7 +1069,9 @@ def plan_deck(
                     level=(
                         Level.sparse
                         if len(pack.sections) <= 3
-                        else Level.medium if len(pack.sections) <= 6 else Level.dense
+                        else Level.medium
+                        if len(pack.sections) <= 6
+                        else Level.dense
                     ),
                     max_items=len(pack.sections),
                 ),
@@ -621,11 +1085,15 @@ def plan_deck(
         ev_ids = sorted(set(chain.from_iterable(u.evidence_ids or [] for u in all_units))) or [
             f"{pack.id}:{primary_sec.id}"
         ]
-        is_divider = not all_units and primary_sec.heading
-        purpose = Purpose.section_divider if is_divider else _purpose_for(primary_sec.heading)
-        base_title = primary_sec.heading or ("Дополнительно" if lang == "ru" else "More")
+        clean_sec_heading = clean_purpose_text(primary_sec.heading) or ""
+        is_divider = not all_units and bool(clean_sec_heading)
+        purpose = Purpose.section_divider if is_divider else _purpose_for(clean_sec_heading)
+        base_title = clean_sec_heading or ("Дополнительно" if lang == "ru" else "More")
         idx = len(slides)
         first_para = next((u.text for u in all_units if u.kind == Kind.paragraph and u.text), None)
+        source_notes = [
+            b.text for sec, _ in slide_parts for b in sec.blocks if is_speaker_note(b) and b.text
+        ]
         note = (
             "Сводка слайдов секций: "
             + ", ".join(sorted({s.heading for s, _ in slide_parts if s.heading}))
@@ -652,16 +1120,26 @@ def plan_deck(
             None
             if strategy == Strategy.faithful
             or purpose in _TOPIC_TITLE_PURPOSES
+            or any(u.kind in {Kind.chart, Kind.table} for u in all_units)
             or para_unit is None
+            or para_unit.locked
             else _conclusion_title(para_unit.text, base_title)
         )
+        # ADR-030: абзац, целиком ушедший в заголовок, оставил бы слайд с
+        # одним заголовком — та же заглушка. Тогда заголовок остаётся
+        # темой раздела, а текст — телом слайда.
+        if (
+            conclusion is not None
+            and not conclusion[1]
+            and not any(u is not para_unit and u.kind != Kind.title for u in all_units)
+        ):
+            conclusion = None
         if conclusion is not None and para_unit is not None:
             base_title_text, rest = conclusion
             # предложение переехало в заголовок — в теле не дублируем
             if rest:
                 all_units = [
-                    u.model_copy(update={"text": rest}) if u is para_unit else u
-                    for u in all_units
+                    u.model_copy(update={"text": rest}) if u is para_unit else u for u in all_units
                 ]
             else:
                 all_units = [u for u in all_units if u is not para_unit]
@@ -669,7 +1147,18 @@ def plan_deck(
             note = f"{heading_note}. {note}" if note else heading_note
             title = unique_title(base_title_text)
         else:
-            title = unique_title(base_title)
+            # заголовок раздела совпал с обложкой: тема из текста слайда,
+            # иначе «Идея — часть 2» повторяет титул (ADR-031 §9)
+            topic = (
+                _topic_title(first_para or next((u.text for u in all_units if u.text), None), lang)
+                if base_title.strip().casefold() == title_text.strip().casefold()
+                and purpose not in _TOPIC_TITLE_PURPOSES
+                else None
+            )
+            title = unique_title(topic or base_title)
+        if source_notes:
+            # заметки автора исходной презентации — первыми
+            note = " ".join([*source_notes, *([note] if note else [])])
         slide = SlidePlan(
             id=f"slide-{idx}",
             index=idx,
@@ -689,42 +1178,45 @@ def plan_deck(
         for sec, _ in slide_parts:
             section_slide_ids.setdefault(sec.id, []).append(slide.id)
 
-    # последний резерв: generic divider (теперь с title-юнитом — не пустой
-    # слайд под integrity.empty_slide). Достижим только при патологическом
-    # ratio target/контент — см. отчёт по задаче.
-    while len(slides) < target - 1:
-        title = unique_title("Раздел" if lang == "ru" else "Section")
-        emit(
-            SlidePlan(
-                id=f"slide-{len(slides)}",
-                index=len(slides),
-                purpose=Purpose.section_divider,
-                title_intent=title,
-                key_message="Переход к следующему разделу",
-                evidence_ids=meta_ev,
-                content_units=[
-                    ContentUnit(
-                        role="title", kind=Kind.title, text=title, evidence_ids=meta_ev
-                    )
-                ],
-                density_budget=_density([]),
-            )
+    # ADR-030: раньше недостающие слайды добивались generic-слайдами
+    # «Раздел» с одним заголовком. Теперь колода короче запрошенной, а
+    # brief плана получает фактическое число слайдов — так инвариант
+    # «число слайдов == brief.target_slide_count» остаётся честным, а
+    # вызывающий код видит сокращение, сравнив его с исходным брифом.
+    if not any(p.purpose not in _BOOKEND_PURPOSES for p in slides):
+        raise DeckDNAError(
+            code="invalid_input",
+            message=(
+                "content pack has no content to build slides from; add content "
+                "or enable content_fill=expand with a model"
+            ),
+            stage="planning",
         )
+    planned = len(slides) + 1  # + закрывающий слайд ниже
+    if planned < target:
+        logger.info(
+            "plan_deck: content fills %d of %d requested slides; deck shortened "
+            "instead of padding with empty section slides (ADR-030)",
+            planned,
+            target,
+        )
+        brief = brief.model_copy(update={"target_slide_count": planned})
 
     closing_purpose = (
         Purpose.cta if _purpose_for(brief.purpose) == Purpose.cta else Purpose.thank_you
+    )
+    closing_title = (
+        "Следующие шаги"
+        if closing_purpose == Purpose.cta
+        else ("Спасибо за внимание" if lang == "ru" else "Thank you")
     )
     emit(
         SlidePlan(
             id=f"slide-{len(slides)}",
             index=len(slides),
             purpose=closing_purpose,
-            title_intent=unique_title(
-                "Следующие шаги"
-                if closing_purpose == Purpose.cta
-                else ("Спасибо за внимание" if lang == "ru" else "Thank you")
-            ),
-            key_message=brief.purpose,
+            title_intent=unique_title(closing_title),
+            key_message=display_purpose or title_text,
             evidence_ids=meta_ev,
             content_units=[
                 ContentUnit(
@@ -745,12 +1237,14 @@ def plan_deck(
         id=f"plan-{pack.id.removeprefix('pack-')}-{strategy.value}",
         brief=brief,
         evidence_graph_id=f"pack:{pack.id}",
-        objective=brief.purpose,
+        objective=display_purpose or title_text,
         audience=brief.audience,
         language=lang,
         sections=[
             PlanSection(
-                id=sec.id, title=sec.heading or sec.id, slide_ids=section_slide_ids.get(sec.id, [])
+                id=sec.id,
+                title=clean_purpose_text(sec.heading) or sec.id,
+                slide_ids=section_slide_ids.get(sec.id, []),
             )
             for sec in pack.sections
         ],
@@ -763,6 +1257,8 @@ def plan_deck(
             input_hashes=[hashlib.sha256(pack.model_dump_json().encode()).hexdigest()],
         ),
     )
+    plan = apply_storyline_and_grammar(plan, pack, brief, cfg, strategy)
+    plan = protect_mandatory_sections(plan, pack)
     validate_deck_plan(plan, cfg)
     return plan
 
@@ -824,6 +1320,71 @@ async def _run_outline_batch(
     return result
 
 
+STORY_LEDGER_PROMPT = "story_ledger"
+
+
+def plan_story_ledger(
+    ledger,
+    brief: Brief,
+    *,
+    beam_width: int = 8,
+):
+    """Детерминированный план истории по FactLedger (beam search, k=8)."""
+    from deckdna.planning.story_rules import beam_search_story_plan
+
+    return beam_search_story_plan(
+        ledger,
+        brief=brief,
+        max_slides=brief.target_slide_count,
+        k=beam_width,
+    )
+
+
+async def plan_story_ledger_llm(
+    ledger,
+    brief: Brief,
+    gateway: ModelGateway | None = None,
+    *,
+    beam_width: int = 8,
+):
+    """LLM-контракт Story Director поверх FactLedger с детерминированным откатом.
+
+    Модель получает компактный каталог ``build_fact_ledger_catalog`` и возвращает
+    только JSON по схеме ``StoryLedgerPlan``. Сервер проверяет существование
+    всех ``fact_id``, принадлежность ``title_realization_id ∈ allowed_title_ids``,
+    наличие факта у каждого ``evidence``-слайда и отсутствие причинных переходов.
+    При любом нарушении или ошибке шлюза возвращается детерминированный план
+    ``beam_search_story_plan`` без падения.
+    """
+    from deckdna.planning.story_rules import (
+        StoryLedgerPlan,
+        build_fact_ledger_catalog,
+        resolve_story_ledger_plan,
+    )
+
+    if gateway is None:
+        return plan_story_ledger(ledger, brief, beam_width=beam_width)
+
+    catalog = build_fact_ledger_catalog(ledger, brief=brief)
+    candidate = None
+    try:
+        candidate = await gateway.text_json(STORY_LEDGER_PROMPT, catalog, StoryLedgerPlan)
+    except Exception as exc:  # noqa: BLE001 — невалидный ответ или ошибка шлюза -> детерминированный план
+        logger.warning(
+            "story_ledger LLM call failed (%s); falling back to deterministic beam search",
+            exc,
+        )
+        candidate = None
+
+    return resolve_story_ledger_plan(
+        candidate,
+        ledger,
+        brief=brief,
+        max_slides=brief.target_slide_count,
+        k=beam_width,
+    )
+
+
 async def plan_deck_llm(
     pack: ContentPack,
     brief: Brief,
@@ -831,6 +1392,9 @@ async def plan_deck_llm(
     design_dna: DesignDNA | None = None,
     config: GenerationConfig | None = None,
     strategy: Strategy = Strategy.balanced,
+    *,
+    fact_ledger: object | None = None,
+    story_plan: object | None = None,
 ) -> DeckPlan:
     """LLM-путь Story Director (v2, батчами) — ContentPack + Brief → DeckPlan.
 
@@ -869,8 +1433,61 @@ async def plan_deck_llm(
         cfg = load_generation_config()
     validate_slide_count(brief.target_slide_count, cfg)
 
+    from deckdna.planning.request_constraints import resolve_count_goal
+
+    brief = resolve_count_goal(brief)
+    if pack.datasets or fact_ledger is not None or story_plan is not None:
+        from deckdna.analysis.fact_ledger import FactLedger, build_pack_fact_ledger
+        from deckdna.analysis.pipeline import analyze_pack
+
+        brief_text = " ".join(
+            filter(
+                None,
+                [
+                    getattr(brief, "purpose", None),
+                    getattr(brief, "key_message", None),
+                    getattr(brief, "call_to_action", None),
+                ],
+            )
+        )
+        ledger = (
+            fact_ledger
+            if isinstance(fact_ledger, FactLedger)
+            else build_pack_fact_ledger(analyze_pack(pack, brief_text))
+        )
+        from deckdna.planning.story_rules import ledger_source_groups
+
+        story_brief = brief.model_copy(
+            update={
+                "target_slide_count": max(
+                    3, brief.target_slide_count - len(ledger_source_groups(pack, brief))
+                )
+            }
+        )
+        resolved_story = (
+            story_plan
+            if story_plan is not None
+            else await plan_story_ledger_llm(ledger, story_brief, gateway)
+        )
+        return plan_deck(
+            pack,
+            brief,
+            cfg,
+            strategy=strategy,
+            fact_ledger=ledger,
+            story_plan=resolved_story,
+        )
+
     baseline = plan_deck(pack, brief, cfg, strategy=strategy)
-    eligible = [s for s in baseline.slides if s.purpose not in _PROTECTED_OUTLINE_PURPOSES]
+    eligible = [
+        s
+        for s in baseline.slides
+        if s.purpose not in _PROTECTED_OUTLINE_PURPOSES
+        and not any(
+            u.locked or u.kind in {Kind.chart, Kind.table, Kind.diagram, Kind.image}
+            for u in s.content_units
+        )
+    ]
     if not eligible:
         return baseline  # ничего осмысленного отдать модели — не звоним ей вовсе
 
@@ -929,8 +1546,8 @@ async def plan_deck_llm(
                 id=base.id,
                 index=base.index,
                 purpose=item.purpose,
-                title_intent=item.title_intent,
-                key_message=item.key_message,
+                title_intent=clean_purpose_text(item.title_intent) or base.title_intent,
+                key_message=clean_purpose_text(item.key_message) or base.key_message,
                 evidence_ids=used_evidence_ids,
                 content_units=units,
                 desired_visual=item.desired_visual or _desired_visual(units),

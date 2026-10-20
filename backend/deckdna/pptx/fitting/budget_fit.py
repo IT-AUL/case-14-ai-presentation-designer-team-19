@@ -99,7 +99,7 @@ def _body_units(slide) -> list[int]:
     return [
         i
         for i, u in enumerate(slide.content_units)
-        if u.kind in _BODY_KINDS and u.text and u.role != "equation"
+        if u.kind in _BODY_KINDS and u.text and u.role != "equation" and not u.locked
     ]
 
 
@@ -127,9 +127,10 @@ async def fit_plan_to_budgets(
             continue
         budget = budgets.get(slide_parts[i]) or {}
         t_max, b_max = budget.get("title_max_chars"), budget.get("bullet_max_chars")
-        title, _ = _title(slide)
+        title, title_idx = _title(slide)
         body = _body_units(slide)
-        over_title = bool(t_max) and len(title) > t_max * _TITLE_SLACK
+        title_locked = title_idx is not None and slide.content_units[title_idx].locked
+        over_title = not title_locked and bool(t_max) and len(title) > t_max * _TITLE_SLACK
         over_body = bool(b_max) and any(
             len(slide.content_units[k].text or "") > b_max * _BULLET_SLACK for k in body
         )
@@ -195,7 +196,8 @@ async def fit_plan_to_budgets(
                 units[k] = units[k].model_copy(update={"text": new.strip()})
                 changed += 1
         update: dict = {"content_units": units}
-        if _accept(title, answer.title.rstrip(". ")):
+        title_locked = any(u.kind == Kind.title and u.locked for u in units)
+        if not title_locked and _accept(title, answer.title.rstrip(". ")):
             new_title = answer.title.strip().rstrip(".")
             _, title_idx = _title(slide)
             if title_idx is not None:

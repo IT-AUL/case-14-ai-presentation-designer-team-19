@@ -3,20 +3,61 @@
 
 from __future__ import annotations
 
-from enum import Enum
-from typing import Annotated
+from enum import Enum, StrEnum
+from typing import Annotated, Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
+
+
+class ContentFill(Enum):
+    """ADR-030: what to do when the content does not fill
+    ``target_slide_count``."""
+
+    expand = 'expand'
+    shrink = 'shrink'
+    ask = 'ask'
+
+
+class Origin(Enum):
+    """ADR-030: where a fact comes from."""
+
+    user = 'user'
+    web = 'web'
+    model = 'model'
+
+
+class SlideCountPolicy(StrEnum):
+    preferred = 'preferred'
+    exact = 'exact'
+    maximum = 'maximum'
 
 
 class Brief(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     purpose: str
     audience: str
     language: str
     target_slide_count: Annotated[int, Field(ge=3, le=40)]
+    slide_count_policy: SlideCountPolicy | None = None
+    requested_slide_count: Annotated[int | None, Field(ge=3, le=40, strict=True)] = None
     tone: str | None = None
     mandatory_sections: list[str] | None = None
     forbidden_claims: list[str] | None = None
+    content_fill: ContentFill | None = None
+    # ADR-034 §3: главная мысль колоды и что сделать слушателям (ответы
+    # на вопросы помощника); планировщик держится за главную мысль
+    key_message: str | None = None
+    call_to_action: str | None = None
+    # ADR-033 §10: слайд-приложение «Как выбирались визуализации»
+    explain_slide: bool | None = None
+
+    @model_validator(mode='after')
+    def bind_requested_count(self) -> Brief:
+        if (self.slide_count_policy in (SlideCountPolicy.exact, SlideCountPolicy.maximum)
+                and self.requested_slide_count is None):
+            self.requested_slide_count = self.target_slide_count
+        return self
 
 
 class Section(BaseModel):
@@ -75,6 +116,14 @@ class ChartType(Enum):
     pie = 'pie'
     area = 'area'
     scatter = 'scatter'
+    # ADR-033 §4: каталог визуализаций для данных
+    bar_horizontal = 'bar_horizontal'
+    bar_stacked = 'bar_stacked'
+    bar_stacked_100 = 'bar_stacked_100'
+    histogram = 'histogram'
+    doughnut = 'doughnut'
+    kpi = 'kpi'
+    waterfall = 'waterfall'
 
 
 class ChartSpec(BaseModel):
@@ -95,6 +144,9 @@ class ContentUnit(BaseModel):
     table_ref: str | None = None
     chart_ref: str | None = None
     diagram_ref: str | None = None
+    locked: bool | None = None
+    origin: Origin | None = None
+    source_id: str | None = None
     chart_spec: ChartSpec | None = None
 
 
@@ -135,6 +187,11 @@ class SlidePlan(BaseModel):
     density_budget: DensityBudget
     speaker_note: str | None = None
     mandatory: bool | None = None
+    # ADR-034 §4: карточка плана для слайда с данными — выбранный график с
+    # причинами и альтернативы; выводы слайда; держится ли за главную мысль
+    chart: dict[str, Any] | None = None
+    insight_ids: list[str] | None = None
+    supports_key_message: bool | None = None
 
 
 class DeckPlan(BaseModel):

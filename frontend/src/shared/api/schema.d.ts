@@ -4,6 +4,24 @@
  */
 
 export interface paths {
+    "/api/v1/projects/{project_id}/agent/messages": {
+        parameters: { path: { project_id: string } };
+        post: {
+            parameters: { path: { project_id: string } };
+            requestBody: { content: { "application/json": components["schemas"]["AgentMessageRequest"] } };
+            responses: { 202: { content: { "application/json": components["schemas"]["AgentMessageAccepted"] } }; 409: { content: { "application/json": components["schemas"]["ErrorEnvelope"] } } };
+        };
+    };
+    "/api/v1/projects/{project_id}/agent/thread": {
+        parameters: { path: { project_id: string } };
+        get: { parameters: { path: { project_id: string } }; responses: { 200: { content: { "application/json": components["schemas"]["AgentThread"] } } } };
+        delete: { parameters: { path: { project_id: string } }; responses: { 204: { content?: never } } };
+    };
+    "/api/v1/projects/{project_id}/agent/jobs/{job_id}/cancel": {
+        parameters: { path: { project_id: string; job_id: string } };
+        post: { parameters: { path: { project_id: string; job_id: string } }; responses: { 200: { content: { "application/json": unknown } }; 204: { content?: never } } };
+    };
+
     "/api/v1/provider-sessions": {
         parameters: {
             query?: never;
@@ -260,6 +278,134 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/content-packs/{pack_id}/understanding": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Understanding
+         * @description ADR-034 §2: смысловые блоки, сводка и датасеты с выводами.
+         *
+         *     С моделью (``use_llm`` / ``provider_session_id``, как у /plans) выводы
+         *     данных получают «что значит» и «что следует» (ADR-033 §5, числа
+         *     сверены с фактом); результат сохраняется в паке.
+         */
+        get: operations["get_understanding_api_v1_content_packs__pack_id__understanding_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/content-packs/{pack_id}/blocks": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch Blocks
+         * @description ADR-034 §2: правка блоков → новая версия пака (цепочка ``filled_from``).
+         */
+        patch: operations["patch_blocks_api_v1_content_packs__pack_id__blocks_patch"];
+        trace?: never;
+    };
+    "/api/v1/content-packs/{pack_id}/insights/{insight_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch Insight
+         * @description ADR-033 §5: подтверждение или правка вывода. Подтверждённый вывод
+         *     поднимается выше в «Ключевых выводах», его следствие идёт в «Что
+         *     предлагаем».
+         */
+        patch: operations["patch_insight_api_v1_content_packs__pack_id__insights__insight_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/content-packs/{pack_id}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add Pack Notes
+         * @description ADR-034 §3: «Я добавлю пару тезисов» → новая версия пака.
+         */
+        post: operations["add_pack_notes_api_v1_content_packs__pack_id__notes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/questions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Questions
+         * @description ADR-034 §3: вопросы только по причине; пустой список — шаг пропускается.
+         */
+        get: operations["get_questions_api_v1_projects__project_id__questions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/answers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Post Answers
+         * @description ADR-034 §3: ответы → бриф проекта (``audience``, ``tone``,
+         *     ``target_slide_count``, ``content_fill``, ``key_message``,
+         *     ``call_to_action``). Бриф отдаётся целиком — фронт шлёт его в /plans.
+         */
+        post: operations["post_answers_api_v1_projects__project_id__answers_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/projects/{project_id}/plans": {
         parameters: {
             query?: never;
@@ -271,11 +417,180 @@ export interface paths {
         put?: never;
         /**
          * Create Plans
-         * @description План до вёрстки (D7): структура колоды по каждой стратегии за
-         *     секунды. Его можно показать, поправить и передать в POST /generations
-         *     (deck_plan_id или deck_plan) — планирование тогда не повторяется.
+         * @description План до вёрстки (D7): структура колоды по каждой стратегии. Его можно
+         *     показать, поправить и передать в POST /generations (deck_plan_id или
+         *     deck_plan) — планирование тогда не повторяется.
+         *
+         *     ADR-030: до планирования — добор контента по ``brief.content_fill``;
+         *     ``run_async=true`` строит план фоновым job'ом с живыми событиями.
          */
         post: operations["create_plans_api_v1_projects__project_id__plans_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{plan_id}/slides/{slide_id}/research": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Research Plan Slide
+         * @description ADR-030: «найти факты / цифры» для одного слайда плана. Найденное
+         *     (с цитатами и источниками) добавляется в слайд и в новый пак; набор
+         *     планов обновляется — передайте его ``content_pack_id`` в генерацию.
+         */
+        post: operations["research_plan_slide_api_v1_plans__plan_id__slides__slide_id__research_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{plan_id}/slides/{slide_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch Plan Slide
+         * @description ADR-034 §4: другой график на карточке — только среди альтернатив;
+         *     иное → 422 с причиной из ``rejected[]``.
+         */
+        patch: operations["patch_plan_slide_api_v1_plans__plan_id__slides__slide_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/plans/{plan_id}/slides/{slide_id}/actions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Plan Slide Action
+         * @description ADR-034 §4: быстрые действия на карточке слайда.
+         */
+        post: operations["plan_slide_action_api_v1_plans__plan_id__slides__slide_id__actions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{plan_id}/style-previews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Style Previews
+         * @description ADR-034 §5: 2–3 ключевых слайда в трёх стратегиях, параллельно.
+         *     Полная сборка с ``preview_id`` берёт те же образцы.
+         */
+        post: operations["create_style_previews_api_v1_plans__plan_id__style_previews_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/style-previews/{preview_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Style Previews
+         * @description Итог пробных слайдов: ``{styles:[{strategy, title, difference,
+         *     recommended, previews:[{slide_id, image_artifact_id}]}], assistant_note}``.
+         */
+        get: operations["get_style_previews_api_v1_style_previews__preview_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Plan Set
+         * @description Готовый набор планов (в т. ч. построенный фоновым job'ом).
+         */
+        get: operations["get_plan_set_api_v1_plans__plan_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/plans/{plan_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Project Plan Set
+         * @description ADR-034 §0: путь фронта к тому же PlanSet.
+         */
+        get: operations["get_project_plan_set_api_v1_projects__project_id__plans__plan_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/plans/{plan_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Cancel Plan
+         * @description ADR-034 §0: кооперативная отмена фонового построения плана.
+         *     Добор контента дорабатывает текущий шаг, план не сохраняется.
+         */
+        post: operations["cancel_plan_api_v1_projects__project_id__plans__plan_id__cancel_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -444,6 +759,152 @@ export interface paths {
         };
         /** Get Slide Preview */
         get: operations["get_slide_preview_api_v1_slides__slide_id__preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/intake": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Intake
+         * @description ADR-034 §1: «Закинь, что есть» — все файлы разом и/или одна фраза.
+         *     Тип каждого файла определяется сам; ответ — что куда ушло.
+         */
+        post: operations["intake_api_v1_projects__project_id__intake_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/intake/files/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch Intake File
+         * @description Чип типа файла: пользователь поправил тип — файлы проекта
+         *     раскладываются заново.
+         */
+        patch: operations["patch_intake_file_api_v1_projects__project_id__intake_files__name__patch"];
+        trace?: never;
+    };
+    "/api/v1/templates/{template_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Template Summary
+         * @description Карточка шаблона: слайды, палитра, шрифты (ADR-034 §1).
+         */
+        get: operations["template_summary_api_v1_templates__template_id__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/brandbooks/{brandbook_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Brandbook */
+        get: operations["get_brandbook_api_v1_brandbooks__brandbook_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Patch Brandbook
+         * @description Переключатель «чьё оформление главнее» для проекта брендбука.
+         */
+        patch: operations["patch_brandbook_api_v1_brandbooks__brandbook_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/brandbooks/{brandbook_id}/summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Brandbook Summary
+         * @description Карточка брендбука: палитра, шрифты, конфликты с шаблоном проекта,
+         *     приоритет (ADR-034 §1, ADR-033 §9).
+         */
+        get: operations["brandbook_summary_api_v1_brandbooks__brandbook_id__summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/variants/{variant_id}/slides/{slide_id}/regenerate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Regenerate Variant Slide
+         * @description ADR-034 §7: пересборка **одного** слайда — новая ревизия колоды, как
+         *     repair; остальные слайды байт-в-байт те же. Аудит и превью слайда.
+         */
+        post: operations["regenerate_variant_slide_api_v1_variants__variant_id__slides__slide_id__regenerate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/slides/{slide_id}/explain": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Explain Slide
+         * @description ADR-034 §7 / ADR-033 §10: панель «Почему так» — данные → профиль →
+         *     задача → почему этот тип → альтернативы → выводы.
+         */
+        get: operations["explain_slide_api_v1_slides__slide_id__explain_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -702,10 +1163,65 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/projects/{project_id}/session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Session */
+        get: operations["get_session_api_v1_projects__project_id__session_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/projects/{project_id}/session/autopilot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Autopilot */
+        post: operations["autopilot_api_v1_projects__project_id__session_autopilot_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        AgentMessageRequest: { text: string; variant_id?: string; plan_id?: string; slide_id?: string; provider_session_id?: string };
+        AgentMessageAccepted: { job_id: string; message_id: string; events_url: string; thread_url: string };
+        AgentSource: { title: string; url: string; publisher?: string | null };
+        AgentAction: { tool: string; slide: number | null; ok: boolean; summary: string; revision?: number | null; sources?: components["schemas"]["AgentSource"][] };
+        AgentMessage: {
+            id: string;
+            role: "user" | "assistant";
+            text: string;
+            created_at: string;
+            job_id: string | null;
+            variant_id?: string | null;
+            plan_id?: string | null;
+            slide_id?: string | null;
+            question?: { text: string; options: string[] } | null;
+            actions?: components["schemas"]["AgentAction"][];
+            mode?: "model" | "local" | "unavailable" | "error";
+            revision?: number | null;
+            reply_to?: string | null;
+        };
+        AgentThread: { items: components["schemas"]["AgentMessage"][]; active_job_id: string | null };
+
         /** AnalysisAccepted */
         AnalysisAccepted: {
             /** Job Id */
@@ -721,6 +1237,13 @@ export interface components {
             slide_coverage: number;
             /** Source Parts */
             source_parts?: string[] | null;
+        };
+        /** AnswersBody */
+        AnswersBody: {
+            /** Answers */
+            answers: {
+                [key: string]: unknown;
+            };
         };
         /** Asset */
         Asset: {
@@ -743,6 +1266,24 @@ export interface components {
             attribution?: string | null;
             /** Source Url */
             source_url?: string | null;
+        };
+        /** AssistantSession */
+        AssistantSession: {
+            /** Step */
+            step: number;
+            /** Completed Steps */
+            completed_steps: number[];
+            /** Skipped Steps */
+            skipped_steps: number[];
+            artifacts: components["schemas"]["SessionArtifacts"];
+            /** Brief */
+            brief: {
+                [key: string]: unknown;
+            };
+            /** Assistant Note */
+            assistant_note: string;
+            /** Job Id */
+            job_id?: string | null;
         };
         /** AuditAccepted */
         AuditAccepted: {
@@ -886,6 +1427,27 @@ export interface components {
             /** Finished At */
             finished_at?: string | null;
         };
+        /** AutopilotAccepted */
+        AutopilotAccepted: {
+            /** Job Id */
+            job_id: string;
+            /** Events Url */
+            events_url: string;
+            /** Assistant Note */
+            assistant_note: string;
+        };
+        /** AutopilotRequest */
+        AutopilotRequest: {
+            /**
+             * From Step
+             * @default 1
+             */
+            from_step: number;
+            /** Use Llm */
+            use_llm?: boolean | null;
+            /** Provider Session Id */
+            provider_session_id?: string | null;
+        };
         /** Background */
         Background: {
             kind?: components["schemas"]["deckdna__contracts__design_dna__Kind"] | null;
@@ -902,6 +1464,20 @@ export interface components {
             /** Items */
             items?: string[] | null;
             source_ref: components["schemas"]["deckdna__contracts__content_pack__SourceRef"];
+        };
+        /** BlockOps */
+        BlockOps: {
+            /** Ops */
+            ops: {
+                [key: string]: unknown;
+            }[];
+        };
+        /** Body_intake_api_v1_projects__project_id__intake_post */
+        Body_intake_api_v1_projects__project_id__intake_post: {
+            /** Files */
+            files?: string[] | null;
+            /** Idea */
+            idea?: string | null;
         };
         /** Body_upload_content_pack_api_v1_projects__project_id__content_packs_post */
         Body_upload_content_pack_api_v1_projects__project_id__content_packs_post: {
@@ -921,6 +1497,14 @@ export interface components {
              */
             file: string;
         };
+        /** BrandbookPatch */
+        BrandbookPatch: {
+            /**
+             * Priority
+             * @enum {string}
+             */
+            priority: "brandbook" | "template";
+        };
         /** Brief */
         Brief: {
             /** Purpose */
@@ -937,6 +1521,13 @@ export interface components {
             mandatory_sections?: string[] | null;
             /** Forbidden Claims */
             forbidden_claims?: string[] | null;
+            content_fill?: components["schemas"]["ContentFill"] | null;
+            /** Key Message */
+            key_message?: string | null;
+            /** Call To Action */
+            call_to_action?: string | null;
+            /** Explain Slide */
+            explain_slide?: boolean | null;
         };
         /** CapabilityProbe */
         CapabilityProbe: {
@@ -993,13 +1584,25 @@ export interface components {
             /** Series */
             series: components["schemas"]["ChartSeries"][];
             source_ref: components["schemas"]["deckdna__contracts__content_pack__SourceRef"];
+            /** Chart Type */
+            chart_type?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Value Axis Title */
+            value_axis_title?: string | null;
+            /** Category Axis Title */
+            category_axis_title?: string | null;
+            /** Unit */
+            unit?: string | null;
+            /** Source Note */
+            source_note?: string | null;
         };
         /** ChartSeries */
         ChartSeries: {
             /** Name */
             name?: string | null;
             /** Values */
-            values: number[];
+            values: (number | null)[];
         };
         /** ChartSpec */
         ChartSpec: {
@@ -1017,7 +1620,7 @@ export interface components {
          * ChartType
          * @enum {string}
          */
-        ChartType: "bar" | "line" | "pie" | "area" | "scatter";
+        ChartType: "bar" | "line" | "pie" | "area" | "scatter" | "bar_horizontal" | "bar_stacked" | "bar_stacked_100" | "histogram" | "doughnut" | "kpi";
         ColorsAdditionalProperty: string;
         /** Component */
         Component: {
@@ -1033,6 +1636,13 @@ export interface components {
             /** Slots */
             slots?: components["schemas"]["Slot"][] | null;
         };
+        /**
+         * ContentFill
+         * @description ADR-030: what to do when the content does not fill
+         *     ``target_slide_count``.
+         * @enum {string}
+         */
+        ContentFill: "expand" | "shrink" | "ask";
         /** ContentPack */
         ContentPack: {
             /** Schema Version */
@@ -1061,6 +1671,21 @@ export interface components {
             assets: components["schemas"]["Asset"][];
             /** Warnings */
             warnings: components["schemas"]["Warning"][];
+            /**
+             * External Sources
+             * @default []
+             */
+            external_sources: components["schemas"]["ExternalSource"][];
+            /**
+             * Datasets
+             * @default []
+             */
+            datasets: components["schemas"]["Dataset"][];
+            /**
+             * Insights
+             * @default []
+             */
+            insights: components["schemas"]["Insight"][];
         };
         /** ContentPackAccepted */
         ContentPackAccepted: {
@@ -1086,6 +1711,11 @@ export interface components {
             chart_ref?: string | null;
             /** Diagram Ref */
             diagram_ref?: string | null;
+            /** Locked */
+            locked?: boolean | null;
+            origin?: components["schemas"]["Origin-Input"] | null;
+            /** Source Id */
+            source_id?: string | null;
             chart_spec?: components["schemas"]["ChartSpec"] | null;
         };
         /** ContentUnit */
@@ -1107,7 +1737,43 @@ export interface components {
             chart_ref?: string | null;
             /** Diagram Ref */
             diagram_ref?: string | null;
+            /** Locked */
+            locked?: boolean | null;
+            origin?: components["schemas"]["deckdna__contracts__deck_plan__Origin"] | null;
+            /** Source Id */
+            source_id?: string | null;
             chart_spec?: components["schemas"]["ChartSpec"] | null;
+        };
+        /**
+         * Dataset
+         * @description Табличные данные пользователя (CSV, XLSX, табличный JSON, таблица в
+         *     тексте). Профиль, задача, выбор графика и выводы считаются по нему
+         *     кодом (``deckdna.analysis``) и не зависят от формата файла.
+         */
+        Dataset: {
+            /** Id */
+            id: string;
+            /** Title */
+            title: string;
+            /** Columns */
+            columns: components["schemas"]["DatasetColumn"][];
+            /** Row Count */
+            row_count: number;
+            source_ref: components["schemas"]["deckdna__contracts__content_pack__SourceRef"];
+            /** File Name */
+            file_name?: string | null;
+            /** Context Text */
+            context_text?: string | null;
+        };
+        /**
+         * DatasetColumn
+         * @description Колонка датасета с сырыми значениями (как в файле, после чтения).
+         */
+        DatasetColumn: {
+            /** Name */
+            name: string;
+            /** Values */
+            values: (string | number | null)[];
         };
         /** DeckPlan */
         "DeckPlan-Input": {
@@ -1220,7 +1886,7 @@ export interface components {
         /**
          * Diagram
          * @description Simple flow/step diagram — steps rendered as SmartArt-like
-         *     grouped editable shapes (baseline, not real dgm).
+         *     grouped editable shapes (native grouped shapes, not SmartArt dgm).
          */
         Diagram: {
             /** Id */
@@ -1373,6 +2039,27 @@ export interface components {
             formats: ("pptx" | "pdf" | "html" | "quality_passport")[];
         };
         /**
+         * ExternalSource
+         * @description ADR-030: a source of content added by research (``web``) or
+         *     written by the model (``model``). Added blocks point at ``id`` through
+         *     ``SourceRef.artifact_id``.
+         */
+        ExternalSource: {
+            /** Id */
+            id: string;
+            origin: components["schemas"]["deckdna__contracts__content_pack__Origin"];
+            /** Url */
+            url?: string | null;
+            /** Title */
+            title?: string | null;
+            /** Publisher */
+            publisher?: string | null;
+            /** Retrieved At */
+            retrieved_at?: string | null;
+            /** Query */
+            query?: string | null;
+        };
+        /**
          * FixPreview
          * @description Что будет сделано для проблемы — считает тот же планировщик (D8).
          */
@@ -1443,6 +2130,12 @@ export interface components {
             /** Deck Plan Id */
             deck_plan_id?: string | null;
             deck_plan?: components["schemas"]["DeckPlan-Input"] | null;
+            /** Preview Id */
+            preview_id?: string | null;
+            /** Brandbook Id */
+            brandbook_id?: string | null;
+            /** Brand Priority */
+            brand_priority?: ("brandbook" | "template") | null;
         };
         /** GenerationDetail */
         GenerationDetail: {
@@ -1473,6 +2166,10 @@ export interface components {
             created_at: string;
             /** Finished At */
             finished_at?: string | null;
+            /** Content Fill */
+            content_fill?: {
+                [key: string]: unknown;
+            } | null;
         };
         /**
          * GenerationSummary
@@ -1504,6 +2201,80 @@ export interface components {
             /** Finished At */
             finished_at?: string | null;
         };
+        /**
+         * Insight
+         * @description Вывод «факт → что значит → что следует» (ADR-033 §5).
+         *
+         *     ``fact`` и ``headline`` считает код; ``meaning`` и ``implication``
+         *     формулирует модель, числа в них сверяются с фактом. Следствие —
+         *     предложение: ``needs_confirmation`` до подтверждения пользователем.
+         */
+        Insight: {
+            /** Id */
+            id: string;
+            /** Dataset Id */
+            dataset_id: string;
+            /** View Id */
+            view_id?: string | null;
+            /** @default fact */
+            kind: components["schemas"]["InsightKind"];
+            /** Fact Type */
+            fact_type?: string | null;
+            /** Fact */
+            fact: string;
+            /** Headline */
+            headline?: string | null;
+            /** Meaning */
+            meaning?: string | null;
+            /** Implication */
+            implication?: string | null;
+            /** Strength */
+            strength: number;
+            /**
+             * Confirmed
+             * @default false
+             */
+            confirmed: boolean;
+            /**
+             * Needs Confirmation
+             * @default false
+             */
+            needs_confirmation: boolean;
+            /**
+             * Evidence
+             * @default []
+             */
+            evidence: string[];
+            /**
+             * Numbers
+             * @default []
+             */
+            numbers: string[];
+        };
+        /**
+         * InsightKind
+         * @enum {string}
+         */
+        InsightKind: "fact" | "recommendation";
+        /** InsightPatch */
+        InsightPatch: {
+            /** Confirmed */
+            confirmed?: boolean | null;
+            /** Text */
+            text?: string | null;
+            /** Meaning */
+            meaning?: string | null;
+            /** Implication */
+            implication?: string | null;
+        };
+        /** IntakeFilePatch */
+        IntakeFilePatch: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "template" | "content" | "data" | "brandbook" | "unknown";
+        };
         /** IssueDismissRequest */
         IssueDismissRequest: {
             /** Reason */
@@ -1511,7 +2282,7 @@ export interface components {
         };
         /**
          * IssueOutcome
-         * @description Исход repair по одной выбранной проблеме (contract D2).
+         * @description Исход repair по одной выбранной проблеме (handoff D2).
          */
         IssueOutcome: {
             /** Issue Id */
@@ -1597,7 +2368,7 @@ export interface components {
          * JobKind
          * @enum {string}
          */
-        JobKind: "template_analysis" | "content_ingestion" | "generation" | "audit" | "repair" | "export";
+        JobKind: "template_analysis" | "content_ingestion" | "generation" | "planning" | "style_preview" | "autopilot" | "audit" | "repair" | "export";
         /**
          * JobState
          * @enum {string}
@@ -1667,6 +2438,12 @@ export interface components {
             source_ref: components["schemas"]["deckdna__contracts__evidence_graph__SourceRef"];
             /** Confidence */
             confidence?: number | null;
+            origin?: components["schemas"]["deckdna__contracts__evidence_graph__Origin"] | null;
+        };
+        /** NotesBody */
+        NotesBody: {
+            /** Items */
+            items: string[];
         };
         /** Observed */
         Observed: {
@@ -1687,6 +2464,12 @@ export interface components {
             /** Max */
             max?: number | null;
         };
+        /**
+         * Origin
+         * @description ADR-030: where a fact comes from.
+         * @enum {string}
+         */
+        "Origin-Input": "user" | "web" | "model";
         /** Page[AuditIssueOut] */
         Page_AuditIssueOut_: {
             /** Items */
@@ -1737,6 +2520,15 @@ export interface components {
             idx?: number | null;
             bbox?: components["schemas"]["deckdna__contracts__design_dna__Bbox"] | null;
         };
+        /** PlanAccepted */
+        PlanAccepted: {
+            /** Plan Id */
+            plan_id: string;
+            /** Job Id */
+            job_id: string;
+            /** Events Url */
+            events_url: string;
+        };
         /** PlanEntry */
         PlanEntry: {
             /** Strategy */
@@ -1762,6 +2554,22 @@ export interface components {
              * @description Model mode. null (default) = auto: the model is used whenever a provider is available (provider_session_id, or a real server provider configured via DECKDNA_PROVIDER_* with mock off). true = force the model (server gateway, mock if configured so). false = deterministic path, no model calls.
              */
             use_llm?: boolean | null;
+            /**
+             * Run Async
+             * @description ADR-030: true = build the plan as a background job (202 {plan_id, job_id}); progress (research queries, sources, slides) streams from GET /jobs/{job_id}/events, the result is GET /plans/{plan_id}. false = synchronous 200 PlanSet.
+             * @default false
+             */
+            run_async: boolean;
+            /**
+             * Respond Async
+             * @description ADR-034 §0: the frontend's name for run_async; either one enables 202.
+             */
+            respond_async?: boolean | null;
+            /**
+             * Exclude Source Ids
+             * @description ADR-034 §0: research sources (PlanSet.research.sources[].id or URL) to drop: their facts leave the pack and research skips them.
+             */
+            exclude_source_ids?: string[];
         };
         /** PlanSet */
         PlanSet: {
@@ -1778,6 +2586,24 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            /** Updated At */
+            updated_at?: string | null;
+            /** Content Fill */
+            content_fill?: {
+                [key: string]: unknown;
+            } | null;
+            /** Sufficiency */
+            sufficiency?: {
+                [key: string]: unknown;
+            } | null;
+            /** Research */
+            research?: {
+                [key: string]: unknown;
+            } | null;
+            /** Key Message */
+            key_message?: string | null;
+            /** Template Id */
+            template_id?: string | null;
         };
         /** Project */
         Project: {
@@ -1877,7 +2703,7 @@ export interface components {
         /**
          * ProviderSession
          * @description Session view — токен и рабочие лимиты хранятся в lease-сторе
-         *     (in-memory lease store) и никогда не возвращаются API.
+         *     (in-memory до Redis, Wave 2) и никогда не возвращаются API.
          */
         ProviderSession: {
             /** Id */
@@ -1936,6 +2762,8 @@ export interface components {
             ttl_seconds: number;
             /** Project Id */
             project_id?: string | null;
+            /** Provider Project Id */
+            provider_project_id?: string | null;
         };
         /** ProviderSessionTestResult */
         ProviderSessionTestResult: {
@@ -1954,6 +2782,19 @@ export interface components {
          * @enum {string}
          */
         Purpose: "title" | "agenda" | "section_divider" | "overview" | "problem" | "solution" | "benefits" | "data" | "comparison" | "timeline" | "process" | "quote" | "team" | "cta" | "qa" | "thank_you" | "custom";
+        /**
+         * RegenerateRequest
+         * @description ADR-034 §7: «Переделать слайд».
+         */
+        RegenerateRequest: {
+            /**
+             * Action
+             * @description other_layout | shorter | other_chart | style:<strategy>
+             */
+            action: string;
+            /** Chart Type */
+            chart_type?: string | null;
+        };
         /** RepairAccepted */
         RepairAccepted: {
             /** Job Id */
@@ -2076,11 +2917,43 @@ export interface components {
             /** Slide Ids */
             slide_ids: string[];
         };
+        /** SessionArtifacts */
+        SessionArtifacts: {
+            /** Template Id */
+            template_id?: string | null;
+            /** Content Pack Id */
+            content_pack_id?: string | null;
+            /** Brandbook Id */
+            brandbook_id?: string | null;
+            /** Plan Id */
+            plan_id?: string | null;
+            /** Preview Id */
+            preview_id?: string | null;
+            /** Generation Id */
+            generation_id?: string | null;
+        };
         /**
          * Severity
          * @enum {string}
          */
         Severity: "info" | "warning" | "error" | "blocker";
+        /** SlideActionBody */
+        SlideActionBody: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "shorten" | "split" | "merge_next" | "to_chart" | "to_diagram" | "remove";
+            /** Strategy */
+            strategy?: string | null;
+        };
+        /** SlideChartPatch */
+        SlideChartPatch: {
+            /** Chart Type */
+            chart_type: string;
+            /** Strategy */
+            strategy?: string | null;
+        };
         /** SlideInfo */
         SlideInfo: {
             /** Id */
@@ -2127,6 +3000,14 @@ export interface components {
             speaker_note?: string | null;
             /** Mandatory */
             mandatory?: boolean | null;
+            /** Chart */
+            chart?: {
+                [key: string]: unknown;
+            } | null;
+            /** Insight Ids */
+            insight_ids?: string[] | null;
+            /** Supports Key Message */
+            supports_key_message?: boolean | null;
         };
         /** SlidePlan */
         "SlidePlan-Output": {
@@ -2152,6 +3033,14 @@ export interface components {
             speaker_note?: string | null;
             /** Mandatory */
             mandatory?: boolean | null;
+            /** Chart */
+            chart?: {
+                [key: string]: unknown;
+            } | null;
+            /** Insight Ids */
+            insight_ids?: string[] | null;
+            /** Supports Key Message */
+            supports_key_message?: boolean | null;
         };
         /** SlidePreviewMeta */
         SlidePreviewMeta: {
@@ -2171,6 +3060,35 @@ export interface components {
             mutability?: string | null;
             /** Preview Artifact Id */
             preview_artifact_id?: string | null;
+        };
+        /**
+         * SlideResearchRequest
+         * @description ADR-030: точечный ресёрч одного слайда плана.
+         */
+        SlideResearchRequest: {
+            /** Strategy */
+            strategy?: string | null;
+            /**
+             * Focus
+             * @default facts
+             * @enum {string}
+             */
+            focus: "facts" | "numbers";
+            /** Provider Session Id */
+            provider_session_id?: string | null;
+            /** Use Llm */
+            use_llm?: boolean | null;
+        };
+        /** SlideResearchResult */
+        SlideResearchResult: {
+            plan_set: components["schemas"]["PlanSet"];
+            slide: components["schemas"]["SlidePlan-Output"];
+            /** Added Units */
+            added_units: number;
+            /** Research */
+            research: {
+                [key: string]: unknown;
+            };
         };
         /** SlideRole */
         SlideRole: {
@@ -2221,6 +3139,23 @@ export interface components {
          * @enum {string}
          */
         Strategy: "preserve" | "immutable_decoration" | "raster_fallback" | "skip";
+        /**
+         * StylePreviewRequest
+         * @description ADR-034 §5: пробные слайды трёх стилей.
+         */
+        StylePreviewRequest: {
+            /** Slide Ids */
+            slide_ids?: string[] | null;
+            /** Strategy */
+            strategy?: string | null;
+            /** Template Id */
+            template_id?: string | null;
+            /**
+             * Respond Async
+             * @default true
+             */
+            respond_async: boolean;
+        };
         /** Table */
         Table: {
             /** Id */
@@ -2443,7 +3378,7 @@ export interface components {
             /** Rationale */
             rationale?: string | null;
             /** Stage */
-            stage?: ("content" | "plan" | "compose" | "audit" | "render" | "passport") | null;
+            stage?: ("content" | "research" | "plan" | "compose" | "audit" | "render" | "passport") | null;
             /** Started At */
             started_at?: string | null;
             /** Finished At */
@@ -2515,6 +3450,11 @@ export interface components {
          * @enum {string}
          */
         deckdna__contracts__content_pack__Kind1: "image" | "icon" | "logo" | "screenshot" | "diagram";
+        /**
+         * Origin
+         * @enum {string}
+         */
+        deckdna__contracts__content_pack__Origin: "web" | "model";
         /** Section */
         deckdna__contracts__content_pack__Section: {
             /** Id */
@@ -2545,6 +3485,12 @@ export interface components {
          * @enum {string}
          */
         deckdna__contracts__deck_plan__Kind: "title" | "subtitle" | "bullet" | "paragraph" | "number" | "label" | "image" | "icon" | "table" | "chart" | "diagram" | "quote" | "note";
+        /**
+         * Origin
+         * @description ADR-030: where a fact comes from.
+         * @enum {string}
+         */
+        deckdna__contracts__deck_plan__Origin: "user" | "web" | "model";
         /** Provenance */
         deckdna__contracts__deck_plan__Provenance: {
             /** Planner */
@@ -2588,6 +3534,11 @@ export interface components {
          * @enum {string}
          */
         deckdna__contracts__design_dna__Kind1: "logo" | "footer" | "page_number" | "date" | "watermark";
+        /**
+         * Origin
+         * @enum {string}
+         */
+        deckdna__contracts__evidence_graph__Origin: "user" | "web" | "model";
         /** SourceRef */
         deckdna__contracts__evidence_graph__SourceRef: {
             /** Artifact Id */
@@ -3367,6 +4318,276 @@ export interface operations {
             };
         };
     };
+    get_understanding_api_v1_content_packs__pack_id__understanding_get: {
+        parameters: {
+            query?: {
+                use_llm?: boolean | null;
+                provider_session_id?: string | null;
+            };
+            header?: never;
+            path: {
+                pack_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    patch_blocks_api_v1_content_packs__pack_id__blocks_patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BlockOps"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    patch_insight_api_v1_content_packs__pack_id__insights__insight_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: string;
+                insight_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InsightPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Insight"];
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    add_pack_notes_api_v1_content_packs__pack_id__notes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                pack_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotesBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_questions_api_v1_projects__project_id__questions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    post_answers_api_v1_projects__project_id__answers_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnswersBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
     create_plans_api_v1_projects__project_id__plans_post: {
         parameters: {
             query?: never;
@@ -3388,7 +4609,352 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
+                    "application/json": components["schemas"]["PlanSet"] | components["schemas"]["PlanAccepted"];
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    research_plan_slide_api_v1_plans__plan_id__slides__slide_id__research_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                slide_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlideResearchRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SlideResearchResult"];
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    patch_plan_slide_api_v1_plans__plan_id__slides__slide_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                slide_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlideChartPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
                     "application/json": components["schemas"]["PlanSet"];
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    plan_slide_action_api_v1_plans__plan_id__slides__slide_id__actions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+                slide_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SlideActionBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanSet"];
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    create_style_previews_api_v1_plans__plan_id__style_previews_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StylePreviewRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_style_previews_api_v1_style_previews__preview_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                preview_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_plan_set_api_v1_plans__plan_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanSet"];
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_project_plan_set_api_v1_projects__project_id__plans__plan_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanSet"];
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    cancel_plan_api_v1_projects__project_id__plans__plan_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                plan_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Job"];
                 };
             };
             /** @description Client error — typed DeckDNAError envelope (API.md §1) */
@@ -3578,7 +5144,9 @@ export interface operations {
             query?: {
                 after?: number;
             };
-            header?: never;
+            header?: {
+                "Last-Event-ID"?: string | null;
+            };
             path: {
                 job_id: string;
             };
@@ -3796,6 +5364,360 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    intake_api_v1_projects__project_id__intake_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_intake_api_v1_projects__project_id__intake_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    patch_intake_file_api_v1_projects__project_id__intake_files__name__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IntakeFilePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    template_summary_api_v1_templates__template_id__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                template_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_brandbook_api_v1_brandbooks__brandbook_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brandbook_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    patch_brandbook_api_v1_brandbooks__brandbook_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brandbook_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BrandbookPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    brandbook_summary_api_v1_brandbooks__brandbook_id__summary_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                brandbook_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    regenerate_variant_slide_api_v1_variants__variant_id__slides__slide_id__regenerate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                variant_id: string;
+                slide_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RegenerateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    explain_slide_api_v1_slides__slide_id__explain_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                slide_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Client error — typed DeckDNAError envelope (API.md §1) */
@@ -4397,6 +6319,90 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    get_session_api_v1_projects__project_id__session_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssistantSession"];
+                };
+            };
+            /** @description Client error — typed DeckDNAError envelope (API.md §1) */
+            "4XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+            /** @description Server/dependency error — typed DeckDNAError envelope */
+            "5XX": {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorEnvelope"];
+                };
+            };
+        };
+    };
+    autopilot_api_v1_projects__project_id__session_autopilot_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                project_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AutopilotRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutopilotAccepted"];
                 };
             };
             /** @description Client error — typed DeckDNAError envelope (API.md §1) */

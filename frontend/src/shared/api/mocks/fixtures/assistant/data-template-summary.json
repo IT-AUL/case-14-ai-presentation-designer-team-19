@@ -1,0 +1,35 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:51:41.276Z",
+  "method": "GET",
+  "path": "/templates/tpl_7c4f33420b0e4c1cb783c86d1cfb12c1/summary",
+  "status": 200,
+  "body": {
+    "template_id": "tpl_7c4f33420b0e4c1cb783c86d1cfb12c1",
+    "filename": "VK Tech шаблон.pptx",
+    "slides": 54,
+    "roles": {
+      "title": 2,
+      "section": 2,
+      "closing": 3,
+      "content": 47
+    },
+    "palette": [
+      "#0077FF",
+      "#FFD91D",
+      "#005EFF",
+      "#007DEA",
+      "#FF9500",
+      "#00D3E6"
+    ],
+    "fonts": [
+      "Arial",
+      "Calibri",
+      "Play"
+    ],
+    "heading_font": "Arial",
+    "body_font": "Calibri",
+    "preview_artifact_ids": [],
+    "assistant_note": "Шаблон: 54 слайда, главный цвет #0077FF, шрифт Arial."
+  }
+}

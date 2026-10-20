@@ -5,7 +5,6 @@ from collections import Counter
 from pathlib import Path
 
 import pytest
-from conftest import inject_text_overflow
 from deckdna.audit.basic import (
     RULE_ANCHOR_POSITION,
     RULE_OUT_OF_BOUNDS,
@@ -63,23 +62,21 @@ def _action(atype, slide_id, shape_ids, **params) -> RepairAction:
 def test_apply_reduces_real_issues(generated, tmp_path):
     """E2E на реальном шаблоне: issues после apply строго меньше.
 
-    Чистая генерация на vk_tech не обязана давать repairable issues —
-    auto-fix закрывает aspect/contrast/palette до ревизии 1, а текст
-    текущим пайплайном умещается. Поэтому в копию колоды детерминированно
-    вносится настоящий text.overflow (conftest.inject_text_overflow) —
-    реальный дефект в байтах, не синтетический AuditIssue."""
-    corrupted = tmp_path / "corrupted.pptx"
-    corrupted.write_bytes(
-        inject_text_overflow(
-            Path(generated["artifacts"]["pptx"]).read_bytes()
-        )
+    ADR-031: конвейер сам чинит переполнения до ревизии 1, поэтому рамки
+    сгенерированной колоды намеренно сжимаются (``squeeze_text_frames``) —
+    иначе repair-цикл нечего проверять."""
+    from conftest import squeeze_text_frames
+
+    damaged = tmp_path / "damaged.pptx"
+    damaged.write_bytes(
+        squeeze_text_frames(Path(generated["artifacts"]["pptx"]).read_bytes())
     )
-    before = audit_deck(corrupted)
+    before = audit_deck(damaged)
     plan = plan_repairs_with_report(before)
-    assert plan.actions, "ожидались repairable issues на vk_tech_template"
+    assert plan.actions, "ожидались repairable issues на сжатых рамках"
 
     out = tmp_path / "fixed.pptx"
-    report = apply_repairs(corrupted, plan.actions, out)
+    report = apply_repairs(damaged, plan.actions, out)
     assert out.exists()
     assert report.failed == 0
     # resize_shape реализован — всё что planner выдал этого типа, должно

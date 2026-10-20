@@ -1,0 +1,68 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:52:51.810Z",
+  "method": "GET",
+  "path": "/brandbooks/brand_5c790b133e1d4219a514c225de271c87",
+  "status": 200,
+  "body": {
+    "id": "brand_5c790b133e1d4219a514c225de271c87",
+    "project_id": "prj_dcfe27bda1874f76b03a28e7ee495aa1",
+    "name": "Северный ветер",
+    "colors": [
+      {
+        "name": "color.primary",
+        "hex": "#E4572E",
+        "role": "primary",
+        "source": "tokens.json"
+      },
+      {
+        "name": "color.secondary",
+        "hex": "#29335C",
+        "role": "secondary",
+        "source": "tokens.json"
+      },
+      {
+        "name": "color.accent",
+        "hex": "#F3A712",
+        "role": "accent",
+        "source": "tokens.json"
+      },
+      {
+        "name": "color.text",
+        "hex": "#1B1B1E",
+        "role": "text",
+        "source": "tokens.json"
+      },
+      {
+        "name": "color.background",
+        "hex": "#FFFFFF",
+        "role": "background",
+        "source": "tokens.json"
+      }
+    ],
+    "fonts": [
+      {
+        "role": "heading",
+        "family": "DejaVu Serif",
+        "source": "tokens.json"
+      },
+      {
+        "role": "body",
+        "family": "Liberation Sans",
+        "source": "tokens.json"
+      }
+    ],
+    "logos": [],
+    "examples": [],
+    "rules": [],
+    "sources": [
+      {
+        "file_name": "tokens.json",
+        "kind": "tokens",
+        "parsed": true,
+        "note": "5 цв., 2 шр."
+      }
+    ],
+    "warnings": []
+  }
+}

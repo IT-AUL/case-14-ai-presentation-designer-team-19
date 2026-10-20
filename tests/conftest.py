@@ -100,6 +100,11 @@ _DECKDNA_PROVIDER_ENV_KEYS = (
     "DECKDNA_MOCK_PROVIDER",
     "DECKDNA_PROVIDER_BASE_URL",
     "DECKDNA_PROVIDER_API_KEY",
+    "DECKDNA_FALLBACK_PROVIDER_BASE_URL",
+    "DECKDNA_FALLBACK_PROVIDER_API_KEY",
+    "DECKDNA_FALLBACK_MODEL_TEXT",
+    "DECKDNA_FALLBACK_MODEL_VISION",
+    "DECKDNA_RESEARCH_SEARCH_URL",
     "DECKDNA_MODEL_TEXT",
     "DECKDNA_MODEL_VISION",
     "DECKDNA_MODEL_EMBED",
@@ -149,6 +154,11 @@ def pytest_configure(config: pytest.Config) -> None:
     settings.mock_provider = True
     settings.provider_base_url = ""
     settings.provider_api_key = ""
+    settings.fallback_provider_base_url = ""
+    settings.fallback_provider_api_key = ""
+    settings.fallback_model_text = ""
+    settings.fallback_model_vision = ""
+    settings.research_search_url = ""
     settings.model_text = ""
     settings.model_vision = ""
     settings.model_embed = ""
@@ -161,47 +171,6 @@ def local_openai() -> LocalOpenAIServer:
     server = LocalOpenAIServer()
     yield server
     server.close()
-
-
-def inject_text_overflow(data: bytes) -> bytes:
-    """Детерминированно вносит настоящий ``text.overflow`` в pptx-байты.
-
-    Чистая генерация не обязана производить repairable issues (auto-fix
-    закрывает aspect/contrast/palette до ревизии 1, overflow может не
-    возникнуть) — тестам repair-loop'а нужен реальный дефект в байтах,
-    а не синтетический AuditIssue. Берётся самая низкая текстовая фигура
-    верхнего уровня первого подходящего слайда, ей отключается autofit и
-    всем run'ам ставится 96pt — текст гарантированно не вмещается в
-    рамку, детерминированный аудит честно видит overflow, а planner
-    выдаёт реальные resize_shape+shorten_text.
-    """
-    import io
-
-    from pptx import Presentation
-    from pptx.enum.text import MSO_AUTO_SIZE
-    from pptx.util import Pt
-
-    prs = Presentation(io.BytesIO(data))
-    candidates = [
-        shape
-        for slide in prs.slides
-        for shape in slide.shapes
-        if shape.has_text_frame
-        and shape.text_frame.text.strip()
-        and shape.width
-        and shape.height
-    ]
-    if not candidates:
-        raise AssertionError("deck has no text-bearing shape to corrupt")
-    shape = min(candidates, key=lambda s: int(s.height))
-    tf = shape.text_frame
-    tf.auto_size = MSO_AUTO_SIZE.NONE
-    for paragraph in tf.paragraphs:
-        for run in paragraph.runs:
-            run.font.size = Pt(96)
-    out = io.BytesIO()
-    prs.save(out)
-    return out.getvalue()
 
 
 @pytest.fixture
@@ -226,3 +195,70 @@ def wait_generation():
             time.sleep(0.2)
 
     return _wait
+
+
+@pytest.fixture(autouse=True)
+def _isolated_shared_pacers():
+    """ADR-031: `shared_pacer()` хранит один пейсер на endpoint на процесс.
+    Без сброса тест получает пейсер с `_next_request_at`, сдвинутым
+    предыдущим тестом, и ждёт чужой слот."""
+    from deckdna.providers import openai_compat
+
+    openai_compat._SHARED_PACERS.clear()
+    yield
+    openai_compat._SHARED_PACERS.clear()
+
+
+def squeeze_text_frames(pptx_bytes: bytes, count: int = 3) -> bytes:
+    """ADR-031: колода с настоящими repairable-проблемами для repair-тестов.
+
+    Конвейер сам чинит переполнения до ревизии 1 (Q2 auto-fix, text_fit),
+    поэтому свежая колода больше не даёт ``text.overflow``. Здесь у *count*
+    текстовых рамок (не заголовков) высота урезается до четверти — текст
+    переполняет рамку, а места под ней на слайде достаточно, чтобы
+    ``resize_shape`` вернул её. Позиция и текст не трогаются."""
+    from io import BytesIO
+
+    from pptx import Presentation
+
+    prs = Presentation(BytesIO(pptx_bytes))
+    squeezed = 0
+    for slide in list(prs.slides)[1:]:
+        for shape in slide.shapes:
+            if squeezed >= count:
+                break
+            if (
+                not shape.has_text_frame
+                or shape.is_placeholder and shape.placeholder_format.type in (1, 3)
+                or len(shape.text_frame.text.strip()) < 40
+                or not shape.height
+                or shape.top + shape.height > prs.slide_height * 0.8
+            ):
+                continue
+            shape.text_frame.auto_size = None
+            shape.text_frame.word_wrap = True
+            shape.height = max(int(shape.height) // 4, 120000)
+            squeezed += 1
+    out = BytesIO()
+    prs.save(out)
+    return out.getvalue()
+
+
+def squeeze_variant_text_frames(variant_id: str) -> None:
+    """Give API repair tests a real damaged PPTX, even when generation is clean."""
+    import hashlib
+
+    from deckdna.api.app import STORE, _variant_or_404
+
+    _, variant = _variant_or_404(variant_id)
+    deck_id = variant.deck_artifact_id
+    artifact = STORE.artifacts[deck_id]
+    data = squeeze_text_frames(artifact.data)
+    STORE.artifacts[deck_id] = artifact.model_copy(update={
+        "data": data, "sha256": hashlib.sha256(data).hexdigest(), "size_bytes": len(data),
+    })
+    # A pipeline audit describes the pre-damage bytes. The next POST /audits
+    # must measure the modified file rather than returning that cached audit.
+    for audit_id in [a.id for a in STORE.audits.values() if a.variant_id == variant_id]:
+        STORE.audits.pop(audit_id)
+        STORE.issues.pop(audit_id, None)

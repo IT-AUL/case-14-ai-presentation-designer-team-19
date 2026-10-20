@@ -4,7 +4,7 @@ import { exceedsParameterLimit, modelParameterCountB } from './modelSize'
 describe('model size rule', () => {
   it('extracts the parameter count from common model ids', () => {
     expect(modelParameterCountB('Qwen/Qwen3-32B')).toBe(32)
-    expect(modelParameterCountB('openai/gpt-oss-120b')).toBe(120)
+    expect(modelParameterCountB('qwen/qwen2.5-120b')).toBe(120)
     expect(modelParameterCountB('Qwen/Qwen3-30B-A3B')).toBe(30)
     expect(modelParameterCountB('qwen2.5:0.5b')).toBe(0.5)
     expect(modelParameterCountB('intfloat/e5-large-335M')).toBeCloseTo(0.335)

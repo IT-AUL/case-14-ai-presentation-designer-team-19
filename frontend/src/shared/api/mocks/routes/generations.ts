@@ -2,7 +2,7 @@ import { HttpResponse } from 'msw'
 import type { RequestHandler } from 'msw'
 import { page } from '../context'
 import type { MockContext } from '../context'
-import { assertRetryable, cancelGeneration, completeGeneration, generationDetail, parseGenerationRequest, startGeneration } from '../generation'
+import { assertRetryable, cancelGeneration, completeGeneration, createPlanSet, generationDetail, parseGenerationRequest, startGeneration } from '../generation'
 import { json, MockApiError, wait } from '../http'
 import type { RunRecord } from '../store'
 import type { Job } from '../types'
@@ -31,8 +31,10 @@ export function generationRoutes(context: MockContext): RequestHandler[] {
 
   const run = async (projectId: string, request: RunRecord['request'], parentRunId: string | null) => {
     const record = startGeneration(store, projectId, request, parentRunId)
+    store.touchProject(projectId, { latest_run_id: record.detail.id, latest_run_state: 'running' })
     await wait(generationDelay)
     await completeGeneration(store, record.detail.id)
+    store.touchProject(projectId, { latest_run_id: record.detail.id, latest_run_state: 'completed' })
     return record
   }
 
@@ -43,9 +45,16 @@ export function generationRoutes(context: MockContext): RequestHandler[] {
       return accepted(await run(projectId, input, null))
     }),
 
+    route('post', '/projects/:projectId/plans', async ({ request, param }) => json(createPlanSet(store, param('projectId'), await readJson(request)))),
+
     route('get', '/generations/:runId', ({ param }) => json(generationDetail(store, store.run(param('runId'))))),
 
-    route('post', '/generations/:runId/cancel', ({ param }) => json(cancelGeneration(store, param('runId')))),
+    route('post', '/generations/:runId/cancel', ({ param }) => {
+      const job = cancelGeneration(store, param('runId'))
+      const record = store.run(param('runId'))
+      store.touchProject(record.detail.project_id, { latest_run_id: record.detail.id, latest_run_state: 'canceled' })
+      return json(job)
+    }),
 
     route('post', '/generations/:runId/retry', async ({ param }) => {
       const previous = assertRetryable(store, param('runId'))
@@ -62,6 +71,25 @@ export function generationRoutes(context: MockContext): RequestHandler[] {
     route('get', '/variants/:variantId/slides', ({ param, url }) => {
       const limit = queryInteger(url, 'limit', { min: 1, max: 500, fallback: 100 })
       return json(page(store.variant(param('variantId')).slides.slice(0, limit)))
+    }),
+
+    route('get', '/variants/:variantId/slide-drafts', ({ param }) => {
+      const variantId = param('variantId')
+      const record = store.variant(variantId)
+      const slides = record.slides.map((slide, idx) => {
+        const index = typeof slide.index === 'number' ? slide.index : idx + 1
+        return {
+          variant_id: variantId,
+          index,
+          slide_id: slide.slide_plan_id ?? `slide-${idx}`,
+          slide_key: `${variantId}:${index}`,
+          revision: record.revision,
+          preview_revision: record.summary.status === 'completed' ? 2 : 1,
+          preview_artifact_id: slide.preview_artifact_id ?? null,
+          status: record.summary.status === 'completed' ? 'rendered' : 'draft',
+        }
+      })
+      return json({ variant_id: variantId, state: record.summary.status, slides })
     }),
 
     route('get', '/slides/:slideId', ({ param }) => json(store.slide(param('slideId')))),

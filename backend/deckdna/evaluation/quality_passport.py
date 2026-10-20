@@ -1,4 +1,4 @@
-"""Quality Passport assembly v0 — honest metrics only (docs/ARCHITECTURE.md).
+"""Quality Passport assembly v0 — honest metrics only (docs/pipeline/EVALUATION.md).
 
 ``assemble_quality_passport`` склеивает уже существующие честные измерения
 в один QualityPassport (contracts/quality_passport.py):
@@ -58,7 +58,7 @@
   только счётчик;
 - ``readability.contrast_failures`` — счётчик accessibility.contrast.
 
-Считается в deckdna.evaluation.measures (contract D3):
+Считается в deckdna.evaluation.measures (handoff D3):
 - ``style_fidelity`` — доли слайдов без нарушений соответствия шаблону
   (палитра / шрифты / происхождение макета / якоря);
 - ``content_support.numbers_verified/failed`` — legacy-имена счётчиков
@@ -78,6 +78,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import posixpath
 import re
 import zipfile
@@ -93,6 +94,7 @@ from deckdna.audit.basic import average_occupancy
 from deckdna.audit.config import DEFAULT_AUDIT_CONFIG_PATH
 from deckdna.contracts.deck_plan import Brief
 from deckdna.contracts.quality_passport import (
+    ContentOrigin,
     ContentSupport,
     Editability,
     Export,
@@ -107,6 +109,8 @@ from deckdna.contracts.quality_passport import (
     Provenance,
     QualityPassport,
     Readability,
+    ResearchMetrics,
+    SpeakerNotes,
     StyleFidelity,
     Timings,
     Usage,
@@ -296,6 +300,62 @@ def _validity_metrics(
     return round_trip_ok, errors
 
 
+def _fill_counts(content_fill: dict[str, Any] | None) -> dict[str, int]:
+    """ADR-030: происхождение фактов колоды из отчёта стадии добора."""
+    if not content_fill:
+        return {}
+    origins = content_fill.get("facts_by_origin") or {}
+    web = content_fill.get("web") or {}
+    return {
+        "facts_from_user": int(origins.get("user", 0)),
+        "facts_from_web": int(origins.get("web", 0)),
+        "facts_from_model": int(origins.get("model", 0)),
+        "web_sources": len(web.get("sources") or []),
+    }
+
+
+def _content_origin(content_fill: dict[str, Any] | None) -> ContentOrigin | None:
+    """ADR-034 §0: ``metrics.content_origin`` в форме фронта."""
+    if not content_fill:
+        return None
+    origins = content_fill.get("facts_by_origin") or {}
+    return ContentOrigin(**{k: int(origins.get(k, 0)) for k in ("user", "web", "model")})
+
+
+def _research_metrics(content_fill: dict[str, Any] | None) -> ResearchMetrics | None:
+    """ADR-034 §0: ``metrics.research`` в форме фронта."""
+    if not content_fill:
+        return None
+    web = content_fill.get("web") or {}
+    return ResearchMetrics(
+        sources_count=len(web.get("sources") or []),
+        duration_s=content_fill.get("elapsed_s"),
+        content_fill=content_fill.get("mode"),
+    )
+
+
+def _fill_fallbacks(content_fill: dict[str, Any] | None) -> list[Fallback]:
+    """ADR-030: раскрытие, если колода добрана или сокращена."""
+    if not content_fill or content_fill.get("resolved") in (None, "none", "condense", "data"):
+        return []
+    disclosure = {
+        key: content_fill.get(key)
+        for key in ("mode", "resolved", "requested_slides", "target_slides", "model_sections")
+    }
+    if (content_fill.get("facts_by_origin") or {}).get("model"):
+        disclosure["note"] = (
+            "facts_from_model are written from model knowledge and are not "
+            "confirmed by a source; review them before presenting"
+        )
+    return [
+        Fallback(
+            feature="content.fill",
+            strategy=str(content_fill.get("resolved")),
+            disclosure=json.dumps(disclosure, ensure_ascii=False),
+        )
+    ]
+
+
 def assemble_quality_passport(
     out_path: str | Path,
     compose_report: dict[str, Any],
@@ -313,6 +373,12 @@ def assemble_quality_passport(
     source_text: str | None = None,
     auto_fixes: dict[str, int] | None = None,
     repair_fixes: dict[str, int] | None = None,
+    content_fill: dict[str, Any] | None = None,
+    speaker_notes: dict[str, Any] | None = None,
+    telemetry: dict[str, Any] | None = None,
+    render_ms: float | None = None,
+    repair_count: int | None = None,
+    cache_hit: bool | None = None,
 ) -> QualityPassport:
     """Собирает QualityPassport из отчёта компиляции, audit-issues и PEI.
 
@@ -414,6 +480,44 @@ def assemble_quality_passport(
     fixed_total = sum((auto_fixes or {}).values()) + sum(
         (repair_fixes or {}).values()
     )
+    tel = telemetry or {}
+    in_tokens = int(
+        tel.get("input_tokens")
+        if tel.get("input_tokens") is not None
+        else sum(int(m.get("input_tokens") or 0) for m in usage.get("per_model", []))
+    )
+    out_tokens = int(
+        tel.get("output_tokens")
+        if tel.get("output_tokens") is not None
+        else sum(int(m.get("output_tokens") or 0) for m in usage.get("per_model", []))
+    )
+    img_tokens = int(tel.get("image_tokens") or 0)
+    prefill_ms_val = round(float(tel.get("prefill_ms") or 0.0), 2)
+    decode_ms_val = round(float(tel.get("decode_ms") or 0.0), 2)
+    effective_cache_hit = (
+        bool(cache_hit)
+        if cache_hit is not None
+        else (
+            bool(tel.get("cache_hit"))
+            or any(bool(item.get("cached")) for item in (stage_timings or []))
+        )
+    )
+    effective_render_ms = (
+        round(float(render_ms), 2)
+        if render_ms is not None
+        else round(
+            sum(
+                float(item.get("seconds") or 0.0)
+                for item in (stage_timings or [])
+                if item.get("stage") == "render"
+            )
+            * 1000.0,
+            2,
+        )
+    )
+    effective_repair_count = (
+        int(repair_count) if repair_count is not None else int(fixed_total)
+    )
 
     template_path = Path(compose_report["template"])
     exports = [
@@ -457,7 +561,11 @@ def assemble_quality_passport(
                 ),
                 numbers_verified=numbers.verified if numbers else None,
                 numbers_failed=numbers.failed if numbers else None,
+                **_fill_counts(content_fill),
             ),
+            speaker_notes=SpeakerNotes(**speaker_notes) if speaker_notes else None,
+            content_origin=_content_origin(content_fill),
+            research=_research_metrics(content_fill),
             readability=Readability(
                 overflow_count=overflow,
                 contrast_failures=contrast_failures,
@@ -465,6 +573,9 @@ def assemble_quality_passport(
             ),
             timings=Timings(
                 total_seconds=duration_seconds,
+                render_ms=effective_render_ms,
+                prefill_ms=prefill_ms_val,
+                decode_ms=decode_ms_val,
                 per_stage=[PerStageItem(**item) for item in stage_timings]
                 if stage_timings
                 else None,
@@ -474,13 +585,23 @@ def assemble_quality_passport(
                 model_calls=usage["model_calls"],
                 per_model=[PerModelItem(**m) for m in usage.get("per_model", [])],
             ),
+            prefill_ms=prefill_ms_val,
+            decode_ms=decode_ms_val,
+            input_tokens=in_tokens,
+            output_tokens=out_tokens,
+            image_tokens=img_tokens,
+            cache_hit=effective_cache_hit,
+            render_ms=effective_render_ms,
+            repair_count=effective_repair_count,
         ),
         issues_summary=IssuesSummary(
             **by_severity,
             fixed=fixed_total or None,
+            repair_count=effective_repair_count,
             unresolved=len(audit_issues),
         ),
         fallbacks=[
+            *_fill_fallbacks(content_fill),
             *(
                 [
                     Fallback(

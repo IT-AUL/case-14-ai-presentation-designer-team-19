@@ -81,7 +81,7 @@ def test_llm_rerank_payload_carries_layout_archetype_and_preferred_hints():
     метка, см. exemplar.py::LayoutArchetype), каждый request — свой
     preferred_archetypes (детерминированная подсказка по Purpose, см.
     _PURPOSE_ARCHETYPE_HINTS) — это и есть замена «сырых чисел» на
-    подобранную под слабую модель метку (живая находка
+    подобранную под слабую модель метку (находка
     27.09 про planning/exemplar-подбор)."""
     from deckdna.contracts.deck_plan import Purpose
     from deckdna.pptx.cloning.exemplar import LayoutArchetype
@@ -312,10 +312,18 @@ def test_pipeline_llm_rerank_end_to_end(monkeypatch, tmp_path):
         for s in report["compose_report"]["slides"]
         if not s.get("protected")
     ]
-    # Детерминированный выбор на этом шаблоне — slide2 для всех; rerank
-    # переназначил первый слайд на другой кандидат — доказуемое отличие.
-    assert picks[0] != "ppt/slides/slide2.xml"
-    assert all(p == "ppt/slides/slide2.xml" for p in picks[1:])
+    # Сравнение с тем же прогоном без rerank-фикстуры (детерминированный
+    # выбор): rerank переназначил первый слайд — доказуемое отличие.
+    baseline = generate(
+        TEMPLATE, CONTENT, dict(BRIEF), tmp_path / "base",
+        gateway=MockProvider(fixtures={"slide_checks": {"verdicts": []}}),
+    )
+    base_picks = [
+        s["exemplar"]["slide_part"]
+        for s in baseline["compose_report"]["slides"]
+        if not s.get("protected")
+    ]
+    assert picks[0] != base_picks[0]
 
 
 def test_pipeline_rerank_marker_honest_fallback(tmp_path):

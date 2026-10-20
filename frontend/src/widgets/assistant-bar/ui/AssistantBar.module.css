@@ -1,0 +1,153 @@
+.bar {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 32px 10px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.nav {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.steps {
+  display: flex;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  flex: none;
+}
+
+.item + .item::before {
+  content: '';
+  width: 20px;
+  height: 1px;
+  margin: 0 4px;
+  background: var(--line-2);
+}
+
+.item[data-state='done']::before,
+.item[data-state='skipped']::before,
+.item[data-state='current']::before {
+  background: var(--ink-3);
+}
+
+.step {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 12px 0 6px;
+  border-radius: 999px;
+  color: var(--ink-3);
+  font-size: 13px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s;
+}
+
+a.step:hover {
+  background: var(--sunken);
+  color: var(--ink);
+}
+
+a.step:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.step[data-state='done'],
+.step[data-state='skipped'] {
+  color: var(--ink-2);
+}
+
+.step[data-state='current'] {
+  background: var(--ink);
+  color: var(--inv);
+}
+
+.step[aria-disabled='true'] {
+  cursor: default;
+}
+
+.marker {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--line-2);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.marker[data-state='done'] {
+  border-color: var(--ok);
+  background: var(--ok);
+  color: var(--inv);
+}
+
+.marker[data-state='skipped'] {
+  border-style: dashed;
+  border-color: var(--ok);
+  color: var(--ok);
+}
+
+.marker[data-state='current'] {
+  border-color: var(--inv);
+  color: var(--inv);
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  min-height: 20px;
+  color: var(--ink-2);
+  font-size: 14px;
+}
+
+.note > svg {
+  flex: none;
+  color: var(--focus);
+}
+
+.noteText {
+  animation: global(dd-fade) 0.25s ease-out;
+}
+
+@media (max-width: 1360px) {
+  .bar {
+    padding-inline: 24px;
+  }
+
+  .item + .item::before {
+    width: 12px;
+  }
+}

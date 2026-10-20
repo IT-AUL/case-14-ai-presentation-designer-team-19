@@ -186,7 +186,7 @@ def _find_shape(slide, shape_id: str):
 # фигур это (0, 1); у детей масштабированной группы (chOff/chExt ≠ off/ext)
 # — нет. Аудит меряет bbox и вместимость в slide-space, поэтому исполнитель
 # обязан писать геометрию через ту же карту, иначе действие «применено», а
-# проблема остаётся (contract B6: фигуры внутри группы масштаба ≈0.38).
+# проблема остаётся (handoff B6: фигуры внутри группы масштаба ≈0.38).
 _AxisMap = tuple[float, float]
 _IDENTITY: tuple[_AxisMap, _AxisMap] = ((0.0, 1.0), (0.0, 1.0))
 
@@ -800,7 +800,7 @@ def _shorten_one_shape(prs, slide, shape, ctx, maps=None) -> str | None:
     координатах группы и масштабируются её (chExt/ext) картой; кегль —
     нет (глиф не масштабируется группой). Без этого фигура внутри
     группы ×0.38 «помещалась» по child-координатам, а аудит видел
-    переполнение (contract B6)."""
+    переполнение (handoff B6)."""
     tf = shape.text_frame
     if not shape.width or not shape.height:
         return None

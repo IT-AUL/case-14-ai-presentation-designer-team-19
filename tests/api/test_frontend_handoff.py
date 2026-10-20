@@ -1,4 +1,4 @@
-"""Контракт API под фронтенд (docs/contracts/API.md): B1–B6, D2–D11,
+"""Контракт API под фронтенд (docs/frontend API contract): B1–B6, D2–D11,
 C1, Q2, Q4 — на реальном шаблоне и реальном конвейере (без моков)."""
 
 from __future__ import annotations
@@ -9,7 +9,7 @@ import zipfile
 from pathlib import Path
 
 import pytest
-from deckdna.api.app import app
+from deckdna.api.app import IssueBbox, _clip_bbox, app
 from deckdna.audit import catalog
 from fastapi.testclient import TestClient
 
@@ -45,7 +45,7 @@ def _project_inputs() -> tuple[str, str, str]:
     return pid, tpl.json()["id"], pack.json()["content_pack"]["id"]
 
 
-def _generate(wait_generation, strategies=("balanced",), **extra) -> dict:
+def _generate(wait_generation, strategies=("balanced",), *, repair_fixture=False, **extra) -> dict:
     pid, tid, cp = _project_inputs()
     body = {
         "template_id": tid,
@@ -58,6 +58,11 @@ def _generate(wait_generation, strategies=("balanced",), **extra) -> dict:
     assert gen.status_code == 202, gen.text
     run = wait_generation(client, gen.json()["generation_id"])
     assert run["state"] == "completed", run
+    if repair_fixture:
+        from conftest import squeeze_variant_text_frames
+
+        for variant_id in gen.json()["variant_ids"]:
+            squeeze_variant_text_frames(variant_id)
     return {
         "pid": pid,
         "tid": tid,
@@ -158,10 +163,18 @@ def test_auto_fixes_are_disclosed_in_the_passport(shared):
 def test_clipped_bbox_is_inside_the_slide(shared):
     _, issues = _audit(shared["variant_ids"][0])
     boxes = [i["clipped_bbox"] for i in issues if i["clipped_bbox"]]
-    assert boxes
     for b in boxes:
         assert 0 <= b["x"] <= 1 and 0 <= b["y"] <= 1
         assert b["x"] + b["w"] <= 1.0001 and b["y"] + b["h"] <= 1.0001
+
+
+@pytest.mark.parametrize('box,expected', [
+    ((-.2, .9, .7, .3), (0, .9, .5, .1)),
+    ((1.2, -.4, .2, .1), (1, 0, 0, 0)),
+])
+def test_clipping_is_tested_even_when_a_generated_deck_has_no_bbox_issues(box, expected):
+    result = _clip_bbox(IssueBbox(**dict(zip(('x', 'y', 'w', 'h'), box, strict=True))))
+    assert (result.x, result.y, result.w, result.h) == pytest.approx(expected)
 
 
 # ------------------------------------------------------------------- D3
@@ -228,16 +241,21 @@ def test_png_previews_and_montage(shared):
 # ------------------------------------------------------------------- D8 / D9
 
 
-def test_rule_catalog_endpoint(shared):
+def test_rule_catalog_endpoint():
     rules = client.get(f"{A}/audit/rules").json()
     assert {r["code"] for r in rules} == set(catalog.RULES)
-    assert len(rules) == 34
+    assert len(rules) == len(catalog.RULES)  # each registered rule exactly once
     for r in rules:
         assert r["title_ru"] and r["category"] in catalog.CATEGORIES
         assert r["repairable"] == (r["fix_title_ru"] is not None)
     by_code = {r["code"]: r for r in rules}
     assert by_code["text.overflow"]["threshold"] == pytest.approx(0.05)
     assert by_code["content.source_support"]["deterministic"] is False
+    readable = by_code["chart.readability"]
+    assert readable["default_severity"] == "warning"
+    assert readable["deterministic"] is True
+    assert readable["repairable"] is False and readable["fix_title_ru"] is None
+    assert readable["threshold"] == pytest.approx(.4)
 
 
 def test_capabilities_features_block():
@@ -249,12 +267,15 @@ def test_capabilities_features_block():
         "png_previews",
         "async_generation",
         "sse_progress",
+        "progressive_previews",
         "contextual_audit",
         "pdf_after_repair",
         "repair_dry_run",
         "style_fidelity",
         "model_text_fit",
         "model_auto",
+        # ADR-034 §0: чипы режима текста
+        "content_fill",
     }
     assert all(isinstance(v, bool) for v in features.values())
     assert features["html_export"] and "html" in cap["exporters"]
@@ -271,7 +292,19 @@ def test_project_reports_latest_run_and_lists_generations(shared):
     listing = client.get(f"{A}/projects/{shared['pid']}/generations").json()["items"]
     assert [g["id"] for g in listing] == [shared["run"]["id"]]
     assert listing[0]["variant_ids"] == shared["variant_ids"]
-    rows = client.get(f"{A}/projects").json()["items"]
+    # Other modules legitimately leave more than the default 50 projects
+    # in STORE. Walk the public cursor contract instead of assuming that
+    # this module's project is on the first page (oldest projects first).
+    rows = []
+    cursor = None
+    while True:
+        params = {"limit": 7, **({"cursor": cursor} if cursor else {})}
+        page = client.get(f"{A}/projects", params=params)
+        assert page.status_code == 200, page.text
+        rows.extend(page.json()["items"])
+        cursor = page.json()["next_cursor"]
+        if cursor is None:
+            break
     assert next(p for p in rows if p["id"] == shared["pid"])["latest_run_id"]
 
 
@@ -341,7 +374,7 @@ def test_export_record_from_generation_lists_pptx_with_checksum(shared):
 
 
 def test_repair_reports_typed_outcomes_that_match_reality(wait_generation):
-    g = _generate(wait_generation)
+    g = _generate(wait_generation, repair_fixture=True)
     vid = g["variant_ids"][0]
     audit_id, issues = _audit(vid)
     overflow = [i for i in issues if i["rule_code"] == "text.overflow"][:5]
@@ -381,15 +414,20 @@ def test_repair_reports_typed_outcomes_that_match_reality(wait_generation):
     before_n = sum(1 for i in issues if i["rule_code"] == "text.overflow")
     after_n = sum(1 for i in after if i["rule_code"] == "text.overflow")
     assert before_n - after_n >= result["applied"]
-    assert {i["deck_revision"] for i in after} == {2}
+    # ADR-032: на этом контенте после ремонта может не остаться ни одной
+    # проблемы (схема из текста убрала переполненный слайд) — проверяем,
+    # что всё оставшееся относится к новой ревизии
+    assert {i["deck_revision"] for i in after} <= {2}
 
 
 def test_dismissal_survives_repair_by_fingerprint(wait_generation):
     g = _generate(wait_generation)
     audit_id, issues = _audit(g["variant_ids"][0])
-    keep = next(i for i in issues if not i["repairable"])
+    # нечинимой проблемы на колоде может не быть (ADR-032: колода стала
+    # чище) — тогда отклоняется последняя, и в ремонт она не идёт
+    keep = next((i for i in issues if not i["repairable"]), issues[-1])
     client.post(f"{A}/issues/{keep['id']}/dismiss", json={"reason": "ok"})
-    repairable = [i for i in issues if i["repairable"]][:2]
+    repairable = [i for i in issues if i["repairable"] and i["id"] != keep["id"]][:2]
     client.post(
         f"{A}/audits/{audit_id}/repairs",
         json={"selected_issue_ids": [i["id"] for i in repairable]},
@@ -399,7 +437,7 @@ def test_dismissal_survives_repair_by_fingerprint(wait_generation):
 
 
 def test_pdf_passport_and_html_exist_for_the_repaired_revision(wait_generation):
-    g = _generate(wait_generation)
+    g = _generate(wait_generation, repair_fixture=True)
     vid = g["variant_ids"][0]
     audit_id, issues = _audit(vid)
     picked = [i for i in issues if i["repairable"]][:3]

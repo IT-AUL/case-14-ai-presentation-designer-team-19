@@ -305,4 +305,43 @@ describe('mock backend', () => {
     expect(unknown.status).toBe(404)
     expect(await unknown.json()).toMatchObject({ error: { code: 'not_found', retryable: false } })
   })
+
+  it('queues, cancels, and validates expected_revision for slide changes', async () => {
+    const { api, unwrap } = client
+    const variantId = variantFixtures.balanced.variant.id
+
+    const initial = (await unwrap(
+      api.GET('/api/v1/variants/{variant_id}/changes' as never, {
+        params: { path: { variant_id: variantId } },
+      } as never),
+    )) as { applied_revision: number; accepted_revision: number; items: unknown[] }
+    expect(initial).toMatchObject({ applied_revision: 1, accepted_revision: 1, items: [] })
+
+    await expectApiError(
+      unwrap(
+        api.POST('/api/v1/variants/{variant_id}/changes' as never, {
+          params: { path: { variant_id: variantId } },
+          body: { slide_id: 'slide-1', expected_revision: 99, action: 'shorter' },
+        } as never),
+      ),
+      409,
+      'state_conflict',
+    )
+
+    const queued = (await unwrap(
+      api.POST('/api/v1/variants/{variant_id}/changes' as never, {
+        params: { path: { variant_id: variantId } },
+        body: { slide_id: 'slide-1', expected_revision: 1, action: 'shorter' },
+      } as never),
+    )) as { change_id: string; state: string; target_revision: number }
+    expect(queued).toMatchObject({ state: 'queued', target_revision: 2 })
+
+    const cancelled = (await unwrap(
+      api.POST('/api/v1/variants/{variant_id}/changes/{change_id}/cancel' as never, {
+        params: { path: { variant_id: variantId, change_id: queued.change_id } },
+      } as never),
+    )) as { change_id: string; state: string }
+    expect(cancelled).toMatchObject({ change_id: queued.change_id, state: 'canceled' })
+  })
 })
+

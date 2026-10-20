@@ -17,6 +17,7 @@ import pytest
 from deckdna.contracts.deck_plan import Brief
 from deckdna.ingestion.content_parsers import parse_file
 from deckdna.planning.story_director import plan_deck
+from deckdna.pptx.cloning.exemplar import slide_parts
 from deckdna.pptx.cloning.layout_fit import (
     LAYOUT_FIT_PROMPT,
     LayoutFitAnswer,
@@ -28,6 +29,7 @@ from deckdna.pptx.cloning.layout_fit import (
 from deckdna.pptx.composing.minimal import slide_needs
 from deckdna.pptx.opc.package import OpcPackage
 from deckdna.providers.mock import MockProvider
+from deckdna.template.meta import meta_slides
 
 FIXTURE = Path("tests/fixtures/pptx/vk_tech_template.pptx")
 needs_fixture = pytest.mark.skipif(not FIXTURE.exists(), reason="organizer fixture missing")
@@ -321,6 +323,8 @@ def test_mock_without_fixture_falls_back_entirely():
             for s in plan.slides
         ],
         purposes=[s.purpose.value for s in plan.slides],
+        # служебные слайды шаблона исключаются и в запасном выборе
+        entity_specific_parts=sorted(meta_slides(pkg, slide_parts(pkg))),
     )
     assert [c.slide_part for c in choices] == [c.slide_part for c in baseline]
 
@@ -426,7 +430,7 @@ def test_narrow_candidates_orders_by_archetype_preference():
 
 
 def test_narrow_candidates_deprioritizes_short_label_exemplars():
-    """Found live (27.09): a diagram exemplar
+    """Found live (27.09, regression check): a diagram exemplar
     reported content_slots=37 (real, not a lie -- 37 non-decorative text
     runs genuinely exist) but mean_run_len~11 -- 37 tiny diagram-node
     labels, not room for full sentences. layout_fit had no signal these

@@ -1,4 +1,4 @@
-"""Design DNA из пакета (contract D1): declared vs observed без «unresolved»."""
+"""Design DNA из пакета (handoff D1): declared vs observed без «unresolved»."""
 
 from __future__ import annotations
 
@@ -164,3 +164,41 @@ def test_title_role_is_inferred_from_slide_features():
     roles = {r.role: r for r in build.design_dna.slide_roles}
     assert "title" in roles and roles["title"].slide_ids == ["tsl_0"]
     assert roles["title"].evidence
+
+
+def test_template_cache_key_invalidates_on_parser_version_not_brandbook():
+    """Vision audit gate п.3: sha256(pptx_bytes + parser_version + schema_version +
+    fonts_hash + renderer_version); смена версии парсера инвалидирует кэш шаблона,
+    смена брендбука — отдельный ключ и не инвалидирует кэш шаблона."""
+    from deckdna.contracts.brandbook import Brandbook, BrandColor, BrandFont
+    from deckdna.template.autopsy import template_cache_key
+    from deckdna.template.brandbook import brandbook_cache_key
+
+    pptx_bytes = (FIXTURES / "synthetic_unseen.pptx").read_bytes()
+    base_key = template_cache_key(pptx_bytes)
+    assert base_key == template_cache_key(pptx_bytes)
+
+    # Смена любого из компонентов инвалидирует ключ кэша шаблона
+    assert template_cache_key(pptx_bytes, parser_version="autopsy.v99") != base_key
+    assert template_cache_key(pptx_bytes, schema_version="schema.v99") != base_key
+    assert template_cache_key(pptx_bytes, fonts_hash="fonts.v99") != base_key
+    assert template_cache_key(pptx_bytes, renderer_version="renderer.v99") != base_key
+
+    # Брендбук имеет отдельный ключ и никак не меняет ключ кэша шаблона
+    bb1 = Brandbook(
+        id="bb_1",
+        colors=[BrandColor(name="primary", role="primary", hex="#0077FF")],
+        fonts=[BrandFont(role="heading", family="Play")],
+    )
+    bb2 = Brandbook(
+        id="bb_2",
+        colors=[BrandColor(name="primary", role="primary", hex="#FF0000")],
+        fonts=[BrandFont(role="heading", family="Inter")],
+    )
+    assert brandbook_cache_key(None) != brandbook_cache_key(bb1)
+    assert brandbook_cache_key(bb1) != brandbook_cache_key(bb2)
+    assert brandbook_cache_key(bb1, priority="brandbook") != brandbook_cache_key(
+        bb1, priority="template"
+    )
+    assert template_cache_key(pptx_bytes) == base_key
+

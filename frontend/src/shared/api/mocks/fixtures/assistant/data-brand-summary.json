@@ -1,0 +1,102 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:52:52.054Z",
+  "method": "GET",
+  "path": "/brandbooks/brand_5c790b133e1d4219a514c225de271c87/summary",
+  "status": 200,
+  "body": {
+    "id": "brand_5c790b133e1d4219a514c225de271c87",
+    "name": "Северный ветер",
+    "palette": [
+      {
+        "name": "color.primary",
+        "hex": "#E4572E",
+        "role": "primary",
+        "source": "tokens.json"
+      },
+      {
+        "name": "color.secondary",
+        "hex": "#29335C",
+        "role": "secondary",
+        "source": "tokens.json"
+      },
+      {
+        "name": "color.accent",
+        "hex": "#F3A712",
+        "role": "accent",
+        "source": "tokens.json"
+      },
+      {
+        "name": "color.text",
+        "hex": "#1B1B1E",
+        "role": "text",
+        "source": "tokens.json"
+      },
+      {
+        "name": "color.background",
+        "hex": "#FFFFFF",
+        "role": "background",
+        "source": "tokens.json"
+      }
+    ],
+    "fonts": [
+      {
+        "role": "heading",
+        "family": "DejaVu Serif",
+        "source": "tokens.json"
+      },
+      {
+        "role": "body",
+        "family": "Liberation Sans",
+        "source": "tokens.json"
+      }
+    ],
+    "logos": [],
+    "rules": [],
+    "sources": [
+      {
+        "file_name": "tokens.json",
+        "kind": "tokens",
+        "parsed": true,
+        "note": "5 цв., 2 шр."
+      }
+    ],
+    "warnings": [],
+    "priority": "brandbook",
+    "conflicts": [
+      {
+        "field": "color.primary",
+        "kind": "color",
+        "template": "#0077FF",
+        "brandbook": "#E4572E",
+        "resolved": "brandbook",
+        "note": "главный цвет шаблона и бренда разные"
+      },
+      {
+        "field": "color.secondary",
+        "kind": "color",
+        "template": "#FFD91D",
+        "brandbook": "#6374B9",
+        "resolved": "brandbook",
+        "note": null
+      },
+      {
+        "field": "font.heading",
+        "kind": "font",
+        "template": "Arial",
+        "brandbook": "DejaVu Serif",
+        "resolved": "brandbook",
+        "note": null
+      },
+      {
+        "field": "font.body",
+        "kind": "font",
+        "template": "Calibri",
+        "brandbook": "Liberation Sans",
+        "resolved": "brandbook",
+        "note": null
+      }
+    ],
+    "assistant_note": "Брендбук расходится с шаблоном в 4 местах; беру цвета и шрифты брендбука."
+  }
+}

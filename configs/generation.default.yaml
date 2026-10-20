@@ -17,6 +17,22 @@ variants:
 planning:
   evidence_coverage_min: 0.8
   conclusion_titles_required: true
+  storyline:
+    version: "1.0"
+    framework: "scqa"
+    min_slides_for_agenda: 8
+    closing_recommendation: true
+    density:
+      max_bullets_per_slide: 5
+      max_words_per_bullet: 12
+      overflow_to_speaker_notes: true
+    diversity:
+      forbid_adjacent_same_archetype: true
+      allow_adjacent_chart_takeaway_if_different_type: true
+      max_bullets_share: 0.3334
+      min_distinct_archetypes_for_long_deck: 4
+      long_deck_min_slides: 8
+      prefer_distinct_adjacent_donor_layouts: true
   # ADR-016: "v3" (default) — Stage 1 Structure + Stage 2 Writer + Stage 3
   # layout_fit (exemplar picked FROM the real written text, adapts it to
   # fit, replaces exemplar_rerank/content_style for this run). Live-
@@ -32,6 +48,31 @@ planning:
   # test_llm_http_e2e.py, ...) still covers it, but it's no longer where
   # new work goes.
   pipeline_version: "v3"
+# ADR-030: что делать, если контента не хватает на запрошенное число
+# слайдов. expand — добрать (веб-ресёрч + знания модели), shrink —
+# сократить колоду, ask — POST /plans вернёт оценку и варианты выбора.
+# Брифовое поле content_fill побеждает дефолт.
+content_fill:
+  default: expand
+research:
+  # общий бюджет стадии добора на прогон (три варианта делят один ресёрч)
+  budget_s: 40
+  web:
+    # нужен DECKDNA_RESEARCH_SEARCH_URL (SearXNG); без него — только модель
+    enabled: true
+    max_queries: 5
+    results_per_query: 4
+    max_pages: 8
+    page_timeout_s: 5
+    max_page_bytes: 307200
+    # сколько текста страницы отдаём модели на извлечение фактов
+    max_page_chars: 6000
+    max_facts_per_page: 6
+  model:
+    # добор из знаний модели, если веб недоступен или его не хватило;
+    # такие факты маркируются origin=model
+    enabled: true
+    bullets_per_section: 4
 content_styling:
   # переписать content_units деловым языком после планирования, до
   # exemplar rerank/compose (prompts/content_styling/content_style.v1.yaml);
@@ -50,23 +91,36 @@ fitting:
   budget_fit: true
 content:
   image_generation:
-    # ADR-017 (docs/adr/ADR-017-image-generation.md), TZ §2.3.1 top-10
-    # stretch — off by default: needs a live pilot on a real image
-    # endpoint before any default flip (same discipline pipeline_version's
-    # v1→v3 flip followed). Slide selection + prompt are deterministic,
-    # not a model call (planning/image_brief.py) — only the actual
-    # generation goes through ModelGateway.image_generate.
-    enabled: false
-    # only the "visual" strategy variant gets generated images —
-    # faithful/balanced are unaffected by design
-    max_per_deck: 2
-    style_suffix: "minimalist flat business illustration, no embedded text, corporate presentation style"
+    # ADR-017 Phase C: живой эндпоинт — FLUX.2 klein 4B (Apache-2.0) на
+    # OpenRouter (DECKDNA_IMAGE_* в .env, transport "chat"). Выбор слайдов
+    # и запрос детерминированы (planning/image_brief.py), в запрос идут
+    # цвета темы шаблона. Без эндпоинта — честный пропуск, колода не падает.
+    enabled: true
+    strategies: [balanced, visual]
+    max_per_deck: 3
+    # картинке нужно место: слайды с ≤4 текстовыми пунктами
+    max_text_units: 4
+    size: "1536x1024"
+    style_suffix: "flat vector business illustration, one clear subject filling most of the frame, clean shapes, no text, no letters, no words"
     purposes: [overview, solution, benefits, team, data]
 composition:
+  card_readability:
+    version: "2"
+    prose_min_chars: 50
+    max_columns: 3
+    body_cap_pt: 18
+    label_cap_pt: 20
+    summary_large_frame_cap_pt: 32
+  agenda_readability:
+    version: "1"
+    min_slot_width_ratio: 0.22
   # Собственные композиции из токенов шаблона (pptx/composing/native_compose.py)
   # вместо слайдов шаблона. Выключено: суть задачи — видоизменять блоки
   # загруженного шаблона, сохраняя узнаваемый стиль, а не рисовать заново.
   native_fallback: false
+  # иконки из библиотеки шаблона на маркеры карточек — по смыслу пунктов
+  # (нужна модель со зрением для подписей иконок, кеш по хешу шаблона)
+  icons: true
   min_body_font_pt: 10
   autofit_fallback: true
   preserve_unsupported: true

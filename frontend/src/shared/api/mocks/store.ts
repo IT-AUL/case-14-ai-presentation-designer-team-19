@@ -65,6 +65,27 @@ export interface AuditRecord {
   issues: AuditIssue[]
 }
 
+export interface MockVariantChangeItem {
+  id: string
+  change_id: string
+  job_id: string
+  variant_id: string
+  slide_id: string
+  action: string
+  chart_type?: string | null
+  text?: string | null
+  expected_revision: number
+  base_revision: number
+  target_revision: number
+  state: 'queued' | 'running' | 'completed' | 'failed' | 'canceled'
+  created_at: string
+  started_at?: string | null
+  completed_at?: string | null
+  result: Record<string, unknown> | null
+  error: { code: string; message: string } | null
+  events_url: string
+}
+
 export class MockStore {
   readonly projects = new Map<string, Project>()
   readonly templates = new Map<string, TemplateRecord>()
@@ -78,6 +99,7 @@ export class MockStore {
   readonly exports = new Map<string, ExportRecord>()
   readonly artifacts = new Map<string, ArtifactRecord>()
   readonly sessions = new Map<string, ProviderSession>()
+  readonly variantChanges = new Map<string, MockVariantChangeItem[]>()
 
   project(id: string): Project {
     return required(this.projects.get(id), 'Project', id)

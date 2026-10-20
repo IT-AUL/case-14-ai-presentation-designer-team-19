@@ -1,0 +1,16 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:51:07.153Z",
+  "method": "POST",
+  "path": "/projects/prj_66f7c26832a2443fabb4bd1820a37f66/session/autopilot",
+  "status": 202,
+  "request": {
+    "from_step": 4,
+    "use_llm": false
+  },
+  "body": {
+    "job_id": "job_be9f9e16695548e1ba17f30f9fb302d3",
+    "events_url": "/api/v1/jobs/job_be9f9e16695548e1ba17f30f9fb302d3/events",
+    "assistant_note": "Приму предложенные варианты и соберу колоду."
+  }
+}

@@ -15,15 +15,8 @@ from typer.testing import CliRunner
 
 runner = CliRunner()
 
-SUBMISSION = (
-    Path(__file__).resolve().parents[1]
-    / "fixtures"
-    / "pptx"
-    / "lct2026_submission.pptx"
-)
-FIXTURE = (
-    Path(__file__).resolve().parents[1] / "fixtures" / "pptx" / "vk_tech_template.pptx"
-)
+SUBMISSION = Path(__file__).resolve().parents[1] / "fixtures" / "pptx" / "lct2026_submission.pptx"
+FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "pptx" / "vk_tech_template.pptx"
 
 HAS_SOFFICE = shutil.which("soffice") is not None
 HAS_PDFTOPPM = shutil.which("pdftoppm") is not None
@@ -96,9 +89,7 @@ def test_export_reports_render_error_without_tools(template, tmp_path, monkeypat
 @requires_render
 def test_export_pdf_real(template, tmp_path):
     out = tmp_path / "deck.pdf"
-    result = runner.invoke(
-        app, ["export", str(template), "--format", "pdf", "--out", str(out)]
-    )
+    result = runner.invoke(app, ["export", str(template), "--format", "pdf", "--out", str(out)])
     assert result.exit_code == 0, result.stdout
     report = json.loads(result.stdout)
     assert report["format"] == "pdf"
@@ -110,9 +101,7 @@ def test_export_pdf_real(template, tmp_path):
 @requires_render
 def test_export_png_real(template, tmp_path):
     out_dir = tmp_path / "slides"
-    result = runner.invoke(
-        app, ["export", str(template), "--format", "png", "--out", str(out_dir)]
-    )
+    result = runner.invoke(app, ["export", str(template), "--format", "png", "--out", str(out_dir)])
     assert result.exit_code == 0, result.stdout
     report = json.loads(result.stdout)
     assert report["format"] == "png"
@@ -124,7 +113,7 @@ def test_export_png_real(template, tmp_path):
 @requires_render
 def test_export_html_real(template, tmp_path):
     # тяжёлая organizer-фикстура (54 слайда, реальные картинки): html — директория
-    # с index.html + slide-*.png, без giant base64 blob (libxml2 limit fix)
+    # с index.html + assets/: текст и таблицы — DOM, не screenshot слайда
     out_dir = tmp_path / "deck-html"
     result = runner.invoke(
         app, ["export", str(template), "--format", "html", "--out", str(out_dir)]
@@ -134,12 +123,16 @@ def test_export_html_real(template, tmp_path):
     assert report["format"] == "html"
     index = Path(report["index"])
     assert index.exists() and index.name == "index.html"
-    slides = sorted(out_dir.glob("slide-*.png"))
-    assert len(slides) == 54  # вся фикстура отрендерилась
+    from lxml import html as html_parser
+
+    doc = html_parser.parse(str(index))
+    assert len(doc.xpath('//section[@class="slide"]')) == 54
+    assert doc.xpath('//div[@class="text-frame"]//span')
+    assert not list(out_dir.glob("slide-*.png"))
     html = index.read_text(encoding="utf-8")
     assert "data:image" not in html  # ассеты — отдельные файлы, не base64
-    assert f'src="{slides[0].name}"' in html
-    # реальный текст презентации присутствует как captions
+    assert all((out_dir / src).is_file() for src in doc.xpath("//img/@src"))
+    # реальный текст презентации присутствует в позиционированных элементах
     assert "Спасибо за внимание" in html or "Дополнительная информация" in html
 
 
@@ -151,9 +144,7 @@ def test_stub_commands_still_present():
 
 # --- generate ---
 
-CONTENT_MD = (
-    Path(__file__).resolve().parents[1] / "fixtures" / "content" / "poc_article.md"
-)
+CONTENT_MD = Path(__file__).resolve().parents[1] / "fixtures" / "content" / "poc_article.md"
 
 
 @requires_render
@@ -176,7 +167,11 @@ def test_generate_end_to_end(template, tmp_path):
     )
     assert result.exit_code == 0, result.stdout
     report = json.loads(result.stdout)
-    assert report["slides"] == 10
+    # Короткий раздел не режется на однострочные «часть 2» ради числа 10.
+    from pptx import Presentation
+
+    pptx = Presentation(report["artifacts"]["pptx"])
+    assert report["slides"] == len(pptx.slides) == 7
     for key in ("pptx", "pdf", "quality_passport"):
         assert Path(report["artifacts"][key]).exists()
     assert report["editability"]["pei_level"] is not None
@@ -207,11 +202,13 @@ AUDIT_GOLDEN = {
         "image.aspect_ratio": 75,
         "integrity.duplicate_slide": 8,
         "layout.edge_margin": 6,
-        "layout.out_of_bounds": 7,
+        # ADR-031: было 7. Фон-плашка слайда 27 без текста на 104% ширины —
+        # намеренный bleed, правило 29.09 его больше не считает
+        "layout.out_of_bounds": 6,
         "integrity.placeholder_text": 271,
         "layout.unintended_overlap": 7,
         "text.font_floor": 67,
-        "accessibility.contrast": 128,
+        "accessibility.contrast": 105,
         "density.occupancy": 11,
         "template.font_scale": 2,  # Q1: наблюдаемая шкала; было 418
         "template.color_palette": 40,
@@ -220,7 +217,8 @@ AUDIT_GOLDEN = {
         "text.overflow": 11,
         "integrity.duplicate_slide": 8,
         "layout.edge_margin": 2,
-        "layout.out_of_bounds": 2,
+        # ADR-031: layout.out_of_bounds было 2. Картинки слайдов 19 и 25 без
+        # текста на всю высоту — намеренный bleed, правило 29.09 их не считает
         "integrity.placeholder_text": 137,
         "layout.unintended_overlap": 3,
         # Alpha-compositing (ad87cf9, 28.09) now finds contrast hidden
@@ -332,9 +330,7 @@ def test_ingest_markdown_fixture():
     assert pack["title_hint"] == "Квартальный отчёт"
     headings = [s["heading"] for s in pack["sections"]]
     assert "Метрики" in headings and "Выводы" in headings
-    list_blocks = [
-        b for s in pack["sections"] for b in s["blocks"] if b["kind"] == "list"
-    ]
+    list_blocks = [b for s in pack["sections"] for b in s["blocks"] if b["kind"] == "list"]
     assert list_blocks and len(list_blocks[0]["items"]) == 3
     # canonical serializer: optional fields are absent, not null
     for section in pack["sections"]:
@@ -402,8 +398,7 @@ UNSEEN_NAME = "synthetic_unseen.pptx"
 CONTENT_MD = CONTENT_FIXTURES / "sample_brief.md"
 
 requires_organizer_fixtures = pytest.mark.skipif(
-    not all((PPTX_FIXTURES / name).exists() for name in ORGANIZER_NAMES)
-    or not CONTENT_MD.exists(),
+    not all((PPTX_FIXTURES / name).exists() for name in ORGANIZER_NAMES) or not CONTENT_MD.exists(),
     reason="organizer pptx/content fixtures missing",
 )
 
@@ -531,9 +526,10 @@ def test_repair_default_out_suffix(template, tmp_path):
     assert report["issues"]["after"] < report["issues"]["before"]
     actions = report["actions"]
     assert actions["applied"] > 0
-    assert actions["total"] == actions["applied"] + actions["skipped"] + actions[
-        "failed"
-    ] + actions["not_implemented"]
+    assert (
+        actions["total"]
+        == actions["applied"] + actions["skipped"] + actions["failed"] + actions["not_implemented"]
+    )
     assert actions["by_type"]
 
 
@@ -593,8 +589,6 @@ def test_repair_protected_slides_config_fallback(tmp_path):
 def test_repair_protected_slides_bad_value(tmp_path):
     src = tmp_path / "deck.pptx"
     src.write_bytes(SUBMISSION.read_bytes())
-    result = runner.invoke(
-        app, ["repair", str(src), "--protected-slides", "a,b"]
-    )
+    result = runner.invoke(app, ["repair", str(src), "--protected-slides", "a,b"])
     assert result.exit_code == 1
     assert json.loads(result.stdout)["error"]["code"] == "invalid_input"

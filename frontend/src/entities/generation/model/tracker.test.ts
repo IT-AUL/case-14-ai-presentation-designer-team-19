@@ -56,7 +56,7 @@ describe('generation tracker', () => {
     const trackingId = startGeneration('prj_1', body)
 
     expect(isTrackingId(trackingId)).toBe(true)
-    expect(submitGeneration).toHaveBeenCalledWith('prj_1', body)
+    expect(submitGeneration).toHaveBeenCalledWith('prj_1', { ...body, progressive_previews: true })
     const pending = getTrackedGeneration(trackingId)
     expect(pending?.status).toBe('pending')
     expect(pending?.startedAt).toBe(Date.parse('2026-09-25T14:04:43.900Z'))

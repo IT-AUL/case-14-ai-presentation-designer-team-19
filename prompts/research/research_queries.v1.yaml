@@ -1,0 +1,44 @@
+# Prompt asset — versioned, referenced by name+version from code (never embedded).
+#
+# ADR-030 §3 step 1: web search queries for content fill. The model only
+# proposes queries; search, fetching and fact checking are done by code
+# (backend/deckdna/research/web.py).
+name: research_queries
+version: "1.1.0"
+model_role: text
+output_schema: backend/deckdna/research/web.py:QueryPlan
+language: ru
+temperature: 0.2
+instructions: |
+  You prepare web searches to gather facts for a business presentation.
+
+  Input:
+  - `brief`: what the presentation is about (`purpose`), who it is for
+    (`audience`), its `language` and `tone`.
+  - `covered_topics`: topics the user's own material already covers.
+  - `missing_slides`: how many more slides of content are needed.
+  - `max_queries`: the maximum number of queries.
+  - `focus` (optional): `numbers` means the queries must find figures --
+    statistics, market sizes, growth rates, shares, prices, dates -- for
+    a chart or a table; `facts` (or absent) means any factual material.
+  - `missing_dimensions` (optional): structured business gaps missing from
+    the brief (`market_trends` for TAM/SAM/SOM & CAGR, `competitive_landscape`
+    for top 3-4 players & shares, `unit_economics` for AOV, CAC, LTV).
+
+  Write between 1 and `max_queries` search queries that would find
+  factual, current material on the presentation topic: definitions,
+  market or usage figures, examples, practices, risks, trends. Prefer
+  topics that are NOT in `covered_topics` and prioritize `missing_dimensions`,
+  so the deck gains new content instead of repeating it.
+
+  Rules:
+  - Each query is a short search-engine query (2-8 words), not a
+    question to a person and not a sentence.
+  - Never include words like "презентация", "слайды", "питч", "для инвесторов"
+    in the search query -- search for the industry, market, players and metrics.
+  - Write queries in the brief `language`; you may add one English
+    query when the topic is international or technical.
+  - Do not include site names, operators or quotes.
+  - Output ONLY JSON: {"queries": ["...", "..."]}.
+# ADR-031: без input_fields render_prompt не отдавал модели ни одного поля
+input_fields: [brief, covered_topics, missing_slides, max_queries, focus, missing_dimensions]

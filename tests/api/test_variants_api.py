@@ -73,9 +73,9 @@ def test_three_strategies_give_distinct_decks(wait_generation):
     strategies = [v["strategy"] for v in run["variants"]]
     assert strategies == ["faithful", "balanced", "visual"]
 
-    # разные планы → разные deck_plan_id; run-level deck_plan — первого варианта
+    # три варианта используют один план, а отличаются раскладкой
     plan_ids = [v["deck_plan_id"] for v in run["variants"]]
-    assert len(set(plan_ids)) == 3
+    assert len(set(plan_ids)) == 1
     assert run["deck_plan_id"] == plan_ids[0]
 
     # главное: pptx-артефакты побитово разные — не одна колода × 3 имени

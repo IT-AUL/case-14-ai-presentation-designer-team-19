@@ -1,5 +1,5 @@
 import { clsx } from 'clsx'
-import type { ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { routes } from '@/shared/config'
 import { useTheme } from '@/shared/lib/theme'
@@ -49,13 +49,7 @@ export function AppHeader({ projectName, status, providerConnected, onOpenProvid
           <span>{status.label}</span>
         </div>
       )}
-      <button type="button" className={styles.action} onClick={onOpenProvider} title="Провайдер моделей">
-        <span className={styles.providerDot} data-connected={providerConnected} />
-        <span>Модели</span>
-      </button>
-      <button type="button" className={styles.action} onClick={onOpenAbout}>
-        О системе
-      </button>
+      <SettingsMenu providerConnected={providerConnected} onOpenProvider={onOpenProvider} onOpenAbout={onOpenAbout} />
       <button
         type="button"
         className={clsx(styles.action, styles.iconAction)}
@@ -67,5 +61,62 @@ export function AppHeader({ projectName, status, providerConnected, onOpenProvid
         <Icon as={theme === 'dark' ? Sun : Moon} size={15} />
       </button>
     </header>
+  )
+}
+
+function SettingsMenu({ providerConnected, onOpenProvider, onOpenAbout }: Pick<AppHeaderProps, 'providerConnected' | 'onOpenProvider' | 'onOpenAbout'>) {
+  const [open, setOpen] = useState(false)
+  const rootRef = useRef<HTMLDivElement>(null)
+  const triggerRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    const onPointer = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false)
+    }
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return
+      setOpen(false)
+      triggerRef.current?.focus()
+    }
+    document.addEventListener('pointerdown', onPointer)
+    document.addEventListener('keydown', onKey)
+    rootRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')?.focus()
+    return () => {
+      document.removeEventListener('pointerdown', onPointer)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open])
+
+  const choose = (action: () => void) => {
+    setOpen(false)
+    action()
+  }
+
+  return (
+    <div className={styles.menuRoot} ref={rootRef}>
+      <button
+        ref={triggerRef}
+        type="button"
+        className={styles.action}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <span className={styles.providerDot} data-connected={providerConnected} />
+        <span>Настройки</span>
+      </button>
+      {open && (
+        <div role="menu" aria-label="Настройки" className={styles.menu}>
+          <button type="button" role="menuitem" className={styles.menuItem} onClick={() => choose(onOpenProvider)}>
+            <span>Модели</span>
+            <span className={styles.menuHint}>{providerConnected ? 'подключены' : 'не подключены'}</span>
+          </button>
+          <button type="button" role="menuitem" className={styles.menuItem} onClick={() => choose(onOpenAbout)}>
+            О системе
+          </button>
+        </div>
+      )}
+    </div>
   )
 }

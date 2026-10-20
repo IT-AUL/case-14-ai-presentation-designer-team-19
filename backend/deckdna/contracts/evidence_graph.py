@@ -32,6 +32,12 @@ class SourceRef(BaseModel):
     range: str | None = None
 
 
+class Origin(Enum):
+    user = 'user'
+    web = 'web'
+    model = 'model'
+
+
 class Node(BaseModel):
     id: str
     type: Type
@@ -39,6 +45,7 @@ class Node(BaseModel):
     value: Value | None = None
     source_ref: SourceRef
     confidence: Annotated[float | None, Field(ge=0.0, le=1.0)] = None
+    origin: Origin | None = None
 
 
 class Type1(Enum):

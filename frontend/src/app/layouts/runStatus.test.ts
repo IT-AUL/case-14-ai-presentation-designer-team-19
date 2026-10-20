@@ -22,7 +22,7 @@ const completed = generationFixture as GenerationDetail
 describe('runStatus', () => {
   it('reports a rejected submission as an error instead of a running generation', () => {
     const error = new ApiError({ code: 'validation_error', message: 'bad brief', status: 422 })
-    expect(runStatus('run', progress, { phase: 'failed', generation: undefined, error })).toEqual({ label: 'Ошибка генерации', tone: 'error' })
+    expect(runStatus('run', progress, { phase: 'failed', generation: undefined, error })).toEqual({ label: 'Сборка не удалась', tone: 'error' })
   })
 
   it('does not claim a failure when the tracking id was lost on reload', () => {
@@ -36,7 +36,7 @@ describe('runStatus', () => {
   })
 
   it('shows a running generation while the service works', () => {
-    expect(runStatus('run', progress, { phase: 'submitting', generation: undefined, error: null })?.label).toBe('Идёт генерация')
+    expect(runStatus('run', progress, { phase: 'submitting', generation: undefined, error: null })?.label).toBe('Идёт сборка')
   })
 
   it('asks for a decision on the audit while critical issues stay open', () => {

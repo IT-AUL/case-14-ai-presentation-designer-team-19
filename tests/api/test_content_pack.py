@@ -108,7 +108,10 @@ def test_json_supplied_pack_id_is_not_api_identity():
         ("image.png", "image/png"),
     ],
 )
-def test_content_pack_rejects_multiple_files_without_storing_anything(extra_name, extra_mime):
+def test_content_pack_with_a_bad_second_file_stores_nothing(extra_name, extra_mime):
+    """ADR-032: несколько файлов в паке разрешены, но битый или
+    неподдерживаемый второй файл отклоняет весь запрос, и ничего не
+    сохраняется (раньше — любой второй файл)."""
     project_id = _project()
     before_artifacts = set(STORE.artifacts)
     before_packs = set(STORE.content_packs)
@@ -122,7 +125,8 @@ def test_content_pack_rejects_multiple_files_without_storing_anything(extra_name
     )
     assert response.status_code == 422, response.text
     assert response.json()["error"]["code"] == "invalid_input"
-    assert "exactly one file" in response.json()["error"]["message"]
+    message = response.json()["error"]["message"]
+    assert "xlsx" in message or extra_name in message
     assert set(STORE.artifacts) == before_artifacts
     assert set(STORE.content_packs) == before_packs
     assert set(STORE.jobs) == before_jobs

@@ -1,0 +1,56 @@
+# ADR-033 §5: детерминированное ранжирование и проверка фактов (Calliope / DataShot / LIDA / Draco).
+# Веса критериев отбора инсайтов и пороги детерминированного гарда.
+version: "1.0"
+
+weights:
+  significance: 0.45
+  unusualness: 0.20
+  intent_match: 0.20
+  coverage: 0.15
+
+thresholds:
+  wide_spread_max_min_ratio: 3.0
+  wide_spread_cv: 0.50
+  wide_spread_range_to_median: 1.0
+  leader_min_share_pct: 25.0
+  leader_relative_dominance: 2.0
+  leader_runner_up_ratio: 1.25
+  leader_gap_ratio: 1.20
+  correlation_min_r: 0.50
+  cross_table_min_r: 0.60
+  cross_table_min_overlap: 4
+  reference_min_rows: 200
+  missing_min_ratio: 0.01
+  number_tolerance_rel: 0.02
+
+intent_fact_types:
+  trend:
+    - growth
+    - decline
+    - acceleration
+    - deceleration
+    - peak
+    - flat
+  comparison:
+    - leader
+    - gap
+    - driver
+    - even
+  composition:
+    - leader
+    - concentration
+    - tail
+    - even
+    - share
+  distribution:
+    - wide_spread
+    - spread
+    - outlier
+  relationship:
+    - correlation
+    - no_correlation
+    - cross_table
+  reference:
+    - reference
+  kpi:
+    - kpi

@@ -43,6 +43,42 @@ function StyleBody({ view }: { view: PassportView }) {
   )
 }
 
+function ResearchBody({ view }: { view: PassportView }) {
+  const research = view.research
+  if (!research) return null
+  const total = research.origins.reduce((sum, origin) => sum + origin.count, 0)
+  return (
+    <div className={styles.research}>
+      {total > 0 && (
+        <>
+          <div className={styles.stageBar} role="img" aria-label={research.origins.map((origin) => `${origin.label}: ${formatPercent(origin.fraction)}`).join(', ')}>
+            {research.origins.map((origin) => (
+              <div key={origin.key} className={styles.stageSegment} data-origin={origin.key} style={{ width: `${origin.fraction * 100}%` }} />
+            ))}
+          </div>
+          <div className={styles.stageLegend}>
+            {research.origins.map((origin) => (
+              <span key={origin.key} className={styles.legendItem}>
+                <span className={styles.legendSwatch} data-origin={origin.key} aria-hidden />
+                {origin.label} <span className={styles.mono}>{formatPercent(origin.fraction)}</span>
+              </span>
+            ))}
+          </div>
+        </>
+      )}
+      <p className={styles.muted}>
+        {[
+          research.sources !== null && `источников: ${formatNumber(research.sources)}`,
+          research.mode && `режим текста: ${research.mode}`,
+          research.seconds && `поиск фактов: ${research.seconds}`,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
+      </p>
+    </div>
+  )
+}
+
 function SourcesBody({ view }: { view: PassportView }) {
   const sources = view.sources
   if (!sources) return null
@@ -115,7 +151,7 @@ function IssuesBody({ view }: { view: PassportView }) {
 }
 
 function TimingTitle({ view }: { view: PassportView }) {
-  const { timing, usage } = view
+  const { timing } = view
   return (
     <span className={styles.titleRow}>
       Время сборки
@@ -124,7 +160,6 @@ function TimingTitle({ view }: { view: PassportView }) {
           {timing.total} из {timing.budget}
         </span>
       )}
-      {usage && <span className={styles.titleNote}>· {usage.map((item) => `${item.value} ${item.label.toLowerCase()}`).join(' · ')}</span>}
     </span>
   )
 }
@@ -214,6 +249,7 @@ export function QualityPassport({ view, revisionLabel, notice, actions }: Qualit
   const sections: Section[] = [
     ...(view.style.status === 'ready' ? [{ key: 'style', title: 'Соответствие шаблону', body: <StyleBody view={view} /> }] : []),
     ...(view.sources ? [{ key: 'sources', title: 'Опора на контент', body: <SourcesBody view={view} /> }] : []),
+    ...(view.research ? [{ key: 'research', title: 'Откуда факты', body: <ResearchBody view={view} /> }] : []),
     { key: 'readability', title: 'Читаемость', body: <ReadabilityBody view={view} /> },
     { key: 'issues', title: 'Итоги аудита', body: <IssuesBody view={view} /> },
     { key: 'timing', title: <TimingTitle view={view} />, body: <TimingBody view={view} /> },
@@ -237,9 +273,8 @@ export function QualityPassport({ view, revisionLabel, notice, actions }: Qualit
       </header>
       {view.skillVersion && (
         <div className={styles.versionBanner}>
-          <span className={styles.versionLabel}>Результат привязан к версии</span>
-          <span className={styles.versionValue}>скилл {view.skillVersion}</span>
-          {view.pipelineVersion && <span className={styles.versionValue}>{view.pipelineVersion}</span>}
+          <span className={styles.versionLabel}>Результат привязан к версии правил</span>
+          <span className={styles.versionValue}>{view.skillVersion}</span>
         </div>
       )}
       {notice}

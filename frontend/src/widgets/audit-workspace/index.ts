@@ -1,2 +1,10 @@
 export { AuditWorkspace } from './ui/AuditWorkspace'
-export type { AuditStageProps, StageMode } from './ui/AuditWorkspace'
+export type { AuditStageProps, SlidePanelContext, StageMode } from './ui/AuditWorkspace'
+export { SlideFilmstrip } from './ui/SlideFilmstrip'
+export type { FilmstripSlide } from './ui/SlideFilmstrip'
+export { IssueList } from './ui/IssueList'
+export type { ClusteredGroup, IssueListProps } from './ui/IssueList'
+export { JournalList } from './ui/JournalList'
+export { appendJournal, useVariantJournal } from './model/journalStore'
+export { shouldIgnoreShortcut } from './lib/keyboard'
+

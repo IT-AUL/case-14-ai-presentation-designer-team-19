@@ -1,4 +1,4 @@
-export { projectKeys, useCreateProject, useInvalidateProject, useProject, useProjects } from './api/projectApi'
+export { projectKeys, useCreateProject, useDeleteProject, useInvalidateProject, useProject, useProjects } from './api/projectApi'
 export { markEvidence, useProjectEvidence } from './lib/evidence'
 export type { EvidenceMark } from './lib/evidence'
 export { latestRunId, projectRunId, readRunIds, rememberRun } from './lib/runHistory'

@@ -212,7 +212,7 @@ def test_dropped_units_surfaced(tmp_path):
 
 
 def test_repair_fixes_disclose_stale_content_support(tmp_path):
-    """When repair_fixes is non-empty (this passport
+    """hardening check #17: when repair_fixes is non-empty (this passport
     describes a post-repair revision), original compose counts must be
     absent from current-revision metrics until they can be recomputed."""
     out = tmp_path / "out.pptx"

@@ -1,0 +1,92 @@
+{
+  "api_base": "https://deckdna.195-209-218-212.sslip.io/api/v1",
+  "recorded_at": "2026-10-17T13:52:41.180Z",
+  "method": "GET",
+  "path": "/variants/var_a9cc34fdabbb4e14af5520ac2384b0ce/slides",
+  "status": 200,
+  "body": {
+    "items": [
+      {
+        "id": "sld_a4e3b28fc6f74ef79bff3cc737f06e7e",
+        "variant_id": "var_a9cc34fdabbb4e14af5520ac2384b0ce",
+        "index": 1,
+        "slide_plan_id": "slide-0",
+        "purpose": "title",
+        "title": "Итоги продаж за год для совета директоров",
+        "revision": 1,
+        "preview_artifact_id": "art_1db8df0574cb485185f5603f69b5448b"
+      },
+      {
+        "id": "sld_0cd5d62557334d4eac42ac037c6fcdf9",
+        "variant_id": "var_a9cc34fdabbb4e14af5520ac2384b0ce",
+        "index": 2,
+        "slide_plan_id": "slide-1",
+        "purpose": "overview",
+        "title": "Ключевые выводы",
+        "revision": 1,
+        "preview_artifact_id": "art_b709d98c33b9471b8ecd472da5a1389f"
+      },
+      {
+        "id": "sld_1d1ea974740c469cbe2cd05e5ed200de",
+        "variant_id": "var_a9cc34fdabbb4e14af5520ac2384b0ce",
+        "index": 3,
+        "slide_plan_id": "slide-2",
+        "purpose": "data",
+        "title": "Выручка: рост в 2,1 раза за 24 месяца",
+        "revision": 1,
+        "preview_artifact_id": "art_1f7b0cdfb1534ec1ac8e84d55361d36b"
+      },
+      {
+        "id": "sld_956223fce8224bfa8eb9cc7e613fccfc",
+        "variant_id": "var_a9cc34fdabbb4e14af5520ac2384b0ce",
+        "index": 4,
+        "slide_plan_id": "slide-3",
+        "purpose": "data",
+        "title": "Электроника: 61% выручки",
+        "revision": 1,
+        "preview_artifact_id": "art_fb59d441ac6640adb118e6bcc1d2ac15"
+      },
+      {
+        "id": "sld_b7de537537434ad4b0efa46b49a2509d",
+        "variant_id": "var_a9cc34fdabbb4e14af5520ac2384b0ce",
+        "index": 5,
+        "slide_plan_id": "slide-4",
+        "purpose": "data",
+        "title": "Сайт: 45% выручки",
+        "revision": 1,
+        "preview_artifact_id": "art_a68155e2ab1b4007b73bc172fc3672e1"
+      },
+      {
+        "id": "sld_ee54509799fd40ccad5c6101b55d1efd",
+        "variant_id": "var_a9cc34fdabbb4e14af5520ac2384b0ce",
+        "index": 6,
+        "slide_plan_id": "slide-5",
+        "purpose": "data",
+        "title": "Москва: 41% выручки",
+        "revision": 1,
+        "preview_artifact_id": "art_7cb9a33666cf4c0c83d174cf8e929cc7"
+      },
+      {
+        "id": "sld_05abbf9b7d9543978e19c05c297785b6",
+        "variant_id": "var_a9cc34fdabbb4e14af5520ac2384b0ce",
+        "index": 7,
+        "slide_plan_id": "slide-6",
+        "purpose": "custom",
+        "title": "Тезисы автора",
+        "revision": 1,
+        "preview_artifact_id": "art_5d76d1f480db4279b18d4cc1b11229b8"
+      },
+      {
+        "id": "sld_4fa2ddc8218d482c89dc1e9bac058a84",
+        "variant_id": "var_a9cc34fdabbb4e14af5520ac2384b0ce",
+        "index": 8,
+        "slide_plan_id": "slide-7",
+        "purpose": "thank_you",
+        "title": "Спасибо за внимание",
+        "revision": 1,
+        "preview_artifact_id": "art_15b9b8205950424ea287e3c0a4a49092"
+      }
+    ],
+    "next_cursor": null
+  }
+}

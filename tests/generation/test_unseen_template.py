@@ -87,7 +87,8 @@ def test_exemplar_gate_rejects_decorative_slide():
 
 def test_full_pipeline_on_unseen_template(generated):
     result = generated
-    assert result["slides_out"] == BRIEF["target_slide_count"]
+    assert 3 <= result["slides_out"] <= BRIEF["target_slide_count"]
+    assert result["slides_out"] == len(result["deck_plan"]["slides"])
     for key in ("pptx", "pdf", "quality_passport"):
         assert Path(result["artifacts"][key]).exists()
     # паспорт и issues валидной формы

@@ -1,4 +1,4 @@
-"""Evaluation: Quality Passport assembly (docs/ARCHITECTURE.md)."""
+"""Evaluation: Quality Passport assembly (docs/pipeline/EVALUATION.md)."""
 
 from deckdna.evaluation.quality_passport import assemble_quality_passport
 
