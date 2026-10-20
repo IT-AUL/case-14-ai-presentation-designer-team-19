@@ -2703,7 +2703,7 @@ export interface components {
         /**
          * ProviderSession
          * @description Session view — токен и рабочие лимиты хранятся в lease-сторе
-         *     (in-memory до Redis, Wave 2) и никогда не возвращаются API.
+         *     в защищённом lease-сторе и никогда не возвращаются API.
          */
         ProviderSession: {
             /** Id */

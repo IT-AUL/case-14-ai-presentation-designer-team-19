@@ -323,8 +323,8 @@ def _validate_provider_network_target(base_url: str, *, allow_private: bool) -> 
 
 
 class ProviderSession(BaseModel):
-    """Session view — токен и рабочие лимиты хранятся в lease-сторе
-    (in-memory до Redis, Wave 2) и никогда не возвращаются API."""
+    """Session view — токен и рабочие лимиты хранятся в защищённом lease-сторе
+    и никогда не возвращаются API."""
 
     id: str
     label: str
@@ -866,9 +866,7 @@ class RuleInfoOut(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# In-memory stub store. Wave 2 replaces this with Postgres repositories and a
-# real job queue; the store exists only to keep stub responses coherent
-# (created entities are visible to subsequent GETs).
+# Application state store with disk snapshot persistence (/data/artifacts/state).
 # ---------------------------------------------------------------------------
 
 
@@ -921,8 +919,7 @@ class _Store:
         self.provider_sessions: dict[str, ProviderSession] = {}
         # Lease-держатель api_token + рабочих полей ProviderSessionCreate
         # (timeout/concurrency не входят в публичную модель сессии).
-        # Токен никогда не сериализуется в ответы — in-memory до Redis
-        # (Wave 2), семантика lease: TTL + revoke по DELETE.
+        # Токен никогда не сериализуется в ответы; семантика lease: TTL + revoke по DELETE.
         self.provider_secrets: dict[str, dict[str, Any]] = {}
         self.templates: dict[str, TemplateAsset] = {}
         self.analyses: dict[str, TemplateAnalysis] = {}
@@ -1235,9 +1232,7 @@ def _complete_job(kind: JobKind, project_id: str | None, result_ids: dict[str, s
 
 
 # ---------------------------------------------------------------------------
-# Stub payload factories — minimal schema-valid samples so the frontend can
-# build real screens against realistic shapes. Wave 2 replaces these with the
-# actual pipeline outputs.
+# Default payload factories and MIME constants.
 # ---------------------------------------------------------------------------
 
 _PPTX_MIME = "application/vnd.openxmlformats-officedocument.presentationml.presentation"

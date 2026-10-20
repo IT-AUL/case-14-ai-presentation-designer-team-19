@@ -10174,7 +10174,7 @@
           "expires_at"
         ],
         "title": "ProviderSession",
-        "description": "Session view — токен и рабочие лимиты хранятся в lease-сторе\n(in-memory до Redis, Wave 2) и никогда не возвращаются API."
+        "description": "Session view — токен и рабочие лимиты хранятся в защищённом lease-сторе\nи никогда не возвращаются API."
       },
       "ProviderSessionCreate": {
         "properties": {

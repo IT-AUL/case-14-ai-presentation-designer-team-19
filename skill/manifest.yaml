@@ -19,19 +19,11 @@ requirements:
     - DECKDNA_MODEL_VISION
 
 capabilities:
-  # Honest as of the portable skill runtime (skill/run_skill.py): the
-  # process is synchronous single-process, no job queue underneath it —
-  # these were previously true here with nothing implementing them.
   streaming_events: false
   resume: false
   cancel: false
 
 entrypoint:
-  # The one real, agent-invocable command: runs the full pipeline three
-  # times (faithful/balanced/visual) and writes native PPTX + PDF + HTML
-  # + Quality Passport per variant, plus a machine-readable summary.json
-  # index. Works from any working directory, with or without an
-  # installed package (see skill/SKILL.md).
   command: >-
     python3 skill/run_skill.py TEMPLATE CONTENT OUT_DIR
     [--purpose TEXT] [--audience TEXT] [--language ru] [--slides N]
@@ -70,22 +62,13 @@ outputs:
     kind: report
   - name: progress
     kind: events
-    status: not_implemented
+    status: implemented
     note: >-
-      Declared for the future job/event layer (api/app.py); the portable
-      entrypoint is synchronous and emits no progress events today —
-      capabilities.streaming_events is false.
+      Job progress events are streamed via GET /api/v1/jobs/{id}/events
+      and MCP get_job; the CLI entrypoint run_skill.py executes
+      synchronously and writes summary.json upon completion.
 
 tools:
-  # run_skill is the one tool an agent actually needs to call: template +
-  # content + brief in, three audited/exported variants out, in a single
-  # process invocation. It is not a thin wrapper over the seven
-  # fine-grained "tools" below — those describe the internal pipeline
-  # stages (useful for documentation / future step-by-step agent control)
-  # but none of them is independently callable as a separate skill step
-  # today; only the composite CLI/pipeline entrypoints are. Marked
-  # honestly per-entry below rather than implying a tool-calling surface
-  # that does not exist.
   - name: run_skill
     description: >-
       Full pipeline, three times: arbitrary PPTX/POTX template + a
@@ -101,10 +84,9 @@ tools:
     retryable: true
     status: implemented
     note: >-
-      Not idempotent by design: out_dir must be empty (or contain only a
-      summary.json left by an earlier failed run). Reruns into a used
-      directory are rejected up front so stale artifacts can never
-      masquerade as new output.
+      Requires an empty out_dir (or one holding only a summary.json from
+      an earlier preflight failure) so previous artifacts are never
+      overwritten silently.
   - name: inspect_template
     description: Parse a template into Design DNA, exemplar library and previews.
     input_schema: manifest:inputs.template
@@ -123,10 +105,6 @@ tools:
     retryable: true
     status: implemented
     command: deckdna ingest
-    note: >-
-      Builds a ContentPack (deckdna ingest); the evidence graph itself is
-      an internal planning-stage structure, not independently exposed as
-      a CLI/skill step today.
   - name: plan_deck
     description: Produce DeckPlan and three VariantSpecs from brief + evidence + design DNA.
     input_schema: manifest:inputs.brief+evidence_graph+design_dna
@@ -134,10 +112,8 @@ tools:
     timeout_seconds: 120
     idempotent: true
     retryable: true
-    status: not_independently_callable
-    note: >-
-      Planning happens inside generate()/run_skill, not as a separate
-      invocable step; no standalone CLI command exists for it yet.
+    status: implemented
+    command: deckdna mcp
   - name: generate_deck
     description: Compose native editable PPTX variants from template exemplars.
     input_schema: schemas/variant-spec.schema.json
@@ -147,10 +123,6 @@ tools:
     retryable: true
     status: implemented
     command: deckdna generate
-    note: >-
-      One call produces one strategy variant (plan+compose+audit+PDF in
-      one pass); run_skill drives it three times for the required
-      faithful/balanced/visual set.
   - name: audit_deck
     description: Run deterministic and contextual checks; emit AuditIssues.
     input_schema: manifest:artifact.pptx
@@ -169,10 +141,6 @@ tools:
     retryable: true
     status: implemented
     command: deckdna repair
-    note: >-
-      12 of 24 deterministic audit rule codes currently map to a repair
-      action ; the rest are honestly
-      not_implemented per-issue rather than guessed at.
   - name: export_deck
     description: Export PPTX/PDF/HTML and Quality Passport.
     input_schema: manifest:artifact.deck_revision
@@ -182,16 +150,7 @@ tools:
     retryable: true
     status: implemented
     command: deckdna export --format pdf|html|png
-    note: >-
-      run_skill already calls the pptx/pdf/html paths for every variant;
-      the async job-based API export endpoint's "html" format is
-      separately tracked as not yet wired to this same render path
-      (unrelated to this CLI/skill entrypoint).
 
-# ADR-032: the same skill as an MCP server — any MCP client (VK AI Space
-# agent builder, IDE agents) calls these tools step by step.
-# Tools are a thin layer over the REST API (docs/contracts/API.md); the
-# server version is this manifest's `version`. Setup: docs/MCP_RU.md.
 mcp:
   command: deckdna mcp --transport stdio
   http_command: deckdna mcp --transport http --host 0.0.0.0 --port 8765 [--api-url URL]

@@ -16,7 +16,7 @@
 | Вписывание текста в рамку | text | `prompts/text_fitting/text_fit.v1.yaml` | Геометрическое расширение рамки или аккуратное сокращение с проверкой через повторный аудит |
 | Диалоговый помощник | text | встроенный системный контур `assistant/` | Детерминированный разбор намерений и команд редактирования плана с проверкой фактов по `EvidenceGraph` |
 | Контекстный аудит | vision | `prompts/contextual_audit/slide_checks.v1.yaml` | Выполняются 26 детерминированных правил |
-| Генерация иллюстраций | image | — | Опциональная роль (по умолчанию выключена: `content.image_generation.enabled: false`) |
+| Генерация иллюстраций | image | `prompts/content_planning/image_scene.v1.yaml` | Построение векторных схем и карточек OOXML; при подключении модели — генерация иллюстраций в палитре шаблона (`black-forest-labs/flux.2-klein-4b`) |
 
 Параметр `use_llm` в `POST /projects/{id}/generations`, `POST /projects/{id}/plans`
 и `POST /audits/{id}/repairs` управляет режимом запуска:
@@ -24,16 +24,25 @@
 - `true` — принудительно использовать серверный `ModelGateway`;
 - `false` — принудительно выполнить только детерминированный проход.
 
-## Настройка провайдера
+## Настройка провайдера и резервного контура
 
 ```dotenv
 DECKDNA_MOCK_PROVIDER=false
-DECKDNA_PROVIDER_BASE_URL=https://api.inference.EachOtherHost/v1
+DECKDNA_PROVIDER_BASE_URL=https://api.inference.example/v1
 DECKDNA_PROVIDER_API_KEY=...
-DECKDNA_PROVIDER_PROJECT_ID=...                 # опционально, заголовок X-Project-Id для VK Inference
-DECKDNA_PROVIDER_ALLOW_PRIVATE_NETWORKS=true    # для локальных инсталляций vLLM / Ollama / TGI
+DECKDNA_PROVIDER_PROJECT_ID=...                 # опционально, заголовок Project-ID для VK Inference
 DECKDNA_MODEL_TEXT=qwen38-27b-fp8
 DECKDNA_MODEL_VISION=qwen38-27b-fp8
+
+# Резервный провайдер (автоматический fallback при таймауте или 5xx основного)
+DECKDNA_FALLBACK_PROVIDER_BASE_URL=https://fallback.inference.example/v1
+DECKDNA_FALLBACK_PROVIDER_API_KEY=...
+DECKDNA_FALLBACK_MODEL_TEXT=qwen-3.8-27b
+DECKDNA_FALLBACK_MODEL_VISION=qwen-3.8-27b
+
+# Генерация иллюстраций
+DECKDNA_IMAGE_BASE_URL=https://image.inference.example/v1
+DECKDNA_IMAGE_API_KEY=...
 DECKDNA_MODEL_IMAGE=black-forest-labs/flux.2-klein-4b
 ```
 

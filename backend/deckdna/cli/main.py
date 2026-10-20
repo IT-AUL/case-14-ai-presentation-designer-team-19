@@ -1,7 +1,4 @@
-"""deckdna CLI — thin client over the API (Wave 0 stub).
-
-Commands per docs/DEPLOYMENT.md; implemented in Wave 2 by Agent 4.
-"""
+"""DeckDNA command-line interface."""
 
 import json
 import sys
@@ -720,10 +717,9 @@ def check_models_cmd() -> None:
         raise typer.Exit(code=1)
 
 
-# Stubs for the frozen command surface — implemented against the API in Wave 2.
 for _cmd in ["init"]:
 
     @app.command(name=_cmd)
     def _stub() -> None:  # noqa: B023
-        typer.echo("not implemented yet — see docs/agents/workstreams/04_frontend_cli.md")
+        typer.echo("not implemented in standalone CLI mode")
         raise typer.Exit(code=2)

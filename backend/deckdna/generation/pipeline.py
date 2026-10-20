@@ -1,4 +1,4 @@
-"""End-to-end generation pipeline (Wave 1, synchronous, single process).
+"""End-to-end generation pipeline.
 
 Wires the independently-tested stages into one call:
 

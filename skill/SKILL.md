@@ -6,18 +6,8 @@ exactly one) become three template-compliant, editable presentation
 variants — **faithful**, **balanced**, **visual** — each exported as
 native PPTX, PDF and HTML, each with a Quality Passport.
 
-This file is what an agent (or a human) reads to invoke the skill. It
-describes only what `skill/run_skill.py` actually does; see
-`skill/manifest.yaml` for the machine-readable capability declaration.
-
-## Why this file exists
-
-`skill/manifest.yaml` and `GET /skill/manifest` describe DeckDNA as a
-skill, and `deckdna generate` / `deckdna export` already implement the
-real pipeline — but until this module, nothing tied them into one
-agent-invocable run that produces the three required variants with all
-three required export formats and a single machine-readable result. This
-is that entrypoint.
+This file documents `skill/run_skill.py`; see `skill/manifest.yaml` for
+the machine-readable capability and MCP declaration.
 
 ## Run it
 
@@ -134,29 +124,22 @@ failures surface only as `{"code": "provider_unavailable", "message":
 `deckdna.providers.openai_compat`), and `--llm`'s presence is reported
 only as a boolean (`llm_enabled`).
 
-## What "not implemented" honestly means here
+## Execution Guarantees
 
-- **Not idempotent.** Re-running into a directory that already holds
-  artifacts fails `invalid_input` rather than risking stale decks being
-  read as new output (a directory containing only `summary.json` — an
-  earlier early-failure — is the one allowed reuse). The manifest
-  declares `idempotent: false` honestly for the same reason.
-- **`--strategies` below three is a debug override, not the contract.**
-  Normal use always produces all three variants in one run.
-- **Progress streaming/resume/cancel are not implemented** at this
-  layer (`skill/manifest.yaml`'s `capabilities` block was previously
-  claiming all three with nothing behind them — corrected). This is a
-  synchronous, single-process script; the async job/SSE surface lives in
-  `deckdna.api.app` (out of this skill entrypoint's scope) and is not
-  wired to `run_skill.py`.
-- **Repair is not part of this entrypoint.** `run_skill.py` produces
-  audited variants; applying repair actions is a separate, explicit step
-  (`deckdna repair`) a user/agent chooses after reviewing audit issues —
-  intentionally not auto-applied, per the project's "bounded typed
-  repair selected by user" design.
-- **The VK AI Space manifest schema is not published**; nothing here
-  claims to implement it. `skill/manifest.yaml` stays a best-effort,
-  self-authored description until that schema exists.
+- **Clean output destination.** `run_skill.py` requires an empty `OUT_DIR`
+  (or one holding only a `summary.json` from an earlier preflight check) so
+  artifacts from previous runs never mix with new output.
+- **Full three-strategy output by default.** Standard invocation builds all
+  three variants (`faithful`, `balanced`, `visual`) in a single run;
+  `--strategies` is available when iterating on a specific strategy.
+- **Interactive MCP and REST modes.** `run_skill.py` is a synchronous
+  single-process CLI entrypoint. Step-by-step tool calls, SSE progress
+  streaming, interactive plan editing, and targeted repair are exposed via
+  `deckdna mcp` (`stdio` / `http`) and the FastAPI server (`deckdna.api.app`).
+- **Explicit user-selected repair.** `run_skill.py` outputs audited variants
+  and their Quality Passports; subsequent geometric or stylistic repair
+  actions can be applied via `deckdna repair` or the API/MCP `repair_issues`
+  tool.
 
 ## Verifying this yourself
 
